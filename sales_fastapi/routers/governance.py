@@ -15,9 +15,9 @@ from sqlalchemy.orm import Session
 
 from ..config import settings
 from ..database import get_db
+from ..governance.audit import list_events, log_event
 from ..governance.classification import policy_summary
 from ..governance.gcp_verify import verify_environment
-from ..governance.audit import list_events, log_event
 from ..governance.retention import policy as retention_policy
 from ..governance.retention import purge
 from ..llm.router import (

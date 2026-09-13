@@ -39,6 +39,13 @@ Thumbs.db
 # Local tooling / scratch
 opencode_task*
 .pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.ruff_cache/
+
+# Local databases
+*.db
 
 # data
 /data/*

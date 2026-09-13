@@ -1,0 +1,57 @@
+# Pre-merge / release gate on Google Cloud Build.
+#   gcloud builds submit --config cloudbuild.checks.yaml
+# Fails the build on lint errors, high-severity SAST findings, failing tests,
+# migration drift, or HIGH/CRITICAL image vulnerabilities.
+steps:
+  - id: quality-and-tests
+    name: "python:3.12-slim"
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        pip install --quiet -r requirements-sales.txt "ruff>=0.5" "bandit>=1.7"
+        ruff check sales_fastapi tests migrations
+        ruff format --check sales_fastapi tests migrations
+        bandit -r sales_fastapi -x sales_fastapi/static -ll
+        export DATABASE_URL="sqlite:///./ci_migration.db"
+        export SECRET_KEY="ci-secret-key-that-is-long-enough-for-hs256"
+        export ENV=test
+        export AUTH_DEV_MODE=true
+        alembic upgrade head
+        alembic check
+        alembic downgrade base
+        pytest --cov=sales_fastapi --cov-fail-under=70
+
+  - id: build-image
+    name: "gcr.io/cloud-builders/docker"
+    args:
+      - build
+      - "-f"
+      - "Dockerfile.sales"
+      - "-t"
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_SERVICE}:$SHORT_SHA"
+      - "."
+
+  - id: image-scan
+    name: "aquasec/trivy:latest"
+    args:
+      - image
+      - "--exit-code"
+      - "1"
+      - "--severity"
+      - "HIGH,CRITICAL"
+      - "--ignore-unfixed"
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_SERVICE}:$SHORT_SHA"
+
+images:
+  - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_SERVICE}:$SHORT_SHA"
+
+substitutions:
+  _REGION: "asia-south1"
+  _SERVICE: "kalisoft-sales"
+  _AR_REPOSITORY: "sales-pipeline"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: "E2_HIGHCPU_8"

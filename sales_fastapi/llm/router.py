@@ -18,7 +18,8 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from ..config import Settings, settings as default_settings
+from ..config import Settings
+from ..config import settings as default_settings
 from ..governance.audit import log_event
 from .guardrails import GuardrailReport, scan_prompt, validate_output
 from .providers import (

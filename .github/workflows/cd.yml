@@ -1,0 +1,60 @@
+name: CD
+
+on:
+  push:
+    branches: ["main", "UAT", "DEV"]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        default: DEV
+        type: choice
+        options: [DEV, UAT, production]
+
+# Uses Workload Identity Federation (no long-lived JSON keys).
+# Required repo configuration:
+#   secrets.GCP_WORKLOAD_IDENTITY_PROVIDER
+#   secrets.GCP_SERVICE_ACCOUNT
+#   vars.GCP_PROJECT_ID, vars.GCP_REGION, vars.ARTIFACT_REPOSITORY
+#   vars.CLOUD_SQL_INSTANCE, vars.CORS_ORIGINS, vars.ALLOWED_HOSTS, vars.GCS_BUCKET
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Cloud Build & Cloud Run deploy
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'production' || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build and deploy
+        run: |
+          gcloud builds submit \
+            --config cloudbuild.fastapi.yaml \
+            --project "${{ vars.GCP_PROJECT_ID }}" \
+            --substitutions="_REGION=${{ vars.GCP_REGION }},_SERVICE=kalisoft-sales,_AR_REPOSITORY=${{ vars.ARTIFACT_REPOSITORY }},_CLOUD_SQL_INSTANCE=${{ vars.CLOUD_SQL_INSTANCE }},_CORS_ORIGINS=${{ vars.CORS_ORIGINS }},_ALLOWED_HOSTS=${{ vars.ALLOWED_HOSTS }},_GCS_BUCKET=${{ vars.GCS_BUCKET }}"
+
+      - name: Post-deploy smoke test
+        run: |
+          URL=$(gcloud run services describe kalisoft-sales \
+            --project "${{ vars.GCP_PROJECT_ID }}" \
+            --region "${{ vars.GCP_REGION }}" \
+            --format='value(status.url)')
+          echo "Service URL: $URL"
+          curl -fsS "$URL/api/health" || (echo "Health check failed" && exit 1)

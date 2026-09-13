@@ -19,7 +19,6 @@ from typing import Any, Optional
 
 from .config import settings
 
-
 # ==========================================================================
 # Contact segregation helpers (domain / intent / context)
 # ==========================================================================
@@ -55,7 +54,6 @@ def classify_contact(email_address: str = "", context_text: str = "") -> dict[st
     """Produce a first-pass (domain, intent, context) segregation."""
     domain = infer_domain(email_address)
     intent = infer_intent(context_text or email_address)
-    is_free = domain in _FREE_EMAIL_DOMAINS
     return {
         "domain": domain,
         "intent": intent,
