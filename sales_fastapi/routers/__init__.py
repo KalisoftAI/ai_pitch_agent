@@ -4,6 +4,7 @@ from .email import router as email_router
 from .governance import governance_router, llm_router
 from .social import router as social_router
 from .system import router as system_router
+from .whatsapp import router as whatsapp_router
 
 __all__ = [
     "auth_router",
@@ -13,4 +14,5 @@ __all__ = [
     "llm_router",
     "social_router",
     "system_router",
+    "whatsapp_router",
 ]

@@ -125,6 +125,42 @@ class WhatsAppSendIn(BaseModel):
     message: str
 
 
+# ---------- Wechaty gateway / WhatsApp ----------
+class WhatsAppSendRequest(BaseModel):
+    to: str = Field(..., min_length=1, max_length=128)
+    text: str = Field(..., min_length=1, max_length=4096)
+
+
+class WhatsAppSendResponse(BaseModel):
+    ok: bool
+    id: str
+    to: str
+    status: str
+    provider: str = ""
+
+
+class WhatsAppInbound(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: str = ""
+    from_id: str = Field(default="", alias="from")
+    from_name: str = ""
+    room: Optional[str] = None
+    text: str = Field(default="", max_length=10_000)
+    timestamp: Optional[int] = None
+    provider: str = ""
+
+
+class WhatsAppMessageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    phone_number: str
+    message: str
+    status: str
+    created_at: datetime
+
+
 # ---------- Governance / Audit ----------
 class AuditEventOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)

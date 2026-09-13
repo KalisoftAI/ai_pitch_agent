@@ -18,6 +18,7 @@ from .routers import (
     llm_router,
     social_router,
     system_router,
+    whatsapp_router,
 )
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -61,6 +62,7 @@ app.include_router(email_router, prefix=api_prefix)
 app.include_router(social_router, prefix=api_prefix)
 app.include_router(governance_router, prefix=api_prefix)
 app.include_router(llm_router, prefix=api_prefix)
+app.include_router(whatsapp_router, prefix=api_prefix)
 
 
 @app.get("/", include_in_schema=False)

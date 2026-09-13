@@ -62,6 +62,13 @@ class Settings(BaseSettings):
     WHATSAPP_API_KEY: str = Field(default="", alias="WHATSAPP_API_KEY")
     WHATSAPP_PHONE_NUMBER_ID: str = Field(default="", alias="WHATSAPP_PHONE_NUMBER_ID")
 
+    # --- Wechaty gateway (WhatsApp/WeChat via Node service) ---
+    WHATSAPP_ENABLED: bool = Field(default=False, alias="WHATSAPP_ENABLED")
+    WECHATY_GATEWAY_URL: str = Field(default="http://localhost:8788", alias="WECHATY_GATEWAY_URL")
+    WECHATY_GATEWAY_TOKEN: str = Field(default="", alias="WECHATY_GATEWAY_TOKEN")
+    WECHATY_WEBHOOK_SECRET: str = Field(default="", alias="WECHATY_WEBHOOK_SECRET")
+    WECHATY_TIMEOUT_SECONDS: int = Field(default=15, alias="WECHATY_TIMEOUT_SECONDS")
+
     # --- LinkedIn / Reddit ---
     LINKEDIN_CLIENT_ID: str = Field(default="", alias="LINKEDIN_CLIENT_ID")
     LINKEDIN_CLIENT_SECRET: str = Field(default="", alias="LINKEDIN_CLIENT_SECRET")
@@ -145,6 +152,10 @@ class Settings(BaseSettings):
                 raise ValueError("PII_REDACTION_ENABLED must be true in production")
             if not self.AUDIT_LOG_ENABLED:
                 raise ValueError("AUDIT_LOG_ENABLED must be true in production")
+            if self.WHATSAPP_ENABLED and not self.WECHATY_GATEWAY_TOKEN:
+                raise ValueError("WECHATY_GATEWAY_TOKEN is required when WHATSAPP_ENABLED is true")
+            if self.WHATSAPP_ENABLED and not self.WECHATY_WEBHOOK_SECRET:
+                raise ValueError("WECHATY_WEBHOOK_SECRET is required when WHATSAPP_ENABLED is true")
         if self.LLM_MONTHLY_TOKEN_BUDGET < 1:
             raise ValueError("LLM_MONTHLY_TOKEN_BUDGET must be positive")
         if self.LLM_MAX_INPUT_CHARS < 1024:
