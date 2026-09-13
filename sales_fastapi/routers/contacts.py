@@ -4,12 +4,13 @@ import csv
 import io
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..config import settings
 from ..database import get_db
+from ..governance.audit import log_event
 from ..models import Contact, User
 from ..schemas import ContactCreate, ContactOut, ContactUpdate
 from ..security import get_current_user
@@ -50,6 +51,7 @@ def list_contacts(
 @router.post("", response_model=ContactOut, status_code=201)
 def create_contact(
     payload: ContactCreate,
+    request: Request,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -88,6 +90,18 @@ def create_contact(
         contact.gcs_path = path
         db.commit()
         db.refresh(contact)
+
+    log_event(
+        db,
+        action="contact.create",
+        actor_user_id=user.id,
+        resource_type="contact",
+        resource_id=str(contact.id),
+        tenant_id=user.domain,
+        ip_address=request.client.host if request.client else "",
+        detail={"source": contact.source, "intent": contact.intent},
+        commit=True,
+    )
     return contact
 
 
@@ -134,6 +148,7 @@ def get_contact(
 def update_contact(
     contact_id: int,
     payload: ContactUpdate,
+    request: Request,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -144,16 +159,29 @@ def update_contact(
     )
     if contact is None:
         raise HTTPException(status_code=404, detail="Contact not found")
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    changed = payload.model_dump(exclude_unset=True)
+    for field, value in changed.items():
         setattr(contact, field, value)
     db.commit()
     db.refresh(contact)
+    log_event(
+        db,
+        action="contact.update",
+        actor_user_id=user.id,
+        resource_type="contact",
+        resource_id=str(contact.id),
+        tenant_id=user.domain,
+        ip_address=request.client.host if request.client else "",
+        detail={"fields": sorted(changed.keys())},
+        commit=True,
+    )
     return contact
 
 
 @router.delete("/{contact_id}", status_code=204)
 def delete_contact(
     contact_id: int,
+    request: Request,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -166,6 +194,17 @@ def delete_contact(
         raise HTTPException(status_code=404, detail="Contact not found")
     db.delete(contact)
     db.commit()
+    log_event(
+        db,
+        action="contact.delete",
+        actor_user_id=user.id,
+        resource_type="contact",
+        resource_id=str(contact_id),
+        tenant_id=user.domain,
+        ip_address=request.client.host if request.client else "",
+        detail={},
+        commit=True,
+    )
 
 
 # --------------------------------------------------------------------------
@@ -234,6 +273,9 @@ def import_from_gcs(
             detail="GCS is not available (missing credentials / package)",
         )
     prefix = prefix or settings.GCS_PATH_CONTACTS
+    allowed_prefix = settings.GCS_PATH_CONTACTS.rstrip("/") + "/"
+    if prefix != settings.GCS_PATH_CONTACTS and not prefix.startswith(allowed_prefix):
+        raise HTTPException(status_code=400, detail="GCS prefix is outside the contacts namespace")
     blobs = gcs.list_contacts(prefix=prefix)
 
     imported = skipped = 0

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -29,22 +29,22 @@ class UserOut(BaseModel):
 
 # ---------- Contacts ----------
 class ContactBase(BaseModel):
-    company: str = ""
-    name: str = ""
-    email: str
-    phone: str = ""
-    domain: str = ""
-    intent: str = ""
-    context: str = ""
-    linkedin_company: str = ""
+    company: str = Field(default="", max_length=255)
+    name: str = Field(default="", max_length=255)
+    email: str = Field(..., min_length=3, max_length=320)
+    phone: str = Field(default="", max_length=64)
+    domain: str = Field(default="", max_length=255)
+    intent: str = Field(default="", max_length=64)
+    context: str = Field(default="", max_length=10_000)
+    linkedin_company: str = Field(default="", max_length=512)
     linkedin_profiles: list[str] = Field(default_factory=list)
-    address: str = ""
-    purchase_contact_name: str = ""
-    purchase_contact_role: str = ""
-    purchase_contact_email: str = ""
-    purchase_contact_phone: str = ""
+    address: str = Field(default="", max_length=2_000)
+    purchase_contact_name: str = Field(default="", max_length=255)
+    purchase_contact_role: str = Field(default="", max_length=255)
+    purchase_contact_email: str = Field(default="", max_length=320)
+    purchase_contact_phone: str = Field(default="", max_length=64)
     tags: list[str] = Field(default_factory=list)
-    notes: str = ""
+    notes: str = Field(default="", max_length=10_000)
 
 
 class ContactCreate(ContactBase):
@@ -82,12 +82,12 @@ class ContactOut(ContactBase):
 
 # ---------- Email ----------
 class EmailConnectionCreate(BaseModel):
-    email_address: str
-    imap_host: str = ""
+    email_address: str = Field(..., min_length=3, max_length=320)
+    imap_host: str = Field(default="", max_length=255)
     imap_port: int = 993
-    smtp_host: str = ""
+    smtp_host: str = Field(default="", max_length=255)
     smtp_port: int = 587
-    password: str = Field(default="", description="App password; stored encrypted")
+    password: str = Field(default="", max_length=512, description="App password; stored encrypted")
 
 
 class EmailConnectionOut(BaseModel):
@@ -103,9 +103,9 @@ class EmailConnectionOut(BaseModel):
 
 
 class SendMailIn(BaseModel):
-    to: str
-    subject: str
-    body: str
+    to: str = Field(..., min_length=3, max_length=320)
+    subject: str = Field(..., min_length=1, max_length=998)
+    body: str = Field(..., min_length=1, max_length=100_000)
 
 
 # ---------- LinkedIn / Reddit ----------
@@ -123,3 +123,36 @@ class RedditSearchIn(BaseModel):
 class WhatsAppSendIn(BaseModel):
     phone_number: str
     message: str
+
+
+# ---------- Governance / Audit ----------
+class AuditEventOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    action: str
+    resource_type: str
+    resource_id: str
+    status: str
+    created_at: datetime
+
+
+# ---------- LLM / SLM routing ----------
+class LLMRunIn(BaseModel):
+    task: str = Field(..., min_length=1, max_length=64)
+    prompt: str = Field(..., min_length=1, max_length=20_000)
+    system: str = Field(default="", max_length=10_000)
+    temperature: float = Field(default=0.2, ge=0.0, le=1.0)
+
+
+class LLMRunOut(BaseModel):
+    task: str
+    tier: str
+    provider: str
+    model: str
+    output: str
+    input_tokens: int
+    output_tokens: int
+    cost_micros: int
+    fallback_used: bool
+    guardrails: dict[str, Any]

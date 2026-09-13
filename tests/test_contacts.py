@@ -81,3 +81,11 @@ def test_contacts_are_user_scoped(client):
 
 def test_contacts_require_auth(client):
     assert client.get("/api/contacts").status_code == 401
+
+
+def test_gcs_import_cannot_escape_contacts_namespace(client, auth_headers):
+    response = client.post(
+        "/api/contacts/import/gcs?prefix=private-finance",
+        headers=auth_headers,
+    )
+    assert response.status_code == 400

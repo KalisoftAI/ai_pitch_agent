@@ -1,9 +1,10 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from ..database import get_db
+from ..governance.audit import log_event
 from ..models import User
 from ..schemas import GoogleLoginIn, TokenOut, UserOut
 from ..security import (
@@ -20,7 +21,11 @@ def _domain_of(email_address: str) -> str:
 
 
 @router.post("/google", response_model=TokenOut)
-def google_login(payload: GoogleLoginIn, db: Session = Depends(get_db)) -> TokenOut:
+def google_login(
+    payload: GoogleLoginIn,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> TokenOut:
     claims = verify_google_id_token(payload.id_token)
     email_address = claims["email"].lower()
 
@@ -40,6 +45,18 @@ def google_login(payload: GoogleLoginIn, db: Session = Depends(get_db)) -> Token
     user.last_login_at = datetime.utcnow()
     db.commit()
     db.refresh(user)
+
+    log_event(
+        db,
+        action="auth.login",
+        actor_user_id=user.id,
+        resource_type="user",
+        resource_id=str(user.id),
+        tenant_id=user.domain,
+        ip_address=request.client.host if request.client else "",
+        detail={"email": email_address, "method": "google"},
+    )
+    db.commit()
 
     token, expires_in = create_access_token(user)
     return TokenOut(access_token=token, expires_in=expires_in)

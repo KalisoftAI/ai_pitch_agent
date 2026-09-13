@@ -1,0 +1,62 @@
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - build
+      - "-f"
+      - "Dockerfile.sales"
+      - "-t"
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_SERVICE}:$SHORT_SHA"
+      - "."
+
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - push
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_SERVICE}:$SHORT_SHA"
+
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - "${_SERVICE}"
+      - "--image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_SERVICE}:$SHORT_SHA"
+      - "--project=$PROJECT_ID"
+      - "--region=${_REGION}"
+      - "--platform=managed"
+      - "--allow-unauthenticated"
+      - "--add-cloudsql-instances=${_CLOUD_SQL_INSTANCE}"
+      - "--set-secrets=SECRET_KEY=SALES_SECRET_KEY:latest,DATABASE_URL=SALES_DATABASE_URL:latest,GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest,GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest"
+      - "--set-env-vars=ENV=production,GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GCS_BUCKET_CONTACTS=${_GCS_BUCKET},GCS_PATH_CONTACTS=${_GCS_PATH},CLOUD_SQL_CONNECTION_NAME=${_CLOUD_SQL_INSTANCE},CORS_ORIGINS=${_CORS_ORIGINS},ALLOWED_HOSTS=${_ALLOWED_HOSTS},RATE_LIMIT_ENABLED=true,AUTH_DEV_MODE=false"
+      - "--no-cpu-throttling"
+      - "--min-instances=0"
+      - "--max-instances=5"
+      - "--memory=512Mi"
+      - "--cpu=1"
+      - "--timeout=300"
+
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args:
+      - run
+      - services
+      - describe
+      - "${_SERVICE}"
+      - "--project=$PROJECT_ID"
+      - "--region=${_REGION}"
+      - "--format=value(status.url)"
+
+images:
+  - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_SERVICE}:$SHORT_SHA"
+
+substitutions:
+  _REGION: "asia-south1"
+  _SERVICE: "kalisoft-sales"
+  _AR_REPOSITORY: "sales-pipeline"
+  _CLOUD_SQL_INSTANCE: "REPLACE_PROJECT:REPLACE_REGION:REPLACE_INSTANCE"
+  _CORS_ORIGINS: "https://kalisoft-sales-REPLACE_HASH.a.run.app"
+  _ALLOWED_HOSTS: "*.a.run.app"
+  _GCS_BUCKET: "kalisoftai-datahub"
+  _GCS_PATH: "all-sales-contacts-data"
+
+options:
+  logging: CLOUD_LOGGING_ONLY

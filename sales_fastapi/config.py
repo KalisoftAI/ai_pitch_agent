@@ -1,7 +1,7 @@
 import os
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = Field(default="", alias="GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET: str = Field(default="", alias="GOOGLE_CLIENT_SECRET")
     GOOGLE_ALLOWED_DOMAINS: str = Field(default="", alias="GOOGLE_ALLOWED_DOMAINS")
-    AUTH_DEV_MODE: bool = Field(default=True, alias="AUTH_DEV_MODE")
+    AUTH_DEV_MODE: bool = Field(default=False, alias="AUTH_DEV_MODE")
 
     # --- SMTP / IMAP ---
     SMTP_HOST: str = Field(default="", alias="SMTP_HOST")
@@ -74,6 +74,34 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=60, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
 
+    # --- Runtime guardrails ---
+    ALLOWED_HOSTS: str = Field(default="localhost,127.0.0.1,testserver", alias="ALLOWED_HOSTS")
+    MAX_REQUEST_BYTES: int = Field(default=1_048_576, alias="MAX_REQUEST_BYTES")
+    RATE_LIMIT_ENABLED: bool = Field(default=False, alias="RATE_LIMIT_ENABLED")
+    AUTH_RATE_LIMIT: int = Field(default=10, alias="AUTH_RATE_LIMIT")
+    API_RATE_LIMIT: int = Field(default=120, alias="API_RATE_LIMIT")
+
+    # --- Data governance ---
+    GOVERNANCE_ENABLED: bool = Field(default=True, alias="GOVERNANCE_ENABLED")
+    PII_REDACTION_ENABLED: bool = Field(default=True, alias="PII_REDACTION_ENABLED")
+    AUDIT_LOG_ENABLED: bool = Field(default=True, alias="AUDIT_LOG_ENABLED")
+    RETENTION_DAYS_AUDIT: int = Field(default=365, alias="RETENTION_DAYS_AUDIT")
+    RETENTION_DAYS_CONTACTS: int = Field(default=730, alias="RETENTION_DAYS_CONTACTS")
+
+    # --- Cost-optimised SLM routing ---
+    LLM_ENABLED: bool = Field(default=False, alias="LLM_ENABLED")
+    LLM_TIMEOUT_SECONDS: int = Field(default=60, alias="LLM_TIMEOUT_SECONDS")
+    LLM_MAX_INPUT_CHARS: int = Field(default=20_000, alias="LLM_MAX_INPUT_CHARS")
+    LLM_MAX_OUTPUT_CHARS: int = Field(default=40_000, alias="LLM_MAX_OUTPUT_CHARS")
+    LLM_MONTHLY_TOKEN_BUDGET: int = Field(default=5_000_000, alias="LLM_MONTHLY_TOKEN_BUDGET")
+    LLM_ENFORCE_BUDGET: bool = Field(default=True, alias="LLM_ENFORCE_BUDGET")
+    LLM_LOCAL_BASE_URL: str = Field(default="http://localhost:11434", alias="LLM_LOCAL_BASE_URL")
+    LLM_LOCAL_NANO_MODEL: str = Field(default="qwen2.5:0.5b", alias="LLM_LOCAL_NANO_MODEL")
+    LLM_LOCAL_MODEL: str = Field(default="qwen2.5:3b", alias="LLM_LOCAL_MODEL")
+    LLM_LOCAL_MEDIUM_MODEL: str = Field(default="llama3.1:8b", alias="LLM_LOCAL_MEDIUM_MODEL")
+    LLM_CLOUD_FLASH_MODEL: str = Field(default="gemini-2.0-flash", alias="LLM_CLOUD_FLASH_MODEL")
+    LLM_CLOUD_MODEL: str = Field(default="gemini-2.5-pro", alias="LLM_CLOUD_MODEL")
+
     # --- CORS ---
     CORS_ORIGINS: str = Field(default="http://localhost:3000,http://localhost:8000", alias="CORS_ORIGINS")
 
@@ -86,6 +114,43 @@ class Settings(BaseSettings):
         if self.REDIS_URL:
             return self.REDIS_URL
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+
+    @property
+    def allowed_host_list(self) -> list[str]:
+        return [host.strip() for host in self.ALLOWED_HOSTS.split(",") if host.strip()]
+
+    @model_validator(mode="after")
+    def validate_security_settings(self):
+        if len(self.SECRET_KEY) < 32 or self.SECRET_KEY == "change-this-secret":
+            raise ValueError("SECRET_KEY must be at least 32 characters and non-default")
+        if self.ACCESS_TOKEN_EXPIRE_MINUTES < 5 or self.ACCESS_TOKEN_EXPIRE_MINUTES > 1440:
+            raise ValueError("ACCESS_TOKEN_EXPIRE_MINUTES must be between 5 and 1440")
+        if self.MAX_REQUEST_BYTES < 16_384:
+            raise ValueError("MAX_REQUEST_BYTES must be at least 16384")
+        if self.ENV.lower() == "production":
+            if self.AUTH_DEV_MODE:
+                raise ValueError("AUTH_DEV_MODE must be false in production")
+            required = {
+                "GOOGLE_CLIENT_ID": self.GOOGLE_CLIENT_ID,
+                "GOOGLE_ALLOWED_DOMAINS": self.GOOGLE_ALLOWED_DOMAINS,
+                "GOOGLE_CLOUD_PROJECT": self.GOOGLE_CLOUD_PROJECT,
+            }
+            missing = [name for name, value in required.items() if not value.strip()]
+            if missing:
+                raise ValueError(f"Missing production security settings: {', '.join(missing)}")
+            if not self.CORS_ORIGINS.strip() or "*" in self.cors_origin_list:
+                raise ValueError("Production CORS_ORIGINS must list explicit origins")
+            if not self.allowed_host_list or "*" in self.allowed_host_list:
+                raise ValueError("Production ALLOWED_HOSTS must be restricted")
+            if not self.PII_REDACTION_ENABLED:
+                raise ValueError("PII_REDACTION_ENABLED must be true in production")
+            if not self.AUDIT_LOG_ENABLED:
+                raise ValueError("AUDIT_LOG_ENABLED must be true in production")
+        if self.LLM_MONTHLY_TOKEN_BUDGET < 1:
+            raise ValueError("LLM_MONTHLY_TOKEN_BUDGET must be positive")
+        if self.LLM_MAX_INPUT_CHARS < 1024:
+            raise ValueError("LLM_MAX_INPUT_CHARS must be at least 1024")
+        return self
 
 
 @lru_cache

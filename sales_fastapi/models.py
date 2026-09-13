@@ -127,3 +127,43 @@ class WhatsAppMessage(Base):
     status: Mapped[str] = mapped_column(String(32), default="pending")
     sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class AuditLog(Base):
+    """Append-only security/audit trail. Details are always PII-redacted."""
+
+    __tablename__ = "audit_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    actor_user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    action: Mapped[str] = mapped_column(String(128), index=True)
+    resource_type: Mapped[str] = mapped_column(String(64), default="")
+    resource_id: Mapped[str] = mapped_column(String(128), default="")
+    tenant_id: Mapped[str] = mapped_column(String(64), default="", index=True)
+    status: Mapped[str] = mapped_column(String(32), default="success", index=True)
+    ip_address: Mapped[str] = mapped_column(String(64), default="")
+    detail: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), index=True
+    )
+
+
+class ModelUsage(Base):
+    """Per-call LLM usage/cost ledger for budget and cost optimisation."""
+
+    __tablename__ = "model_usage"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    task: Mapped[str] = mapped_column(String(64), index=True)
+    tier: Mapped[str] = mapped_column(String(16), default="")
+    provider: Mapped[str] = mapped_column(String(32), default="")
+    model: Mapped[str] = mapped_column(String(128), default="")
+    input_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    output_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    cost_micros: Mapped[int] = mapped_column(Integer, default=0)
+    latency_ms: Mapped[int] = mapped_column(Integer, default=0)
+    fallback_used: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), index=True
+    )
