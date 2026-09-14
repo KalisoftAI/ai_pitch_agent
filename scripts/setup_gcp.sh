@@ -77,7 +77,7 @@ Variables:
   CORS_ORIGINS          = https://kalisoftai.in
   CORS_ORIGINS_UAT      = https://uat.kalisoftai.in
   CORS_ORIGINS_DEV      = https://dev.kalisoftai.in
-  ALLOWED_HOSTS         = *.a.run.app,kalisoftai.in
+  ALLOWED_HOSTS         = *.run.app,kalisoftai.in
   GCS_BUCKET            = kalisoftai-datahub
   GCS_PATH              = all-sales-contacts-data
   GOOGLE_ALLOWED_DOMAINS = kalisoftai.in

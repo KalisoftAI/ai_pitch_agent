@@ -32,7 +32,7 @@ gcloud builds submit --config cloudbuild.checks.yaml
 
 # Build + push + deploy to Cloud Run (Secret Manager + Cloud SQL attached)
 gcloud builds submit --config cloudbuild.fastapi.yaml \
-  --substitutions="_REGION=asia-south1,_SERVICE=kalisoft-sales,_AR_REPOSITORY=sales-pipeline,_CLOUD_SQL_INSTANCE=<PROJECT>:asia-south1:<INSTANCE>,_CORS_ORIGINS=https://kalisoft-sales-<HASH>.a.run.app,_ALLOWED_HOSTS=*.a.run.app,_GCS_BUCKET=kalisoftai-datahub,_GCS_PATH=all-sales-contacts-data"
+  --substitutions="_REGION=asia-south1,_SERVICE=kalisoft-sales,_AR_REPOSITORY=sales-pipeline,_CLOUD_SQL_INSTANCE=<PROJECT>:<DB_REGION>:<INSTANCE>,_CORS_ORIGINS=https://kalisoftai.in,_ALLOWED_HOSTS=*.run.app,_GCS_BUCKET=kalisoftai-datahub,_GCS_PATH=all-sales-contacts-data"
 ```
 
 `cloudbuild.fastapi.yaml` builds `Dockerfile.sales`, pushes to Artifact Registry
@@ -196,4 +196,24 @@ GitHub secrets/variables to configure. Then create the app secrets
 gcloud builds submit --config cloudbuild.image.yaml --project <PROJECT_ID>
 # -> asia-south1-docker.pkg.dev/<PROJECT_ID>/sales-pipeline/kalisoft-sales:latest
 ```
+
+### Current production (live)
+
+| Item | Value |
+|---|---|
+| Project | `gen-lang-client-0132243782` |
+| Region | `asia-south1` |
+| Service URL | https://kalisoft-sales-19782268668.asia-south1.run.app |
+| Image | `asia-south1-docker.pkg.dev/gen-lang-client-0132243782/sales-pipeline/kalisoft-sales:latest` |
+| Cloud SQL | `gen-lang-client-0132243782:us-central1:kalisoft-sales-data` (db `marketing-datav1`, user `kalisoft-sales-data`) |
+| Runtime/CI SA | `kalisoft-sales-run@gen-lang-client-0132243782.iam.gserviceaccount.com` |
+| WIF provider | `projects/19782268668/locations/global/workloadIdentityPools/github/providers/github-provider` |
+| App secrets | `SALES_SECRET_KEY`, `SALES_DATABASE_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |
+
+Health: `GET /api/health` → `env=production`, `database=ok`, `gcs_available=true`.
+
+> Cloud SQL is in `us-central1` while the service runs in `asia-south1`. It works
+> over the unix socket but adds latency; moving both to the same region is the
+> cheapest/fastest option when the DB can be relocated.
+
 
