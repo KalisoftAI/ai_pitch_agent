@@ -2,7 +2,7 @@ name: Docker Publish
 
 on:
   push:
-    branches: ["main", "UAT", "DEV"]
+    branches: ["main", "UAT", "DEV", "sales-gcp-migration", "feature/**"]
     tags: ["v*"]
   workflow_dispatch:
 
