@@ -244,5 +244,52 @@ user 3 ai.solutions@kalisoftai.in  source=7923 target=7923 OK
 RECONCILE: PASS
 ```
 
+---
+
+## 10. Google Sign-In setup (required for login)
+
+`GOOGLE_CLIENT_ID` is shipped as a placeholder (`your-client-id.apps.googleusercontent.com`)
+so Google Sign-In is **not configured out of the box**. The API now reports this
+honestly: `/api/config` returns an empty `google_client_id` and `/api/health`
+shows `google_signin_configured: false`, so the UI hides the button and shows a
+notice instead of failing silently.
+
+To enable it:
+
+1. **Google Cloud Console → APIs & Services → OAuth consent screen**
+   - User type: External; fill app name + support email; add scopes `openid`,
+     `email`, `profile`; add test users (or publish the app).
+2. **Credentials → Create credentials → OAuth client ID → Web application**
+3. **Authorized JavaScript origins** (required by Google Identity Services):
+   ```
+   https://kalisoft-sales-19782268668.asia-south1.run.app
+   https://kalisoftai.in
+   http://localhost:5173
+   http://localhost:8000
+   ```
+   (No redirect URI is needed for the Google Identity Services ID-token flow.)
+4. Copy the **Client ID** and update the secret:
+   ```bash
+   printf '%s' "<CLIENT_ID>.apps.googleusercontent.com" \
+     | gcloud secrets versions add GOOGLE_CLIENT_ID --data-file=- --project gen-lang-client-0132243782
+   # server-side secret only if you later add a code-exchange flow:
+   printf '%s' "<CLIENT_SECRET>" \
+     | gcloud secrets versions add GOOGLE_CLIENT_SECRET --data-file=- --project gen-lang-client-0132243782
+   ```
+5. **Create a new revision** so Cloud Run picks up `:latest`:
+   ```bash
+   gcloud run services update kalisoft-sales --region asia-south1 \
+     --update-secrets GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest,GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:latest
+   ```
+6. Verify: `/api/config` now returns the client id, and the sign-in page shows the
+   Google button.
+
+Set `GOOGLE_ALLOWED_DOMAINS` (e.g. `kalisoftai.in,kalisoftai.com`) so only your
+domain can sign in.
+
+### Temporary local/dev login
+While OAuth is being set up, an unauthenticated dev login is available when
+`AUTH_DEV_MODE=true` (type any email). Do **not** leave it enabled in production:
+
 
 

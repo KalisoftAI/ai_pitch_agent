@@ -32,7 +32,7 @@ def public_config():
     return {
         "project_name": settings.PROJECT_NAME,
         "version": settings.VERSION,
-        "google_client_id": settings.GOOGLE_CLIENT_ID,
+        "google_client_id": settings.GOOGLE_CLIENT_ID if settings.google_signin_configured else "",
         "dev_mode": settings.AUTH_DEV_MODE,
     }
 
@@ -47,7 +47,7 @@ def health(request: Request):
         "database": "ok" if request.app.state.db_ready else "degraded",
         "redis": _redis_ping(),
         "gcs_available": GCSStorage().available,
-        "google_signin_configured": bool(settings.GOOGLE_CLIENT_ID),
+        "google_signin_configured": settings.google_signin_configured,
         "dev_mode": settings.AUTH_DEV_MODE,
     }
 

@@ -126,6 +126,16 @@ class Settings(BaseSettings):
     def allowed_host_list(self) -> list[str]:
         return [host.strip() for host in self.ALLOWED_HOSTS.split(",") if host.strip()]
 
+    @property
+    def google_signin_configured(self) -> bool:
+        """True only for a real OAuth web client id (not the .env.example placeholder)."""
+        client_id = (self.GOOGLE_CLIENT_ID or "").strip()
+        if not client_id.endswith(".apps.googleusercontent.com"):
+            return False
+        if client_id.startswith("your-client-id"):
+            return False
+        return True
+
     @model_validator(mode="after")
     def validate_security_settings(self):
         if len(self.SECRET_KEY) < 32 or self.SECRET_KEY == "change-this-secret":
