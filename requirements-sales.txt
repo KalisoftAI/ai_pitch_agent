@@ -1,4 +1,4 @@
-# FastAPI sales pipeline (isolated from the legacy Django requirements.txt)
+# FastAPI sales pipeline — runtime dependencies (production image)
 fastapi>=0.115
 uvicorn[standard]>=0.30
 pydantic>=2.7
@@ -26,11 +26,3 @@ httpx>=0.27
 # --- Contact import parsing ---
 openpyxl>=3.1
 xlrd>=2.0
-
-# --- Testing / quality ---
-pytest>=8.0
-pytest-cov>=5.0
-coverage>=7.5
-ruff>=0.5
-bandit>=1.7
-pip-audit>=2.7

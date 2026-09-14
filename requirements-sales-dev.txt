@@ -1,0 +1,9 @@
+# Development, testing and CI tooling (not installed in the production image)
+-r requirements-sales.txt
+
+pytest>=8.0
+pytest-cov>=5.0
+coverage>=7.5
+ruff>=0.5
+bandit>=1.7
+pip-audit>=2.7

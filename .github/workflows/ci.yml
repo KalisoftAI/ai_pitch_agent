@@ -63,7 +63,7 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-sales.txt
       - name: Install dependencies
-        run: pip install -r requirements-sales.txt
+        run: pip install -r requirements-sales-dev.txt
       - name: Run tests with coverage
         run: pytest --cov=sales_fastapi --cov-report=term-missing --cov-report=xml --cov-fail-under=70
       - name: Upload coverage

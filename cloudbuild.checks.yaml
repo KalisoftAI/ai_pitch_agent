@@ -10,7 +10,7 @@ steps:
       - -c
       - |
         set -euo pipefail
-        pip install --quiet -r requirements-sales.txt "ruff>=0.5" "bandit>=1.7"
+        pip install --quiet -r requirements-sales-dev.txt
         ruff check sales_fastapi tests migrations
         ruff format --check sales_fastapi tests migrations
         bandit -r sales_fastapi -x sales_fastapi/static -ll
