@@ -10,14 +10,20 @@ router = APIRouter(tags=["system"])
 
 
 def _redis_ping() -> str:
-    try:
-        import redis  # type: ignore
+    """Redis is disabled for local runs.
 
-        client = redis.Redis.from_url(settings.redis_url, socket_connect_timeout=1)
-        client.ping()
-        return "ok"
-    except Exception as exc:  # noqa: BLE001
-        return f"unavailable: {exc}"
+    The connection code is intentionally commented out; re-enable it when a
+    Redis instance is available.
+    """
+    # try:
+    #     import redis  # type: ignore
+    #
+    #     client = redis.Redis.from_url(settings.redis_url, socket_connect_timeout=1)
+    #     client.ping()
+    #     return "ok"
+    # except Exception as exc:  # noqa: BLE001
+    #     return f"unavailable: {exc}"
+    return "disabled"
 
 
 @router.get("/config")
@@ -69,7 +75,13 @@ def run_cron(user=Depends(get_current_user)):
     Celery beat worker backed by Redis. This endpoint lets the frontend trigger
     a manual sweep.
     """
-    import redis  # type: ignore
+    # Redis queue is disabled for local runs. Uncomment when Redis is available:
+    # import redis  # type: ignore
+    #
+    # client = redis.Redis.from_url(settings.redis_url, socket_connect_timeout=1)
+    # for task in tasks:
+    #     client.lpush("sales:cron", task)
+    # queued = True
 
     tasks = [
         "sync_gcs_contacts",
@@ -79,11 +91,4 @@ def run_cron(user=Depends(get_current_user)):
         "whatsapp_reminders",
     ]
     queued = False
-    try:
-        client = redis.Redis.from_url(settings.redis_url, socket_connect_timeout=1)
-        for task in tasks:
-            client.lpush("sales:cron", task)
-        queued = True
-    except Exception:  # noqa: BLE001
-        queued = False
     return {"tasks": tasks, "queued_to_redis": queued}

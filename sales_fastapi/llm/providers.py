@@ -184,3 +184,13 @@ class GeminiProvider:
             output_tokens=int(usage.get("candidatesTokenCount") or estimate_tokens(text)),
             latency_ms=int((monotonic() - started) * 1000),
         )
+
+
+class GemmaProvider(GeminiProvider):
+    """Gemma model via the same Generative Language API surface."""
+
+    name = "gemma"
+
+    def __init__(self, api_key: str | None = None, model: str | None = None):
+        super().__init__(api_key=api_key)
+        self.default_model = model or settings.LLM_GEMMA_MODEL

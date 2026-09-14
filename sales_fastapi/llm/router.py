@@ -25,6 +25,7 @@ from .guardrails import GuardrailReport, scan_prompt, validate_output
 from .providers import (
     EchoProvider,
     GeminiProvider,
+    GemmaProvider,
     LLMProvider,
     LLMResult,
     OllamaProvider,
@@ -36,6 +37,7 @@ from .tasks import TaskSpec, Tier, get_task
 COST_MICROS_PER_1K: dict[str, tuple[int, int]] = {
     "ollama": (0, 0),
     "echo": (0, 0),
+    "gemma-4-27b-it": (100, 400),
     "gemini-2.0-flash": (100, 400),
     "gemini-2.0-flash-lite": (50, 200),
     "gemini-2.5-pro": (1250, 5000),
@@ -89,6 +91,8 @@ class RouteResult:
 
 def estimate_cost_micros(model: str, input_tokens: int, output_tokens: int) -> int:
     input_rate, output_rate = COST_MICROS_PER_1K.get(model, (0, 0))
+    if model.startswith("gemma"):
+        input_rate, output_rate = COST_MICROS_PER_1K["gemma-4-27b-it"]
     return (input_tokens * input_rate + output_tokens * output_rate) // 1000
 
 
@@ -104,6 +108,7 @@ class ModelRouter:
         self.providers = providers or {
             "local": OllamaProvider(),
             "cloud": GeminiProvider(),
+            "gemma": GemmaProvider(),
             "echo": EchoProvider(),
         }
         self.usage_sink = usage_sink
@@ -137,9 +142,12 @@ class ModelRouter:
         local_medium = ("local", s.LLM_LOCAL_MEDIUM_MODEL)
         cloud_flash = ("cloud", s.LLM_CLOUD_FLASH_MODEL)
         cloud_large = ("cloud", s.LLM_CLOUD_MODEL)
+        gemma = ("gemma", s.LLM_GEMMA_MODEL)
         echo = ("echo", "echo")
 
-        if spec.tier == Tier.NANO:
+        if spec.name == "generate_outreach_message":
+            chain = [gemma, local_medium, cloud_flash]
+        elif spec.tier == Tier.NANO:
             chain = [local_nano, local_small, cloud_flash]
         elif spec.tier == Tier.SMALL:
             chain = [local_small, cloud_flash, local_medium]

@@ -107,6 +107,7 @@ class Settings(BaseSettings):
     LLM_LOCAL_MEDIUM_MODEL: str = Field(default="llama3.1:8b", alias="LLM_LOCAL_MEDIUM_MODEL")
     LLM_CLOUD_FLASH_MODEL: str = Field(default="gemini-2.0-flash", alias="LLM_CLOUD_FLASH_MODEL")
     LLM_CLOUD_MODEL: str = Field(default="gemini-2.5-pro", alias="LLM_CLOUD_MODEL")
+    LLM_GEMMA_MODEL: str = Field(default="gemma-4-27b-it", alias="LLM_GEMMA_MODEL")
 
     # --- CORS ---
     CORS_ORIGINS: str = Field(default="http://localhost:3000,http://localhost:8000", alias="CORS_ORIGINS")

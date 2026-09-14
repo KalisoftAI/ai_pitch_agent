@@ -167,3 +167,65 @@ class ModelUsage(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), index=True
     )
+
+
+class MessageTemplate(Base):
+    """Reusable outreach template for a channel and sales-funnel strategy."""
+
+    __tablename__ = "message_templates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    name: Mapped[str] = mapped_column(String(128), index=True)
+    channel: Mapped[str] = mapped_column(String(32), index=True, default="email")
+    strategy: Mapped[str] = mapped_column(String(32), index=True, default="cold_outreach")
+    funnel_stage: Mapped[str] = mapped_column(String(32), default="awareness")
+    subject: Mapped[str] = mapped_column(String(255), default="")
+    body: Mapped[str] = mapped_column(Text, default="")
+    variables: Mapped[list] = mapped_column(JSON, default=list)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class Campaign(Base):
+    """A bulk outreach run built from a template and a contact selection."""
+
+    __tablename__ = "campaigns"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    name: Mapped[str] = mapped_column(String(160), default="")
+    channel: Mapped[str] = mapped_column(String(32), index=True, default="email")
+    strategy: Mapped[str] = mapped_column(String(32), default="cold_outreach")
+    template_id: Mapped[int] = mapped_column(Integer, default=0)
+    ai_model: Mapped[str] = mapped_column(String(64), default="")
+    status: Mapped[str] = mapped_column(String(32), index=True, default="pending_review")
+    total: Mapped[int] = mapped_column(Integer, default=0)
+    sent_count: Mapped[int] = mapped_column(Integer, default=0)
+    failed_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class CampaignMessage(Base):
+    """A single personalised message within a campaign (human-reviewable)."""
+
+    __tablename__ = "campaign_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    campaign_id: Mapped[int] = mapped_column(Integer, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    contact_id: Mapped[int] = mapped_column(Integer, default=0)
+    to_address: Mapped[str] = mapped_column(String(320), default="")
+    rendered_subject: Mapped[str] = mapped_column(String(255), default="")
+    rendered_body: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(32), index=True, default="pending_review")
+    error: Mapped[str] = mapped_column(String(512), default="")
+    provider_id: Mapped[str] = mapped_column(String(128), default="")
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

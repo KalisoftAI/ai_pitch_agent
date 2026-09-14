@@ -12,12 +12,14 @@ from .database import init_db
 from .guardrails import RequestGuardrailsMiddleware
 from .routers import (
     auth_router,
+    campaigns_router,
     contacts_router,
     email_router,
     governance_router,
     llm_router,
     social_router,
     system_router,
+    templates_router,
     whatsapp_router,
 )
 
@@ -63,6 +65,8 @@ app.include_router(social_router, prefix=api_prefix)
 app.include_router(governance_router, prefix=api_prefix)
 app.include_router(llm_router, prefix=api_prefix)
 app.include_router(whatsapp_router, prefix=api_prefix)
+app.include_router(templates_router, prefix=api_prefix)
+app.include_router(campaigns_router, prefix=api_prefix)
 
 
 @app.get("/", include_in_schema=False)

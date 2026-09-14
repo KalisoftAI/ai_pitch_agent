@@ -1,7 +1,14 @@
 """LLM layer: task registry, guardrails, providers, cost-optimised router."""
 
 from .guardrails import GuardrailReport, scan_prompt, validate_output
-from .providers import EchoProvider, GeminiProvider, LLMResult, OllamaProvider, estimate_tokens
+from .providers import (
+    EchoProvider,
+    GeminiProvider,
+    GemmaProvider,
+    LLMResult,
+    OllamaProvider,
+    estimate_tokens,
+)
 from .router import (
     AllProvidersFailed,
     BudgetExceeded,
@@ -18,6 +25,7 @@ __all__ = [
     "BudgetExceeded",
     "EchoProvider",
     "GeminiProvider",
+    "GemmaProvider",
     "GuardrailReport",
     "LLMError",
     "LLMResult",

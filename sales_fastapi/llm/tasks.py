@@ -85,6 +85,15 @@ TASKS: dict[str, TaskSpec] = {
         description="Synthesize multi-source research into findings",
         max_output_tokens=1500,
     ),
+    "generate_outreach_message": TaskSpec(
+        name="generate_outreach_message",
+        tier=Tier.SMALL,
+        description="Personalise an outreach message for one contact",
+        max_output_tokens=800,
+        allow_external=True,
+        allow_pii=True,
+        tags=("outreach", "gemma"),
+    ),
 }
 
 
