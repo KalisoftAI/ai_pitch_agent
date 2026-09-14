@@ -480,6 +480,10 @@ it is not in the current production revision.
 - Secret rotation + audit export.
 
 ### 13.6 Platform & observability
+- **Google OAuth client**: create the Web client (origins: Cloud Run URL +
+  `kalisoftai.in` + localhost), set the real `GOOGLE_CLIENT_ID`, then set
+  `AUTH_DEV_MODE=false` to retire the restricted `ai.solutions@kalisoftai.in`
+  dev-login (see `docs/DEPLOYMENT.md` §10).
 - Cloud Logging/Trace with `request_id`, Cloud Monitoring uptime checks.
 - **Budget alerts** and SLOs; per-tenant error-rate dashboard.
 - Branch protection + required checks on `main`; manual approval only for schema

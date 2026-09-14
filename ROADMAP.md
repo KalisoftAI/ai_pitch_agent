@@ -337,4 +337,6 @@ Upload the repo docs + this `ROADMAP.md`, then run these prompts/scenarios:
 | 2026-09-14 | Templates, bulk campaigns (human-in-the-loop), Gemma routing |
 | 2026-09-14 | Docker image + GitHub Actions CI/CD; Artifact Registry with cleanup policy |
 | 2026-09-14 | **Production Cloud Run deploy** + SQLite→Cloud SQL migration (reconcile PASS) |
+| 2026-09-14 | Sign-in page with plans (Free 2 AI users → Scale) + WhatsApp cost transparency (Meta India rate card) |
+| 2026-09-14 | Auth: Google placeholder detected; restricted production login for `ai.solutions@kalisoftai.in` (403 for others) |
 | _next_ | Gemma personalisation, region co-location, Sarvam voice, Wechaty live, BigQuery, multi-tenant RLS |

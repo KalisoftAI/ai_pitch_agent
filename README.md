@@ -840,6 +840,8 @@ Deploy secrets (Secret Manager): `SALES_SECRET_KEY`, `SALES_DATABASE_URL`,
 ## 🚀 Production & Outreach (live)
 
 - **Production:** https://kalisoft-sales-19782268668.asia-south1.run.app (Cloud Run, `env=production`, Cloud SQL attached, scale-to-zero).
+- **Sign-in:** official email `ai.solutions@kalisoftai.in` (restricted dev-login allowlist until Google OAuth is configured).
+- **Sign-in page also shows pricing** (Free 2 AI users → Starter ₹499 → Growth ₹1,499 → Scale ₹3,999/mo) and a transparent **WhatsApp cost-per-message** table/calculator sourced from Meta's official India rate card.
 - **Contacts:** 7,924 records migrated to Cloud SQL (reconcile PASS); upload CSV/Excel/VCF/JSON or sync a GCS bucket/prefix per user.
 - **Templates:** 12 Kalisoft defaults across email / WhatsApp / LinkedIn / WeChat and 6 funnel strategies.
 - **Bulk campaigns:** create → human review → approve → send (SMTP / Wechaty gateway / LinkedIn queue) with per-message status and audit trail.

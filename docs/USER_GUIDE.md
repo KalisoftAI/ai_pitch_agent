@@ -41,10 +41,21 @@ python run.py
 
 ## 2. Sign in
 
-- **Dev mode** (`AUTH_DEV_MODE=true`): type an email on the login page and press
-  *Enter*. Any email works; first login creates the user.
+- **Production** (https://kalisoft-sales-19782268668.asia-south1.run.app): the
+  dev field is prefilled with the official email **`ai.solutions@kalisoftai.in`** —
+  click **Enter**. Only this allow-listed email is accepted (`AUTH_DEV_MODE=true` +
+  `AUTH_DEV_ALLOWED_EMAILS`); any other email gets **403**.
+- **Google Sign-In** appears once a real `GOOGLE_CLIENT_ID` is configured; until
+  then the page shows "Google Sign-In is not configured".
+- **Local dev** (`AUTH_DEV_MODE=true`): type any email and press *Enter*; the first
+  login creates the user.
 - **Admin user:** `ai.solutions@kalisoftai.in` (name: Kalisoft).
-- **Google Sign-In** is used when `GOOGLE_CLIENT_ID` is configured.
+
+### Plans shown on the sign-in page
+The page also shows transparent pricing: **Free** (2 AI users, ₹0), Starter ₹499,
+Growth ₹1,499, Scale ₹3,999 per month (INR, excl. 18% GST; annual = 2 months free),
+plus a **WhatsApp cost-per-message** table and calculator sourced from Meta's
+official India rate card.
 
 ---
 
