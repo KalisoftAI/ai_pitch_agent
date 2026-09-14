@@ -148,3 +148,52 @@ The image excludes `.env`, tests, data and markdown via `.dockerignore`/`.docker
 | Cloud Run can't reach DB | attach Cloud SQL instance + grant the runtime SA `cloudsql.client`; check `DATABASE_URL` |
 | Mail test fails | store the Gmail **app password**; SMTP 587 STARTTLS, IMAP 993 SSL |
 | Health `redis: disabled` | expected — Redis is commented out locally |
+
+---
+
+## 8. Cost-effective pipeline & branch strategy
+
+**Branches deploy directly — no manual prod gate.**
+
+| Branch | GitHub environment | Cloud Run service | `ENV` | max instances |
+|---|---|---|---|---|
+| `main` | production | `kalisoft-sales` | `production` | 3 |
+| `UAT` | staging | `kalisoft-sales-uat` | `staging` | 2 |
+| `DEV` | development | `kalisoft-sales-dev` | `development` | 1 |
+| `feature/**` | — | CI + GHCR image only | — | — |
+
+Flow: **PR** → CI (ruff/bandit/gitleaks/tests/migrations/pip-audit) → merge →
+**CD builds in GitHub Actions**, pushes one image to Artifact Registry, deploys to
+Cloud Run, smoke-tests `/api/health`.
+
+### Cost controls
+
+- Cloud Run **scales to zero** (`--min-instances=0`) with `--cpu-throttling`
+  (CPU billed only during requests) and `--concurrency=80` (fewer instances).
+- Image built in **GitHub Actions**, not Cloud Build, to avoid per-build charges.
+- **Artifact Registry cleanup**: keep 5 versions, delete anything older than 14 days
+  (`deploy/artifact-cleanup-policy.json`).
+- Small footprint: `--cpu=1 --memory=512Mi`, `--timeout=300`.
+- Local/dev uses **SQLite**; only prod attaches **Cloud SQL**.
+- Redis is disabled locally; enable a serverless tier only when needed.
+- Model routing prefers **local SLMs** first; cloud models are fallback only.
+
+### One-time bootstrap
+
+```bash
+./scripts/setup_gcp.sh <PROJECT_ID> KalisoftAI/ai_pitch_agent asia-south1
+```
+
+Creates the Artifact Registry repo + cleanup policy, the CI/CD service account,
+IAM roles, the GitHub Workload Identity Federation pool/provider, and prints the
+GitHub secrets/variables to configure. Then create the app secrets
+(`SALES_SECRET_KEY`, `SALES_DATABASE_URL`, `GOOGLE_CLIENT_ID`,
+`GOOGLE_CLIENT_SECRET`, `GEMINI_API_KEY`) as shown at the end of the script.
+
+### Manual image build (already verified)
+
+```bash
+gcloud builds submit --config cloudbuild.image.yaml --project <PROJECT_ID>
+# -> asia-south1-docker.pkg.dev/<PROJECT_ID>/sales-pipeline/kalisoft-sales:latest
+```
+
