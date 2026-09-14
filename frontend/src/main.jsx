@@ -55,7 +55,7 @@ function App() {
   }, [notice]);
 
   if (!config || (readToken() && !user)) return <LoadingScreen />;
-  if (!user) return <Login config={config} onLogin={setUser} onNotice={setNotice} />;
+  if (!user) return <SignInPage config={config} onLogin={setUser} onNotice={setNotice} />;
 
   const logout = () => { sessionStorage.removeItem("sales_token"); setUser(null); };
   return (
@@ -268,6 +268,123 @@ function Outreach({ onNotice }) {
         </div>
       </section>
     </div>
+  );
+}
+
+const PLANS = [
+  { name: "Free", price: 0, period: "forever", tagline: "Start with 2 AI users", features: ["2 AI users", "250 contacts", "50 AI credits / month", "Email + WhatsApp templates", "CSV / Excel / GCS import"], cta: "Create free account" },
+  { name: "Starter", price: 499, period: "/ month", tagline: "Small tier-2 teams", features: ["5 users", "5,000 contacts", "1,000 AI credits / month", "Automated follow-ups", "1 WhatsApp number"], cta: "Choose Starter" },
+  { name: "Growth", price: 1499, period: "/ month", tagline: "Most popular", popular: true, features: ["15 users", "50,000 contacts", "10,000 AI credits / month", "Sales funnels + A/B templates", "3 WhatsApp numbers", "Priority support"], cta: "Choose Growth" },
+  { name: "Scale", price: 3999, period: "/ month", tagline: "High volume", features: ["Unlimited users", "Unlimited contacts", "50,000 AI credits / month", "SSO + audit export", "10 WhatsApp numbers"], cta: "Choose Scale" },
+];
+
+const WHATSAPP_RATES = [
+  { category: "Marketing", rate: 0.8631, note: "Promotions, offers, re-engagement" },
+  { category: "Utility", rate: 0.115, note: "Order / delivery / payment updates" },
+  { category: "Authentication", rate: 0.115, note: "OTP / login verification (domestic)" },
+  { category: "Authentication (international)", rate: 2.3, note: "OTP to non-India numbers" },
+  { category: "Service", rate: 0, note: "Replies inside the 24h window — free" },
+];
+
+const PLATFORM_FEE_PER_MESSAGE = 0.05;
+const inr = (value) => "₹" + Number(value).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function SignInPage({ config, onLogin, onNotice }) {
+  return (
+    <div className="signin-shell">
+      <Login config={config} onLogin={onLogin} onNotice={onNotice} />
+      <PricingSection />
+    </div>
+  );
+}
+
+function PricingSection() {
+  const [annual, setAnnual] = useState(false);
+  const displayPrice = (plan) => (plan.price === 0 ? "₹0" : inr(annual ? plan.price * 10 : plan.price).replace(".00", ""));
+  const displayPeriod = (plan) => (plan.price === 0 ? plan.period : annual ? "/ year" : plan.period);
+  return (
+    <section className="pricing" aria-label="Plans and pricing">
+      <div className="pricing-head">
+        <div className="section-kicker">PLANS &amp; PRICING</div>
+        <h2>Built for tier-2 Indian businesses</h2>
+        <p className="muted">Nashik · Ahmedabad · Indore · Coimbatore · Nagpur · Ahmednagar. Prices in INR, exclusive of 18% GST. Annual billing gives 2 months free.</p>
+        <div className="billing-toggle" role="group" aria-label="Billing period">
+          <button className={!annual ? "active" : ""} onClick={() => setAnnual(false)}>Monthly</button>
+          <button className={annual ? "active" : ""} onClick={() => setAnnual(true)}>Annual (2 months free)</button>
+        </div>
+      </div>
+      <div className="plan-grid">
+        {PLANS.map((plan) => (
+          <article key={plan.name} className={`plan-card ${plan.popular ? "popular" : ""}`}>
+            {plan.popular && <span className="plan-badge">Most popular</span>}
+            <h3>{plan.name}</h3>
+            <p className="muted">{plan.tagline}</p>
+            <div className="plan-price"><b>{displayPrice(plan)}</b><span>{displayPeriod(plan)}</span></div>
+            <ul>{plan.features.map((feature) => <li key={feature}><Check size={14} />{feature}</li>)}</ul>
+            <button className={plan.popular ? "primary-button" : "secondary-button"}>{plan.cta}</button>
+          </article>
+        ))}
+      </div>
+      <p className="muted plan-note">WhatsApp usage is billed at Meta's published rate (pass-through) plus a {inr(PLATFORM_FEE_PER_MESSAGE)} / message platform fee. Email is included. AI credits cover Gemma-powered personalisation.</p>
+      <WhatsAppCosts />
+    </section>
+  );
+}
+
+function WhatsAppCosts() {
+  const [volume, setVolume] = useState(1000);
+  const marketingRate = WHATSAPP_RATES[0].rate;
+  const meta = marketingRate * volume;
+  const gst = meta * 0.18;
+  const fee = PLATFORM_FEE_PER_MESSAGE * volume;
+  const total = meta + gst + fee;
+  return (
+    <section className="wa-costs" aria-label="WhatsApp cost transparency">
+      <div className="section-kicker">FUTURE SCOPE · COST TRANSPARENCY</div>
+      <h3>What one WhatsApp message really costs</h3>
+      <p className="muted">
+        Meta charges <b>per delivered template message</b> (not per conversation) and the price is set by the
+        recipient's country. Official India INR rate card, effective 1 January 2026. Source:{" "}
+        <a href="https://developers.facebook.com/docs/whatsapp/pricing" target="_blank" rel="noreferrer">developers.facebook.com/docs/whatsapp/pricing</a>.
+      </p>
+      <table className="wa-table">
+        <caption>Meta India per-message rates (INR), exclusive of 18% GST</caption>
+        <thead><tr><th>Category</th><th>Meta rate / message</th><th>When it applies</th></tr></thead>
+        <tbody>
+          {WHATSAPP_RATES.map((row) => (
+            <tr key={row.category}>
+              <td>{row.category}</td>
+              <td>{row.rate === 0 ? "Free" : "₹" + row.rate.toFixed(4)}</td>
+              <td>{row.note}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="wa-calc">
+        <label htmlFor="wa-volume">Marketing messages / month
+          <input id="wa-volume" type="number" min="1" max="1000000" value={volume} onChange={(event) => setVolume(Math.max(1, Number(event.target.value) || 1))} />
+        </label>
+        <ul>
+          <li><span>Meta marketing charge ({volume.toLocaleString("en-IN")} × ₹{marketingRate.toFixed(4)})</span><b>{inr(meta)}</b></li>
+          <li><span>18% GST</span><b>{inr(gst)}</b></li>
+          <li><span>Kalisoft platform fee ({inr(PLATFORM_FEE_PER_MESSAGE)}/message)</span><b>{inr(fee)}</b></li>
+          <li className="wa-total"><span>Total you pay</span><b>{inr(total)}</b></li>
+          <li className="wa-per"><span>All-in per message</span><b>{inr(total / volume)}</b></li>
+        </ul>
+      </div>
+      <table className="wa-table">
+        <caption>Channel cost per message (transparency)</caption>
+        <thead><tr><th>Channel</th><th>Per message</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>WhatsApp — marketing</td><td>₹0.8631 + GST</td><td>Meta pass-through</td></tr>
+          <tr><td>WhatsApp — utility / auth</td><td>₹0.1150 + GST</td><td>Utility free inside the 24h window</td></tr>
+          <tr><td>Email (SMTP)</td><td>Included</td><td>Your mailbox, no per-message fee</td></tr>
+          <tr><td>WeChat / WhatsApp (Wechaty)</td><td>Infra only</td><td>Self-hosted gateway</td></tr>
+          <tr><td>LinkedIn</td><td>Manual</td><td>Queued for human action</td></tr>
+        </tbody>
+      </table>
+      <p className="muted">Rates are Meta's published India rate card and may change quarterly; verify before budgeting. Volume tiers discount utility / authentication by up to 30% at scale.</p>
+    </section>
   );
 }
 
