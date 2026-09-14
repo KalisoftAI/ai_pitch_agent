@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str = Field(default="", alias="GOOGLE_CLIENT_SECRET")
     GOOGLE_ALLOWED_DOMAINS: str = Field(default="", alias="GOOGLE_ALLOWED_DOMAINS")
     AUTH_DEV_MODE: bool = Field(default=False, alias="AUTH_DEV_MODE")
+    # When dev mode is enabled, restrict it to these emails (comma-separated).
+    AUTH_DEV_ALLOWED_EMAILS: str = Field(default="", alias="AUTH_DEV_ALLOWED_EMAILS")
 
     # --- SMTP / IMAP ---
     SMTP_HOST: str = Field(default="", alias="SMTP_HOST")
@@ -136,6 +138,10 @@ class Settings(BaseSettings):
             return False
         return True
 
+    @property
+    def auth_dev_allowed_list(self) -> list[str]:
+        return [email.strip().lower() for email in self.AUTH_DEV_ALLOWED_EMAILS.split(",") if email.strip()]
+
     @model_validator(mode="after")
     def validate_security_settings(self):
         if len(self.SECRET_KEY) < 32 or self.SECRET_KEY == "change-this-secret":
@@ -145,8 +151,11 @@ class Settings(BaseSettings):
         if self.MAX_REQUEST_BYTES < 16_384:
             raise ValueError("MAX_REQUEST_BYTES must be at least 16384")
         if self.ENV.lower() == "production":
-            if self.AUTH_DEV_MODE:
-                raise ValueError("AUTH_DEV_MODE must be false in production")
+            if self.AUTH_DEV_MODE and not self.auth_dev_allowed_list:
+                raise ValueError(
+                    "AUTH_DEV_MODE must be false in production unless "
+                    "AUTH_DEV_ALLOWED_EMAILS restricts it to specific emails"
+                )
             required = {
                 "GOOGLE_CLIENT_ID": self.GOOGLE_CLIENT_ID,
                 "GOOGLE_ALLOWED_DOMAINS": self.GOOGLE_ALLOWED_DOMAINS,

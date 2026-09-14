@@ -94,7 +94,7 @@ async function requestPublicConfig() { const response = await fetch(`${API}/conf
 function LoadingScreen() { return <div className="loading-screen"><div className="brand-mark"><Sparkles size={18} /></div><span>Preparing your workspace...</span></div>; }
 
 function Login({ config, onLogin, onNotice }) {
-  const [email, setEmail] = useState("owner@kalisoftai.com");
+  const [email, setEmail] = useState("ai.solutions@kalisoftai.in");
   const [busy, setBusy] = useState(false);
   const login = async (idToken) => {
     setBusy(true);

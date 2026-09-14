@@ -23,3 +23,15 @@ def test_me_requires_token(client):
 def test_me_rejects_bad_token(client):
     resp = client.get("/api/auth/me", headers={"Authorization": "Bearer not-a-jwt"})
     assert resp.status_code == 401
+
+
+def test_dev_login_restricted_to_allowlist(client, monkeypatch):
+    from sales_fastapi.config import settings
+
+    monkeypatch.setattr(settings, "AUTH_DEV_ALLOWED_EMAILS", "ai.solutions@kalisoftai.in")
+
+    allowed = client.post("/api/auth/google", json={"id_token": "dev:ai.solutions@kalisoftai.in"})
+    assert allowed.status_code == 200, allowed.text
+
+    blocked = client.post("/api/auth/google", json={"id_token": "dev:someone@else.com"})
+    assert blocked.status_code == 403

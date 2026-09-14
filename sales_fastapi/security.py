@@ -99,6 +99,12 @@ def verify_google_id_token(token: str) -> dict:
         email = token[4:].strip().lower()
         if not email:
             raise HTTPException(status_code=400, detail="dev token needs an email")
+        allowed = settings.auth_dev_allowed_list
+        if allowed and email not in allowed:
+            raise HTTPException(
+                status_code=403,
+                detail="dev sign-in is restricted to approved emails",
+            )
         return {
             "sub": f"dev-{email}",
             "email": email,

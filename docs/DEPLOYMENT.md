@@ -288,8 +288,21 @@ Set `GOOGLE_ALLOWED_DOMAINS` (e.g. `kalisoftai.in,kalisoftai.com`) so only your
 domain can sign in.
 
 ### Temporary local/dev login
-While OAuth is being set up, an unauthenticated dev login is available when
-`AUTH_DEV_MODE=true` (type any email). Do **not** leave it enabled in production:
+While OAuth is being set up, a dev login is available when `AUTH_DEV_MODE=true`
+(type any email). To use it in production safely, restrict it to an allow-list:
+
+```
+AUTH_DEV_MODE=true
+AUTH_DEV_ALLOWED_EMAILS=ai.solutions@kalisoftai.in
+```
+
+The production config validator now allows `AUTH_DEV_MODE=true` **only** when
+`AUTH_DEV_ALLOWED_EMAILS` is set; emails outside the list get HTTP 403.
+
+**Current production state:** `AUTH_DEV_MODE=true` with
+`AUTH_DEV_ALLOWED_EMAILS=ai.solutions@kalisoftai.in`, so only the official
+`ai.solutions@kalisoftai.in` can sign in. Switch to real Google OAuth (above) and
+set `AUTH_DEV_MODE=false` to retire this.
 
 
 
