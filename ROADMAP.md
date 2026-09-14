@@ -6,8 +6,8 @@ prepares **WhatsApp → Reddit/LinkedIn** outreach, and is secured with **Google
 **Guardrails**, **Data Governance** and a **cost-optimised small-language-model router**.
 Runs on **Cloud Run**, backed by **Postgres** (local SQLite → Cloud SQL) and **Redis**.
 
-> Status: security/governance/SLM phases implemented — **57 backend tests green**, coverage 74%,
-> `ruff` clean, `bandit -ll` clean, `alembic check` no drift.
+> Status: security/governance/SLM/outreach phases implemented and **live in production** —
+> 71 backend tests green, coverage 74%, `ruff` clean, `bandit -ll` clean, `alembic check` no drift.
 > Full exhaustive reference: [`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md).
 
 ---
@@ -333,4 +333,8 @@ Upload the repo docs + this `ROADMAP.md`, then run these prompts/scenarios:
 | 2026-09-13 | Cost-optimised SLM router + `model_usage` cost ledger |
 | 2026-09-13 | Alembic migrations (SQLite/Cloud SQL), 57 tests, CI/CD gates |
 | 2026-09-13 | Docs: `docs/IMPLEMENTATION_ROADMAP.md`, README + ROADMAP detail |
-| _next_ | Sarvam voice, Wechaty WhatsApp, Agent-Reach, BigQuery, multi-tenant RLS |
+| 2026-09-14 | Wechaty gateway (mock + live) + FastAPI WhatsApp/WeChat integration |
+| 2026-09-14 | Templates, bulk campaigns (human-in-the-loop), Gemma routing |
+| 2026-09-14 | Docker image + GitHub Actions CI/CD; Artifact Registry with cleanup policy |
+| 2026-09-14 | **Production Cloud Run deploy** + SQLite→Cloud SQL migration (reconcile PASS) |
+| _next_ | Gemma personalisation, region co-location, Sarvam voice, Wechaty live, BigQuery, multi-tenant RLS |

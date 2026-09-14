@@ -834,3 +834,18 @@ Deploy secrets (Secret Manager): `SALES_SECRET_KEY`, `SALES_DATABASE_URL`,
 | HTTP 429 in tests | disable `RATE_LIMIT_ENABLED` |
 | HTTP 400 untrusted host | add host to `ALLOWED_HOSTS` |
 | `/api/governance/gcp` not ok | `gcloud auth application-default login` or fix service account |
+
+---
+
+## 🚀 Production & Outreach (live)
+
+- **Production:** https://kalisoft-sales-19782268668.asia-south1.run.app (Cloud Run, `env=production`, Cloud SQL attached, scale-to-zero).
+- **Contacts:** 7,924 records migrated to Cloud SQL (reconcile PASS); upload CSV/Excel/VCF/JSON or sync a GCS bucket/prefix per user.
+- **Templates:** 12 Kalisoft defaults across email / WhatsApp / LinkedIn / WeChat and 6 funnel strategies.
+- **Bulk campaigns:** create → human review → approve → send (SMTP / Wechaty gateway / LinkedIn queue) with per-message status and audit trail.
+- **Wechaty gateway:** mock mode for tests, live mode for real WhatsApp/WeChat.
+- **Gemma:** routed but disabled until an API key is supplied (see future scope).
+- **CI/CD:** `main`→production, `UAT`→staging, `DEV`→development; build in GitHub Actions → Artifact Registry → Cloud Run.
+
+See [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md), [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+and [`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md) §13 (future scope).

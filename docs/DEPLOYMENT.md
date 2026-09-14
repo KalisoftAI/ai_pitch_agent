@@ -216,4 +216,33 @@ Health: `GET /api/health` → `env=production`, `database=ok`, `gcs_available=tr
 > over the unix socket but adds latency; moving both to the same region is the
 > cheapest/fastest option when the DB can be relocated.
 
+---
+
+## 9. Data migration (SQLite → Cloud SQL)
+
+The app writes to local SQLite in dev and Cloud SQL in prod. Use the connector-based
+migration (ADC, no proxy binary, no public IP):
+
+```bash
+# overview only
+python scripts/migrate_sqlite_to_cloudsql.py --instance <PROJECT>:<DB_REGION>:<INSTANCE> --dry-run
+
+# copy + reconcile
+python scripts/migrate_sqlite_to_cloudsql.py --instance gen-lang-client-0132243782:us-central1:kalisoft-sales-data
+```
+
+It ensures the schema exists, bulk-inserts users, contacts, templates, campaigns,
+messages, audit logs (idempotent `ON CONFLICT DO NOTHING`), advances Postgres
+sequences, then prints a per-table and per-user reconcile (source vs target).
+
+Latest run:
+
+```
+users 3/3 · contacts 7924/7924 · message_templates 12/12
+campaigns 1/1 · campaign_messages 5/5 · audit_logs 11/11
+user 3 ai.solutions@kalisoftai.in  source=7923 target=7923 OK
+RECONCILE: PASS
+```
+
+
 

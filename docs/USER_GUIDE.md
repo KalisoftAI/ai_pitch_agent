@@ -7,6 +7,7 @@ with governance/audit and human-in-the-loop review.
 - **Frontend (dev):** http://localhost:5173/static/
 - **API + docs:** http://localhost:8000/ · http://localhost:8000/docs
 - **Wechaty gateway:** http://localhost:8788/health
+- **Production:** https://kalisoft-sales-19782268668.asia-south1.run.app
 
 ---
 

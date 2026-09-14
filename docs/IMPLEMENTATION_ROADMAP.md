@@ -440,10 +440,49 @@ Health endpoints: `/api/health` (liveness/readiness summary),
 
 ---
 
-## 13. Backlog (documented feature branches)
+## 13. Future scope
 
-- `feature/sarvam-voice` — SarvamAI TTS/STT voice notes.
-- `feature/wechaty-whatsapp` — Wechaty WhatsApp channel.
-- `feature/agent-reach` — internet read/search for lead discovery.
-- BigQuery event spine (`analytics.*`) after transactional Cloud SQL writes are stable.
-- Multi-tenant `tenant_id` rollout + PostgreSQL row-level security.
+Everything below is intentionally deferred. Each item lists what it needs and why
+it is not in the current production revision.
+
+### 13.1 Gemma personalisation (next phase)
+- Add `GEMINI_API_KEY` to Secret Manager and `gcloud run services update --update-secrets`.
+- Set `LLM_ENABLED=true`; router task `generate_outreach_message` then calls
+  **Gemma → local SLM → cloud flash → echo**.
+- Per-campaign `ai_model` already records which model produced each message.
+- Add prompt templates per strategy, A/B variants, and a quality score before send.
+- Cost guard: `LLM_MONTHLY_TOKEN_BUDGET`, per-task caps, usage ledger
+  (`GET /api/governance/usage`).
+
+### 13.2 Region co-location (cost + latency)
+- Cloud SQL is `us-central1`; Cloud Run is `asia-south1` (cross-region socket).
+- Migrate by creating a same-region instance, `pg_dump`/restore via the connector,
+  flip `CLOUD_SQL_CONNECTION_NAME`, then decommission the old instance.
+- Expected: lower query latency, lower network egress, simpler cost model.
+
+### 13.3 Async work & scheduling
+- Replace inline sends with **Cloud Tasks / Pub-Sub** (or Celery + Redis) for bulk
+  campaigns, retries, rate limiting and provider backoff.
+- **Cloud Scheduler** for daily scraping and campaign sweeps.
+- Outbox pattern so a committed DB write never loses its event.
+
+### 13.4 Channels
+- **SarvamAI voice** (`feature/sarvam-voice`): TTS/STT voice notes (bulbul/saaras).
+- **Wechaty live mode** (`feature/wechaty-whatsapp`): real account via
+  `wechaty-puppet-wechat4u` / `wechaty-puppet-service`; QR login and inbound webhooks
+  already supported.
+- **Agent-Reach** (`feature/agent-reach`): internet read/search for lead discovery.
+
+### 13.5 Analytics & governance
+- **BigQuery** event spine (`analytics.*`) partitioned by day, clustered by tenant.
+- **Multi-tenant** `tenant_id` + PostgreSQL row-level security.
+- Retention/DPDP compliance surfaces, data-subject export/delete endpoints.
+- Secret rotation + audit export.
+
+### 13.6 Platform & observability
+- Cloud Logging/Trace with `request_id`, Cloud Monitoring uptime checks.
+- **Budget alerts** and SLOs; per-tenant error-rate dashboard.
+- Branch protection + required checks on `main`; manual approval only for schema
+  migrations if desired.
+- Frontend: componentisation, i18n, deeper accessibility (focus traps, live regions).
+
