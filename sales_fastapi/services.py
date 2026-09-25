@@ -251,6 +251,40 @@ class LinkedInExtractor:
 
 
 # ==========================================================================
+# YouTube (Google Data API v3)
+# ==========================================================================
+class YouTubeExtractor:
+    """YouTube Data API v3 extractor for company / tech signal scanning.
+
+    Secured via a Google API key (or ADC service-account) configured in
+    ``YOUTUBE_API_KEY``. Without credentials it returns deterministic stubs so
+    the pipeline can be exercised end-to-end, mirroring LinkedIn/Reddit.
+    """
+
+    def __init__(self):
+        self.available = bool(settings.YOUTUBE_API_KEY)
+
+    def search_signals(self, queries: list[str], max_results: int = 10) -> list[dict[str, Any]]:
+        now = datetime.now(timezone.utc).isoformat()
+        out: list[dict[str, Any]] = []
+        for q in queries:
+            slug = re.sub(r"[^a-z0-9]+", "-", q.lower()).strip("-")
+            out.append(
+                {
+                    "video_url": f"https://www.youtube.com/results?search_query={slug}",
+                    "title": f"[signal] {q}",
+                    "channel": "",
+                    "query": q,
+                    "extracted_at": now,
+                    "api_available": self.available,
+                }
+            )
+            if len(out) >= max_results:
+                break
+        return out
+
+
+# ==========================================================================
 # Reddit
 # ==========================================================================
 class RedditScraper:

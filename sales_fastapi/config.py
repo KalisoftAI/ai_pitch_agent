@@ -71,11 +71,12 @@ class Settings(BaseSettings):
     WECHATY_WEBHOOK_SECRET: str = Field(default="", alias="WECHATY_WEBHOOK_SECRET")
     WECHATY_TIMEOUT_SECONDS: int = Field(default=15, alias="WECHATY_TIMEOUT_SECONDS")
 
-    # --- LinkedIn / Reddit ---
+    # --- LinkedIn / Reddit / YouTube (Google-secured APIs) ---
     LINKEDIN_CLIENT_ID: str = Field(default="", alias="LINKEDIN_CLIENT_ID")
     LINKEDIN_CLIENT_SECRET: str = Field(default="", alias="LINKEDIN_CLIENT_SECRET")
     REDDIT_CLIENT_ID: str = Field(default="", alias="REDDIT_CLIENT_ID")
     REDDIT_CLIENT_SECRET: str = Field(default="", alias="REDDIT_CLIENT_SECRET")
+    YOUTUBE_API_KEY: str = Field(default="", alias="YOUTUBE_API_KEY")
 
     # --- Security ---
     SECRET_KEY: str = Field(default="change-this-secret", alias="SECRET_KEY")

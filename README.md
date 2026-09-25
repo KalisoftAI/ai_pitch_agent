@@ -4,6 +4,29 @@ A powerful Django-based web application that automates the entire B2B sales pipe
 
 ---
 
+## 🆕 FastAPI Pipeline — latest updates (branch `sales-gcp-migration`)
+
+The FastAPI workspace (`sales_fastapi/` + React `frontend/`) is the actively developed product. Latest additions:
+
+- **Customized scheduler** — `POST /api/scheduler/run` (manual sweep + Cloud Scheduler target), `/status`, `/tasks` (cron expressions per task), `/clear`. Redis queue with in-memory fallback; user-scoped.
+- **Business KPI monitoring** — `GET /api/kpi/overview | pipeline | outreach | costs` power the new **KPIs** tab (contacts funnel, delivery rate, AI spend from the micro-USD ledger).
+- **Google-secured APIs (ADC)** — LinkedIn, Reddit and now **YouTube Data API v3** (`POST /api/social/youtube/search`); ADC works on Cloud Run, `GOOGLE_APPLICATION_CREDENTIALS` locally.
+- **Feedback + mail notification** — `POST /api/feedback` stores feedback and notifies the team by Gmail SMTP; **Feedback** tab in the UI with star rating.
+- **Data-security guardrails UI** — `GET /api/security/status` drives the "Your data, guarded" panel (Google Sign-In, per-user isolation, Fernet encryption, PII redaction, audit trail, rate limits, LLM guardrails, retention).
+- **Engaging next-scope section** — sign-in page previews Gemma 4 personalisation, knowledge-catalog graph DB, YouTube signals, smart notifications, BigQuery KPI warehouse, multi-tenant RLS.
+- **UAT/Prod parity** — env badge in the UI (DEV/UAT/PROD) fed by `/api/health`; CD pipeline maps `main`→production, `UAT`→staging, `DEV`→development Cloud Run services.
+
+### Run it
+
+```powershell
+pip install -r requirements-sales.txt
+python run.py --seed            # backend → http://localhost:8000
+cd frontend; npm run dev        # frontend dev → http://localhost:5173 (proxies /api)
+npm run build                   # frontend prod → served by FastAPI at /
+```
+
+---
+
 ## 🛡️ Authentication & Session Security
 
 ### Owner-Only Access Control

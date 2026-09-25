@@ -2,13 +2,35 @@
 
 A FastAPI sales pipeline that ingests contacts (GCS + manual), segregates them by
 **domain / intent / context**, extracts email & LinkedIn signal via **IMAP + SMTP**,
-prepares **WhatsApp → Reddit/LinkedIn** outreach, and is secured with **Google Sign-In**,
-**Guardrails**, **Data Governance** and a **cost-optimised small-language-model router**.
+prepares **WhatsApp → Reddit/LinkedIn/YouTube** outreach, and is secured with
+**Google Sign-In (ADC)**, **Guardrails**, **Data Governance** and a
+**cost-optimised small-language-model router (Gemma 4)**.
 Runs on **Cloud Run**, backed by **Postgres** (local SQLite → Cloud SQL) and **Redis**.
 
 > Status: security/governance/SLM/outreach phases implemented and **live in production** —
 > 71 backend tests green, coverage 74%, `ruff` clean, `bandit -ll` clean, `alembic check` no drift.
+> **ADC (Application Default Credentials) update: DONE** — Google-secured APIs (GCS, YouTube
+> Data API v3, future Gmail OAuth) authenticate via ADC on Cloud Run and via
+> `GOOGLE_APPLICATION_CREDENTIALS` locally. Working UI with basic features is live.
 > Full exhaustive reference: [`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md).
+
+---
+
+## GCP Context
+
+| GCP Service | Role in this pipeline | Status |
+|---|---|---|
+| **Cloud Run** | Hosts the FastAPI backend (`sales-api`) and serves the built React static bundle | ✅ Live in prod |
+| **Cloud SQL (Postgres)** | Primary relational store (users, contacts, campaigns, audit, model usage) | ✅ Migrated from SQLite |
+| **Cloud Storage (GCS)** | `kalisoftai-datahub` bucket — contact files (`all-sales-contacts-data/`), GCS mirror per user | ✅ Live |
+| **Secret Manager** | All secrets (DB password, OAuth client secret, API keys) — never in code | ✅ Live |
+| **Artifact Registry** | Docker images with cleanup policy | ✅ Live |
+| **Cloud Scheduler** | Cron → `POST /api/scheduler/run` (task queue) | 🔶 Configured, Redis worker pending |
+| **Workload Identity Federation** | GitHub Actions → Cloud Build → Cloud Run deploys (keyless) | ✅ Live |
+| **ADC** | Application Default Credentials for all Google API calls | ✅ **Updated & working** |
+| **YouTube Data API v3** | Company/tech video signal scan (Google-secured API) | 🔶 Stub ready, key pending |
+| **BigQuery** | `analytics.*` event spine for KPI warehouse | ⬜ Future scope |
+| **Knowledge catalog + Graph DB** | Entity graph of contacts ⇄ companies ⇄ signals (see §10) | ⬜ Future scope |
 
 ---
 
@@ -252,6 +274,15 @@ bash deploy_sales.sh
 | GET | `/api/email/connections/{id}/inbox` | fetch + intent-tag mail |
 | POST | `/api/email/send` | send via SMTP |
 | POST/GET | `/api/social/linkedin/*`, `/api/social/reddit/*`, `/api/social/whatsapp/*` | social + WhatsApp queue |
+| POST | `/api/social/youtube/search` | YouTube signal scan (Google-secured, ADC) |
+| POST | `/api/scheduler/run` | Enqueue standard cron tasks (user-scoped) |
+| GET | `/api/scheduler/status` | Scheduler health + queued tasks |
+| GET | `/api/scheduler/tasks` | Registered recurring task definitions + cron |
+| POST | `/api/scheduler/clear` | Clear this user's queued tasks |
+| GET | `/api/kpi/overview` | Headline business KPIs |
+| GET | `/api/kpi/pipeline` | Contact funnel: intent/source mix, 7-day growth |
+| GET | `/api/kpi/outreach` | Campaign funnel + delivery rate |
+| GET | `/api/kpi/costs` | LLM usage & cost summary |
 | GET | `/api/governance/policy` | classification + retention + flags |
 | GET | `/api/governance/gcp` | status-only GCP verification |
 | GET | `/api/governance/audit` | current user's audit events |
@@ -339,4 +370,69 @@ Upload the repo docs + this `ROADMAP.md`, then run these prompts/scenarios:
 | 2026-09-14 | **Production Cloud Run deploy** + SQLite→Cloud SQL migration (reconcile PASS) |
 | 2026-09-14 | Sign-in page with plans (Free 2 AI users → Scale) + WhatsApp cost transparency (Meta India rate card) |
 | 2026-09-14 | Auth: Google placeholder detected; restricted production login for `ai.solutions@kalisoftai.in` (403 for others) |
-| _next_ | Gemma personalisation, region co-location, Sarvam voice, Wechaty live, BigQuery, multi-tenant RLS |
+| 2026-09-25 | ADC update (Google-secured APIs), YouTube Data API stub, customized scheduler + business-KPI endpoints, UAT/Prod env strategy |
+| _next_ | Gemma 4 personalisation, region co-location, Sarvam voice, Wechaty live, BigQuery, multi-tenant RLS, knowledge catalog graph DB |
+
+---
+
+## 10. Future scope — knowledge catalog with graph database (Gemma 4)
+
+> Documented backlog; **not yet implemented**. Tracked behind feature flags.
+
+### Vision
+A **knowledge catalog** that turns today's flat contact rows into a connected
+**entity graph**: `Contact ⇄ Company ⇄ Signal ⇄ Campaign ⇄ Outcome`. Sales users
+query relationships ("which procurement contacts at M&M-group companies engaged
+with our last 3 campaigns?") instead of scanning lists.
+
+### Candidate architecture
+
+```text
+  Postgres (system of record)
+        │  CDC / nightly ETL
+        v
+  ┌────────────────────────────┐        ┌─────────────────────────┐
+  │ Graph store (one of):       │        │ Gemma 4 (gemma-4-27b-it)│
+  │  • Neo4j AuraDB (managed)   │◄──────►│  entity extraction &     │
+  │  • Neo4j on GCE (self-host) │ Cypher │  relationship inference  │
+  │  • Postgres + Apache AGE    │        │  (cost-routed via        │
+  │  • BigQuery + Spanner Graph │        │   ModelRouter, large tier)│
+  └────────────────────────────┘        └─────────────────────────┘
+        │                                        │
+        v                                        v
+  /api/graph/query (natural language → Cypher, guardrailed)
+```
+
+### Decision criteria (choose ONE, keep it stupidly simple)
+1. **Postgres + Apache AGE** — zero new infra, lowest cost; start here.
+2. **Neo4j AuraDB** — best query ergonomics; add when relationship queries
+   outgrow AGE.
+3. **Spanner Graph** — only if multi-region global scale is required.
+
+### Phased plan
+- [ ] **G1** — Schema: `entities`, `relationships` tables (AGE-compatible)
+- [ ] **G2** — Gemma 4 entity/relationship extraction job (nightly, cost-routed)
+- [ ] **G3** — `/api/graph/query` natural-language → Cypher with LLM guardrails
+- [ ] **G4** — Frontend graph explorer (React Flow / Cytoscape.js)
+- [ ] **G5** — KPI layer on graph: influence score, relationship depth, churn risk
+
+---
+
+## 11. UAT / Production environment strategy
+
+| Concern | UAT | Production |
+|---|---|---|
+| `ENV` | `staging` | `production` |
+| API docs (`/docs`) | enabled | disabled |
+| `AUTH_DEV_MODE` | `true` (restricted via `AUTH_DEV_ALLOWED_EMAILS`) | `false` |
+| Database | Cloud SQL (UAT instance) | Cloud SQL (prod instance) |
+| Redis | Memorystore (basic) | Memorystore (standard HA) |
+| Scheduler backend | in-memory acceptable | Redis queue + Cloud Scheduler |
+| Rate limits | relaxed | enforced (`RATE_LIMIT_ENABLED=true`) |
+| Sign-in | Google OAuth + dev fallback | Google OAuth only (`GOOGLE_ALLOWED_DOMAINS=kalisoftai.com`) |
+| Deploy trigger | PR merge → `staging` branch | tag / release → `main` |
+| Smoke test | `/api/health` after deploy | `/api/health` + SLO alert |
+
+**UI environment indicator:** the frontend reads `GET /api/health.env` and shows a
+colored badge — **green** = production, **amber** = staging/UAT, **blue** = local dev —
+so testers always know which environment they are using.

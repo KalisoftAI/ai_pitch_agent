@@ -169,6 +169,22 @@ class ModelUsage(Base):
     )
 
 
+class Feedback(Base):
+    """User feedback submitted from the UI; triggers a mail notification."""
+
+    __tablename__ = "feedback"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    category: Mapped[str] = mapped_column(String(32), default="general", index=True)
+    rating: Mapped[int] = mapped_column(Integer, default=5)
+    message: Mapped[str] = mapped_column(Text, default="")
+    page: Mapped[str] = mapped_column(String(64), default="")
+    status: Mapped[str] = mapped_column(String(32), default="new", index=True)
+    notified: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
 class MessageTemplate(Base):
     """Reusable outreach template for a channel and sales-funnel strategy."""
 

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  Activity, ArrowUpRight, BriefcaseBusiness, Check, ChevronDown, CircleAlert,
-  Database, LogOut, Mail, Menu, Plus, RefreshCw, Search, Send, Settings2,
-  ShieldCheck, Sparkles, Trash2, UploadCloud, Users, X,
+  Activity, ArrowUpRight, BarChart3, Bell, BriefcaseBusiness, Check, ChevronDown, CircleAlert,
+  Clock, Database, LogOut, Mail, Menu, MessageSquarePlus, Plus, RefreshCw, Search, Send, Settings2,
+  ShieldCheck, Sparkles, Star, Trash2, UploadCloud, Users, Video, X,
 } from "lucide-react";
 import "./styles.css";
 
@@ -69,6 +69,9 @@ function App() {
           <NavItem icon={Mail} label="Email connections" active={tab === "email"} onClick={() => { setTab("email"); setMobileNav(false); }} />
           <NavItem icon={BriefcaseBusiness} label="Signal desk" active={tab === "signals"} onClick={() => { setTab("signals"); setMobileNav(false); }} />
           <NavItem icon={Send} label="Outreach" active={tab === "outreach"} onClick={() => { setTab("outreach"); setMobileNav(false); }} />
+          <NavItem icon={Clock} label="Scheduler" active={tab === "scheduler"} onClick={() => { setTab("scheduler"); setMobileNav(false); }} />
+          <NavItem icon={BarChart3} label="KPIs" active={tab === "kpis"} onClick={() => { setTab("kpis"); setMobileNav(false); }} />
+          <NavItem icon={MessageSquarePlus} label="Feedback" active={tab === "feedback"} onClick={() => { setTab("feedback"); setMobileNav(false); }} />
         </nav>
         <div className="sidebar-bottom">
           <div className="security-note"><ShieldCheck size={16} /><span>Private workspace<br /><small>Google verified access</small></span></div>
@@ -77,12 +80,15 @@ function App() {
       </aside>
       {mobileNav && <button className="scrim" aria-label="Close menu" onClick={() => setMobileNav(false)} />}
       <main className="main">
-        <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open menu"><Menu size={20} /></button><div><div className="eyebrow">KALISOFT AI / SALES PIPELINE</div><h1>{tab === "overview" ? "Good work starts with a clear signal." : tab === "contacts" ? "Contacts" : tab === "email" ? "Email connections" : tab === "signals" ? "Signal desk" : "Outreach"}</h1></div><div className="topbar-actions"><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Settings"><Settings2 size={18} /></button></div></header>
+        <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open menu"><Menu size={20} /></button><div><div className="eyebrow">KALISOFT AI / SALES PIPELINE</div><h1>{tab === "overview" ? "Good work starts with a clear signal." : tab === "contacts" ? "Contacts" : tab === "email" ? "Email connections" : tab === "signals" ? "Signal desk" : tab === "scheduler" ? "Scheduler" : tab === "kpis" ? "Business KPIs" : tab === "feedback" ? "Feedback" : "Outreach"}</h1></div><div className="topbar-actions"><EnvBadge env={health?.env} /><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Settings"><Settings2 size={18} /></button></div></header>
         {tab === "overview" && <Overview onNavigate={setTab} onNotice={setNotice} health={health} setHealth={setHealth} />}
         {tab === "contacts" && <Contacts onNotice={setNotice} />}
         {tab === "email" && <EmailConnections onNotice={setNotice} />}
         {tab === "signals" && <Signals onNotice={setNotice} />}
         {tab === "outreach" && <Outreach onNotice={setNotice} />}
+        {tab === "scheduler" && <Scheduler onNotice={setNotice} />}
+        {tab === "kpis" && <Kpis onNotice={setNotice} />}
+        {tab === "feedback" && <Feedback onNotice={setNotice} />}
       </main>
       {notice && <div className={`toast ${notice.type === "error" ? "error" : ""}`}><span>{notice.type === "error" ? <CircleAlert size={17} /> : <Check size={17} />}</span>{notice.text}<button onClick={() => setNotice(null)} aria-label="Dismiss"><X size={15} /></button></div>}
     </div>
@@ -119,12 +125,19 @@ function Login({ config, onLogin, onNotice }) {
 
 function NavItem({ icon: Icon, label, active, onClick }) { return <button className={`nav-item ${active ? "active" : ""}`} onClick={onClick}><Icon size={18} /><span>{label}</span>{active && <ChevronDown size={15} className="nav-caret" />}</button>; }
 
+function EnvBadge({ env }) {
+  const normalized = (env || "development").toLowerCase();
+  const style = normalized === "production" ? { background: "#e5f6e5", color: "#187a2f", borderColor: "#187a2f" } : normalized === "staging" ? { background: "#fff4d6", color: "#8a5a00", borderColor: "#8a5a00" } : { background: "#e0ecff", color: "#1d4fa3", borderColor: "#1d4fa3" };
+  const label = normalized === "production" ? "PROD" : normalized === "staging" ? "UAT" : "DEV";
+  return <span title={`Environment: ${normalized}`} style={{ ...style, border: "1px solid", borderRadius: 999, padding: "2px 10px", fontSize: 11, fontWeight: 700, letterSpacing: 0.5 }}>{label}</span>;
+}
+
 function Overview({ onNavigate, onNotice, health, setHealth }) {
   const [stats, setStats] = useState(null);
   const [contacts, setContacts] = useState([]);
   const refresh = async () => { try { const [nextStats, nextContacts, nextHealth] = await Promise.all([request("/contacts/stats"), request("/contacts?q=") , request("/health")]); setStats(nextStats); setContacts(nextContacts.slice(0, 5)); setHealth(nextHealth); } catch (error) { onNotice({ type: "error", text: error.message }); } };
   useEffect(() => { refresh(); }, []);
-  return <div className="content"><div className="welcome-row"><div><div className="section-kicker">MONDAY, SEPTEMBER 14, 2026</div><h2>Pipeline at a glance</h2><p className="muted">A quiet view of what needs your attention next.</p></div><button className="primary-button" onClick={() => onNavigate("contacts")}><Plus size={17} /> Add contact</button></div><div className="metric-grid"><Metric label="Total contacts" value={stats?.total ?? "--"} detail="across your workspace" icon={Users} /><Metric label="Ready to reach" value={stats ? Object.values(stats.by_intent || {}).reduce((sum, value) => sum + value, 0) : "--"} detail="classified signals" icon={Sparkles} accent /><Metric label="API status" value={health?.status === "healthy" ? "Live" : "--"} detail={health?.database === "ok" ? "database connected" : "checking services"} icon={Activity} /></div><div className="two-column"><section className="panel"><div className="panel-heading"><div><div className="section-kicker">RECENTLY ADDED</div><h3>Latest contacts</h3></div><button className="text-button" onClick={() => onNavigate("contacts")}>View all <ArrowUpRight size={15} /></button></div><ContactRows contacts={contacts} /></section><section className="panel signal-panel"><div className="panel-heading"><div><div className="section-kicker">SYSTEM PULSE</div><h3>Connected services</h3></div><button className="icon-button" onClick={refresh} aria-label="Refresh services"><RefreshCw size={17} /></button></div><Service status={health?.database === "ok"} icon={Database} label="PostgreSQL / SQLite" value={health?.database === "ok" ? "Connected" : "Degraded"} /><Service status={health?.gcs_available} icon={UploadCloud} label="Google Cloud Storage" value={health?.gcs_available ? "Available" : "Optional"} /><Service status={health?.google_signin_configured} icon={ShieldCheck} label="Google Sign-In" value={health?.google_signin_configured ? "Configured" : "Not configured"} /></section></div></div>;
+  return <div className="content"><div className="welcome-row"><div><div className="section-kicker">MONDAY, SEPTEMBER 14, 2026</div><h2>Pipeline at a glance</h2><p className="muted">A quiet view of what needs your attention next.</p></div><button className="primary-button" onClick={() => onNavigate("contacts")}><Plus size={17} /> Add contact</button></div><div className="metric-grid"><Metric label="Total contacts" value={stats?.total ?? "--"} detail="across your workspace" icon={Users} /><Metric label="Ready to reach" value={stats ? Object.values(stats.by_intent || {}).reduce((sum, value) => sum + value, 0) : "--"} detail="classified signals" icon={Sparkles} accent /><Metric label="API status" value={health?.status === "healthy" ? "Live" : "--"} detail={health?.database === "ok" ? "database connected" : "checking services"} icon={Activity} /></div><div className="two-column"><section className="panel"><div className="panel-heading"><div><div className="section-kicker">RECENTLY ADDED</div><h3>Latest contacts</h3></div><button className="text-button" onClick={() => onNavigate("contacts")}>View all <ArrowUpRight size={15} /></button></div><ContactRows contacts={contacts} /></section><section className="panel signal-panel"><div className="panel-heading"><div><div className="section-kicker">SYSTEM PULSE</div><h3>Connected services</h3></div><button className="icon-button" onClick={refresh} aria-label="Refresh services"><RefreshCw size={17} /></button></div><Service status={health?.database === "ok"} icon={Database} label="PostgreSQL / SQLite" value={health?.database === "ok" ? "Connected" : "Degraded"} /><Service status={health?.gcs_available} icon={UploadCloud} label="Google Cloud Storage" value={health?.gcs_available ? "Available" : "Optional"} /><Service status={health?.google_signin_configured} icon={ShieldCheck} label="Google Sign-In" value={health?.google_signin_configured ? "Configured" : "Not configured"} /></section></div><SecurityTrust /></div>;
 }
 
 function Metric({ label, value, detail, icon: Icon, accent }) { return <div className={`metric ${accent ? "accent" : ""}`}><div className="metric-icon"><Icon size={18} /></div><div className="metric-label">{label}</div><div className="metric-value">{value}</div><div className="metric-detail">{detail}</div></div>; }
@@ -147,7 +160,125 @@ function Contacts({ onNotice }) {
 
 function EmailConnections({ onNotice }) { const [connections, setConnections] = useState([]); const [form, setForm] = useState({ email_address: "", imap_host: "imap.gmail.com", imap_port: 993, smtp_host: "smtp.gmail.com", smtp_port: 587, password: "" }); const [show, setShow] = useState(false); const load = () => request("/email/connections").then(setConnections).catch((error) => onNotice({ type: "error", text: error.message })); useEffect(() => { load(); }, []); const add = async (event) => { event.preventDefault(); try { await request("/email/connections", { method: "POST", body: JSON.stringify(form) }); setShow(false); setForm({ email_address: "", imap_host: "imap.gmail.com", imap_port: 993, smtp_host: "smtp.gmail.com", smtp_port: 587, password: "" }); onNotice({ type: "success", text: "Email connection saved encrypted." }); load(); } catch (error) { onNotice({ type: "error", text: error.message }); } }; const test = async (id) => { try { const result = await request(`/email/connections/${id}/test`, { method: "POST" }); onNotice({ type: result.is_connected ? "success" : "error", text: result.is_connected ? "IMAP and SMTP are connected." : "Connection test failed." }); load(); } catch (error) { onNotice({ type: "error", text: error.message }); } }; return <div className="content"><div className="page-heading"><div><div className="section-kicker">OUTREACH INFRASTRUCTURE</div><h2>Email connections</h2><p className="muted">Credentials are encrypted before they are stored.</p></div><button className="primary-button" onClick={() => setShow(!show)}><Plus size={17} /> Add mailbox</button></div>{show && <form className="panel form-panel" onSubmit={add}><div className="form-grid"><input required type="email" placeholder="Mailbox email" value={form.email_address} onChange={(event) => setForm({ ...form, email_address: event.target.value })} /><input required type="password" placeholder="App password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} /><input placeholder="IMAP host" value={form.imap_host} onChange={(event) => setForm({ ...form, imap_host: event.target.value })} /><input placeholder="SMTP host" value={form.smtp_host} onChange={(event) => setForm({ ...form, smtp_host: event.target.value })} /></div><button className="primary-button">Save encrypted connection</button></form>}<section className="panel"><div className="panel-heading"><div><div className="section-kicker">CONNECTED MAILBOXES</div><h3>Sender accounts</h3></div><Mail size={19} className="muted" /></div>{connections.length ? connections.map((connection) => <div className="connection-row" key={connection.id}><span className="mail-icon"><Mail size={17} /></span><span><b>{connection.email_address}</b><small>{connection.smtp_host} / {connection.imap_host}</small></span><span className={`status ${connection.is_connected ? "ok" : "muted-status"}`}><i />{connection.is_connected ? "Connected" : "Not tested"}</span><button className="secondary-button compact" onClick={() => test(connection.id)}><RefreshCw size={15} /> Test</button></div>) : <div className="empty-state"><Mail size={22} /><p>No mailboxes connected.</p><small>Use a Gmail app password, never your primary password.</small></div>}</section></div>; }
 
-function Signals({ onNotice }) { const [output, setOutput] = useState(null); const [busy, setBusy] = useState(false); const run = async (path, body, label) => { setBusy(true); try { setOutput({ label, data: await request(path, { method: "POST", body: JSON.stringify(body) }) }); } catch (error) { onNotice({ type: "error", text: error.message }); } finally { setBusy(false); } }; return <div className="content"><div className="page-heading"><div><div className="section-kicker">MARKET INTELLIGENCE</div><h2>Signal desk</h2><p className="muted">Queue the searches and background work that sharpen your next move.</p></div></div><div className="signal-actions"><button className="signal-action" onClick={() => run("/social/linkedin/search", { keywords: ["procurement", "scm", "hiring"] }, "LinkedIn hiring search")}><span><BriefcaseBusiness size={20} /></span><b>LinkedIn hiring search</b><small>Find hiring signals in procurement and SCM.</small><ArrowUpRight size={16} /></button><button className="signal-action" onClick={() => run("/social/reddit/search", {}, "Reddit hiring search")}><span><Search size={20} /></span><b>Reddit hiring search</b><small>Scan communities for useful conversations.</small><ArrowUpRight size={16} /></button><button className="signal-action" onClick={() => run("/cron/run", {}, "Cron sweep")}><span><RefreshCw size={20} /></span><b>Run cron sweep</b><small>Queue the scheduled pipeline tasks.</small><ArrowUpRight size={16} /></button></div>{busy && <div className="panel loading-inline"><RefreshCw size={18} className="spin" /> Working through the signal stream...</div>}{output && <section className="panel output-panel"><div className="panel-heading"><h3>{output.label}</h3><button className="icon-button" onClick={() => setOutput(null)} aria-label="Close"><X size={17} /></button></div><pre>{JSON.stringify(output.data, null, 2)}</pre></section>}</div>; }
+function Signals({ onNotice }) { const [output, setOutput] = useState(null); const [busy, setBusy] = useState(false); const run = async (path, body, label) => { setBusy(true); try { setOutput({ label, data: await request(path, { method: "POST", body: JSON.stringify(body) }) }); } catch (error) { onNotice({ type: "error", text: error.message }); } finally { setBusy(false); } }; return <div className="content"><div className="page-heading"><div><div className="section-kicker">MARKET INTELLIGENCE</div><h2>Signal desk</h2><p className="muted">Queue the searches and background work that sharpen your next move.</p></div></div><div className="signal-actions"><button className="signal-action" onClick={() => run("/social/linkedin/search", { keywords: ["procurement", "scm", "hiring"] }, "LinkedIn hiring search")}><span><BriefcaseBusiness size={20} /></span><b>LinkedIn hiring search</b><small>Find hiring signals in procurement and SCM.</small><ArrowUpRight size={16} /></button><button className="signal-action" onClick={() => run("/social/reddit/search", {}, "Reddit hiring search")}><span><Search size={20} /></span><b>Reddit hiring search</b><small>Scan communities for useful conversations.</small><ArrowUpRight size={16} /></button><button className="signal-action" onClick={() => run("/social/youtube/search", { queries: ["hiring procurement", "supply chain"], max_results: 10 }, "YouTube signal scan")}><span><Video size={20} /></span><b>YouTube signal scan</b><small>Google-secured Data API v3 company/tech signals.</small><ArrowUpRight size={16} /></button><button className="signal-action" onClick={() => run("/scheduler/run", {}, "Cron sweep")}><span><RefreshCw size={20} /></span><b>Run cron sweep</b><small>Queue the scheduled pipeline tasks.</small><ArrowUpRight size={16} /></button></div>{busy && <div className="panel loading-inline"><RefreshCw size={18} className="spin" /> Working through the signal stream...</div>}{output && <section className="panel output-panel"><div className="panel-heading"><h3>{output.label}</h3><button className="icon-button" onClick={() => setOutput(null)} aria-label="Close"><X size={17} /></button></div><pre>{JSON.stringify(output.data, null, 2)}</pre></section>}</div>; }
+
+function Scheduler({ onNotice }) {
+  const [status, setStatus] = useState(null);
+  const [tasks, setTasks] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const load = async () => {
+    try {
+      const [nextStatus, nextTasks] = await Promise.all([request("/scheduler/status"), request("/scheduler/tasks")]);
+      setStatus(nextStatus);
+      setTasks(nextTasks.tasks || []);
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+  };
+  useEffect(() => { load(); }, []);
+  const runNow = async () => {
+    setBusy(true);
+    try {
+      const result = await request("/scheduler/run", { method: "POST", body: "{}" });
+      onNotice({ type: "success", text: `Enqueued ${result.enqueued} tasks (${result.backend}).` });
+      load();
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+    finally { setBusy(false); }
+  };
+  const clearQueue = async () => {
+    if (!window.confirm("Clear this workspace's queued tasks?")) return;
+    setBusy(true);
+    try {
+      const result = await request("/scheduler/clear", { method: "POST", body: "{}" });
+      onNotice({ type: "success", text: `Cleared ${result.cleared} queued tasks.` });
+      load();
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+    finally { setBusy(false); }
+  };
+  return (
+    <div className="content">
+      <div className="page-heading">
+        <div><div className="section-kicker">AUTOMATION</div><h2>Scheduler</h2><p className="muted">Customized cron queue, scoped to your workspace. Cloud Scheduler triggers the same endpoint in production.</p></div>
+        <div className="button-row">
+          <button className="secondary-button" onClick={clearQueue} disabled={busy}><Trash2 size={16} /> Clear queue</button>
+          <button className="primary-button" onClick={runNow} disabled={busy}><Clock size={16} /> {busy ? "Queueing..." : "Run now"}</button>
+        </div>
+      </div>
+      <div className="two-column">
+        <section className="panel">
+          <div className="panel-heading"><div><div className="section-kicker">REGISTERED</div><h3>Recurring tasks</h3></div><button className="icon-button" onClick={load} aria-label="Refresh scheduler"><RefreshCw size={17} /></button></div>
+          <div className="contact-list" role="list">
+            {tasks.map((task) => (
+              <div className="contact-row" key={task.name} role="listitem">
+                <span className="contact-main"><b>{task.name}</b><small>{task.description}</small></span>
+                <span className="contact-tag" title="Cron expression">{task.cron}</span>
+              </div>
+            ))}
+            {!tasks.length && <div className="empty-state"><Clock size={22} /><p>No tasks registered.</p></div>}
+          </div>
+        </section>
+        <section className="panel signal-panel">
+          <div className="panel-heading"><div><div className="section-kicker">QUEUE</div><h3>Status</h3></div></div>
+          <Service status={status?.scheduler === "running"} icon={Clock} label="Scheduler" value={status?.scheduler || "--"} />
+          <Service status={status?.backend === "redis"} icon={Database} label="Queue backend" value={status?.backend || "--"} />
+          <Service status icon={RefreshCw} label="Queued (you)" value={String(status?.queued_count ?? 0)} />
+          <Service status icon={BriefcaseBusiness} label="Registered tasks" value={String(status?.registered_tasks ?? 0)} />
+          {!!status?.queued_tasks?.length && <pre style={{ marginTop: 10, maxHeight: 220, overflow: "auto" }}>{JSON.stringify(status.queued_tasks, null, 2)}</pre>}
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function Kpis({ onNotice }) {
+  const [overview, setOverview] = useState(null);
+  const [pipeline, setPipeline] = useState(null);
+  const [outreach, setOutreach] = useState(null);
+  const [costs, setCosts] = useState(null);
+  const load = async () => {
+    try {
+      const [o, p, out, c] = await Promise.all([request("/kpi/overview"), request("/kpi/pipeline"), request("/kpi/outreach"), request("/kpi/costs")]);
+      setOverview(o); setPipeline(p); setOutreach(out); setCosts(c);
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+  };
+  useEffect(() => { load(); }, []);
+  const rate = outreach?.delivery_rate == null ? "--" : `${Math.round(outreach.delivery_rate * 100)}%`;
+  return (
+    <div className="content">
+      <div className="page-heading">
+        <div><div className="section-kicker">BUSINESS KPI MONITORING</div><h2>Business KPIs</h2><p className="muted">Workspace-level funnel, outreach performance, and AI cost control.</p></div>
+        <button className="icon-button" onClick={load} aria-label="Refresh KPIs"><RefreshCw size={17} /></button>
+      </div>
+      <div className="metric-grid">
+        <Metric label="Total contacts" value={overview?.contacts_total ?? "--"} detail={`+${pipeline?.new_last_7_days ?? 0} last 7 days`} icon={Users} />
+        <Metric label="Signals captured" value={overview ? overview.signals.linkedin + overview.signals.reddit : "--"} detail={`LinkedIn ${overview?.signals?.linkedin ?? 0} · Reddit ${overview?.signals?.reddit ?? 0}`} icon={Sparkles} accent />
+        <Metric label="Messages sent" value={overview?.messages_sent ?? "--"} detail={`delivery ${rate}`} icon={Send} />
+        <Metric label="AI spend" value={costs ? `$${costs.total_cost_usd}` : "--"} detail="all-time, micro-USD ledger" icon={BarChart3} />
+      </div>
+      <div className="two-column">
+        <section className="panel">
+          <div className="panel-heading"><div><div className="section-kicker">PIPELINE FUNNEL</div><h3>Contacts by intent</h3></div></div>
+          <div className="contact-list" role="list">
+            {Object.entries(pipeline?.by_intent || {}).map(([intent, count]) => (
+              <div className="contact-row" key={intent} role="listitem"><span className="contact-main"><b>{intent}</b></span><span className="contact-tag">{count}</span></div>
+            ))}
+            {!Object.keys(pipeline?.by_intent || {}).length && <div className="empty-state"><Users size={22} /><p>No contacts yet.</p></div>}
+          </div>
+        </section>
+        <section className="panel">
+          <div className="panel-heading"><div><div className="section-kicker">OUTREACH & COST</div><h3>Campaign funnel</h3></div></div>
+          <div className="contact-list" role="list">
+            {Object.entries(outreach?.campaigns_by_status || {}).map(([status, count]) => (
+              <div className="contact-row" key={status} role="listitem"><span className="contact-main"><b>{status}</b></span><span className="contact-tag">{count}</span></div>
+            ))}
+            {!Object.keys(outreach?.campaigns_by_status || {}).length && <div className="empty-state"><Send size={22} /><p>No campaigns yet.</p></div>}
+          </div>
+          {!!Object.keys(costs?.by_task || {}).length && (
+            <pre style={{ marginTop: 10, maxHeight: 180, overflow: "auto" }}>{JSON.stringify(costs.by_task, null, 2)}</pre>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}
 
 function Outreach({ onNotice }) {
   const [templates, setTemplates] = useState([]);
@@ -271,6 +402,118 @@ function Outreach({ onNotice }) {
   );
 }
 
+function Feedback({ onNotice }) {
+  const [form, setForm] = useState({ category: "general", rating: 5, message: "" });
+  const [items, setItems] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const load = async () => { try { setItems(await request("/feedback")); } catch (error) { onNotice({ type: "error", text: error.message }); } };
+  useEffect(() => { load(); }, []);
+  const submit = async (event) => {
+    event.preventDefault();
+    setBusy(true);
+    try {
+      const saved = await request("/feedback", { method: "POST", body: JSON.stringify({ ...form, page: "feedback" }) });
+      onNotice({ type: "success", text: saved.notified ? "Thanks! Feedback sent and our team was notified by mail." : "Thanks! Feedback saved (mail notification not configured here)." });
+      setForm({ category: "general", rating: 5, message: "" });
+      load();
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+    finally { setBusy(false); }
+  };
+  return (
+    <div className="content">
+      <div className="page-heading">
+        <div><div className="section-kicker">WE LISTEN</div><h2>Feedback</h2><p className="muted">Tell us what to improve — every submission notifies the team by mail.</p></div>
+      </div>
+      <div className="two-column">
+        <form className="panel form-panel" onSubmit={submit}>
+          <div className="form-heading"><div><div className="section-kicker">NEW</div><h3>Share feedback</h3></div></div>
+          <div className="form-grid">
+            <label>Category
+              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+                <option value="general">General</option><option value="bug">Bug report</option><option value="feature">Feature request</option><option value="ux">Experience</option>
+              </select>
+            </label>
+            <label>Rating
+              <span style={{ display: "flex", gap: 6, padding: "8px 0" }}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button type="button" key={n} onClick={() => setForm({ ...form, rating: n })} aria-label={`Rate ${n}`} style={{ background: "none", border: 0, cursor: "pointer", color: n <= form.rating ? "#e6a817" : "#c8cdd6" }}><Star size={20} fill={n <= form.rating ? "#e6a817" : "none"} /></button>
+                ))}
+              </span>
+            </label>
+            <label style={{ gridColumn: "1 / -1" }}>Message
+              <textarea required rows={4} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="What's working? What's missing?" style={{ width: "100%", resize: "vertical" }} />
+            </label>
+          </div>
+          <button className="primary-button" disabled={busy}><Send size={16} /> {busy ? "Sending..." : "Send feedback"}</button>
+        </form>
+        <section className="panel">
+          <div className="panel-heading"><div><div className="section-kicker">HISTORY</div><h3>Your feedback ({items.length})</h3></div><button className="icon-button" onClick={load} aria-label="Refresh feedback"><RefreshCw size={17} /></button></div>
+          <div className="contact-list" role="list">
+            {items.map((item) => (
+              <div className="contact-row" key={item.id} role="listitem">
+                <span className="contact-main"><b>{item.category} · {item.rating}/5</b><small>{item.message.slice(0, 90)}</small></span>
+                <span className="contact-tag">{item.notified ? "mailed" : "saved"}</span>
+                <span className="contact-tag">{item.status}</span>
+              </div>
+            ))}
+            {!items.length && <div className="empty-state"><MessageSquarePlus size={22} /><p>No feedback yet.</p><small>Your suggestions shape the roadmap.</small></div>}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function SecurityTrust() {
+  const [data, setData] = useState(null);
+  useEffect(() => { request("/security/status").then(setData).catch(() => setData(null)); }, []);
+  if (!data) return null;
+  return (
+    <section className="panel" style={{ marginTop: 16 }} aria-label="Data security">
+      <div className="panel-heading"><div><div className="section-kicker">DATA SECURITY</div><h3>Your data, guarded</h3></div><ShieldCheck size={18} /></div>
+      <div className="contact-list" role="list">
+        {data.guardrails.map((g) => (
+          <div className="contact-row" key={g.key} role="listitem">
+            <span className="service-icon" style={{ color: g.on ? "#187a2f" : "#8a5a00" }}>{g.on ? <ShieldCheck size={16} /> : <CircleAlert size={16} />}</span>
+            <span className="contact-main"><b>{g.label}</b></span>
+            <span className={`status ${g.on ? "ok" : "muted-status"}`}><i />{g.on ? "On" : "Off"}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+const FUTURE_SCOPE = [
+  { icon: Sparkles, title: "Gemma 4 personalisation", text: "Every outreach message written by gemma-4-27b-it, tuned to each contact's intent and history." },
+  { icon: Database, title: "Knowledge catalog + graph DB", text: "Contacts, companies, signals and outcomes connected as a queryable entity graph." },
+  { icon: Video, title: "YouTube signal scan", text: "Google-secured Data API v3 watches for company and tech signals in your market." },
+  { icon: Bell, title: "Smart mail notifications", text: "Hot leads and KPI changes pushed to your inbox the moment they happen." },
+  { icon: BarChart3, title: "BigQuery KPI warehouse", text: "Nightly analytics snapshots power trend lines and forecasts on your dashboard." },
+  { icon: ShieldCheck, title: "Multi-tenant RLS", text: "PostgreSQL row-level security for enterprise workspaces and audit export." },
+];
+
+function FutureScope() {
+  return (
+    <section className="pricing" aria-label="What's next">
+      <div className="pricing-head">
+        <div className="section-kicker">NEXT SCOPE</div>
+        <h2>Where Kalisoft AI is heading</h2>
+        <p className="muted">A preview of what's already in build — secured by your Google account (ADC), guarded end to end.</p>
+      </div>
+      <div className="plan-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
+        {FUTURE_SCOPE.map((f) => (
+          <article key={f.title} className="plan-card">
+            <div className="metric-icon" style={{ marginBottom: 8 }}><f.icon size={18} /></div>
+            <h3>{f.title}</h3>
+            <p className="muted">{f.text}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 const PLANS = [
   { name: "Free", price: 0, period: "forever", tagline: "Start with 2 AI users", features: ["2 AI users", "250 contacts", "50 AI credits / month", "Email + WhatsApp templates", "CSV / Excel / GCS import"], cta: "Create free account" },
   { name: "Starter", price: 499, period: "/ month", tagline: "Small tier-2 teams", features: ["5 users", "5,000 contacts", "1,000 AI credits / month", "Automated follow-ups", "1 WhatsApp number"], cta: "Choose Starter" },
@@ -294,6 +537,7 @@ function SignInPage({ config, onLogin, onNotice }) {
     <div className="signin-shell">
       <Login config={config} onLogin={onLogin} onNotice={onNotice} />
       <PricingSection />
+      <FutureScope />
     </div>
   );
 }

@@ -119,6 +119,11 @@ class RedditSearchIn(BaseModel):
     keywords: list[str] = Field(default_factory=lambda: ["hiring", "procurement"])
 
 
+class YouTubeSearchIn(BaseModel):
+    queries: list[str] = Field(default_factory=lambda: ["hiring procurement", "supply chain"])
+    max_results: int = Field(default=10, ge=1, le=50)
+
+
 # ---------- WhatsApp ----------
 class WhatsAppSendIn(BaseModel):
     phone_number: str
@@ -262,6 +267,27 @@ class CampaignSendResult(BaseModel):
     sent: int
     failed: int
     skipped: int
+
+
+# ---------- Feedback ----------
+class FeedbackIn(BaseModel):
+    category: str = Field(default="general", max_length=32)
+    rating: int = Field(default=5, ge=1, le=5)
+    message: str = Field(..., min_length=1, max_length=5_000)
+    page: str = Field(default="", max_length=64)
+
+
+class FeedbackOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    category: str
+    rating: int
+    message: str
+    page: str
+    status: str
+    notified: bool
+    created_at: datetime
 
 
 # ---------- Governance / Audit ----------

@@ -62,8 +62,10 @@ def integrations(user=Depends(get_current_user)):
         "whatsapp": bool(settings.WHATSAPP_API_KEY),
         "linkedin": bool(settings.LINKEDIN_CLIENT_ID),
         "reddit": bool(settings.REDDIT_CLIENT_ID),
+        "youtube": bool(settings.YOUTUBE_API_KEY),
         "smtp": bool(settings.SMTP_HOST),
         "imap": bool(settings.IMAP_HOST),
+        "scheduler_backend": "redis" if settings.REDIS_URL else "in-memory",
     }
 
 

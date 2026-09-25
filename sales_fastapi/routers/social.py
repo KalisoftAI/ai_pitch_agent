@@ -3,9 +3,9 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models import LinkedInProfile, RedditPost, User, WhatsAppMessage
-from ..schemas import LinkedInSearchIn, RedditSearchIn, WhatsAppSendIn
+from ..schemas import LinkedInSearchIn, RedditSearchIn, WhatsAppSendIn, YouTubeSearchIn
 from ..security import get_current_user
-from ..services import LinkedInExtractor, RedditScraper
+from ..services import LinkedInExtractor, RedditScraper, YouTubeExtractor
 
 router = APIRouter(prefix="/social", tags=["social"])
 
@@ -95,6 +95,22 @@ def search_reddit(
         added += 1
     db.commit()
     return {"found": len(found), "added": added, "api_available": scraper.available}
+
+
+# ---------- YouTube ----------
+@router.post("/youtube/search")
+def search_youtube(
+    payload: YouTubeSearchIn,
+    user: User = Depends(get_current_user),
+):
+    """Scan YouTube for company/tech signals (Google Data API v3).
+
+    Secured by the workspace Google account (ADC / API key). Without a key the
+    extractor returns deterministic stubs so the pipeline remains testable.
+    """
+    extractor = YouTubeExtractor()
+    found = extractor.search_signals(payload.queries, payload.max_results)
+    return {"found": len(found), "api_available": extractor.available, "results": found}
 
 
 # ---------- WhatsApp ----------
