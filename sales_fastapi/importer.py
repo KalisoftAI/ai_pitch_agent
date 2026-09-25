@@ -19,14 +19,24 @@ SUPPORTED_SUFFIXES = (".csv", ".json", ".xlsx", ".xls", ".vcf")
 
 
 def _xlsx_rows(raw: bytes) -> list[dict[str, Any]]:
+    """Read an xlsx sheet, tolerating leading blank rows.
+
+    Real GCS exports (e.g. "Contacts ( Pune, Chennai nd others ).xlsx") have a
+    blank first row and the header row on row 2 — so scan forward until a row
+    with at least two non-empty cells and treat that as the header.
+    """
     from openpyxl import load_workbook
 
     workbook = load_workbook(io.BytesIO(raw), read_only=True, data_only=True)
     sheet = workbook.worksheets[0]
     rows = sheet.iter_rows(values_only=True)
-    try:
-        headers = [str(cell).strip() if cell is not None else "" for cell in next(rows)]
-    except StopIteration:
+    headers: list[str] | None = None
+    for candidate in rows:
+        cells = [str(cell).strip() if cell is not None else "" for cell in candidate]
+        if sum(1 for cell in cells if cell) >= 2:
+            headers = cells
+            break
+    if not headers:
         return []
     records: list[dict[str, Any]] = []
     for row in rows:
@@ -147,16 +157,36 @@ def normalise_record(record: dict[str, Any]) -> dict[str, Any] | None:
     if not email_address and not company and not name:
         return None
     verdict = classify_contact(email_address, company or name)
+
+    # Real GCS exports carry extra B2B fields — fold them into tags/notes so no
+    # signal is lost even though the Contact model has no dedicated columns.
+    tags: list[str] = []
+    for key, label in (
+        ("sector", "sector"), ("category", "category"), ("exporter", "exporter"),
+        ("turnover range", "turnover"),
+    ):
+        value = _pick(record, key)
+        if value:
+            tags.append(f"{label}:{value}")
+
+    notes_parts = []
+    for key in ("requirements", "description", "call status", "website"):
+        value = _pick(record, key)
+        if value:
+            notes_parts.append(f"{key.replace('_', ' ').title()}: {value}")
+
     return {
         "company": company,
         "name": name,
         "email": email_address or f"unknown-{hashlib.md5((company or name).encode()).hexdigest()[:12]}@placeholder.local",
         "phone": _pick(record, "phone", "contact (phone)", "mobile", "phone number", "contact number", "tel"),
         "address": _pick(record, "address", "address (ahmednagar unit)", "location", "city"),
-        "linkedin_company": _pick(record, "linkedin", "linkedin (company / key scm profile)", "linkedin url"),
+        "linkedin_company": _pick(record, "linkedin", "linkedin (company / key scm profile)", "linkedin url", "website"),
         "purchase_contact_name": _pick(record, "purchase / scm contact (name, role)", "purchase contact", "scm contact"),
         "purchase_contact_email": _pick(record, "purchase contact details (email / phone)", "purchase email"),
         "purchase_contact_role": _pick(record, "title", "designation", "role", "position"),
+        "tags": tags,
+        "notes": " | ".join(notes_parts),
         "domain": verdict["domain"],
         "intent": verdict["intent"],
         "context": company or name,

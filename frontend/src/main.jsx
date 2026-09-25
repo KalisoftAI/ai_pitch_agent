@@ -34,6 +34,7 @@ function App() {
   const [tab, setTab] = useState("overview");
   const [notice, setNotice] = useState(null);
   const [mobileNav, setMobileNav] = useState(false);
+  const [tour, setTour] = useState(() => !sessionStorage.getItem(TOUR_KEY));
 
   useEffect(() => {
     requestPublicConfig().then(setConfig).catch((error) => setNotice({ type: "error", text: error.message }));
@@ -80,7 +81,7 @@ function App() {
       </aside>
       {mobileNav && <button className="scrim" aria-label="Close menu" onClick={() => setMobileNav(false)} />}
       <main className="main">
-        <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open menu"><Menu size={20} /></button><div><div className="eyebrow">KALISOFT AI / SALES PIPELINE</div><h1>{tab === "overview" ? "Good work starts with a clear signal." : tab === "contacts" ? "Contacts" : tab === "email" ? "Email connections" : tab === "signals" ? "Signal desk" : tab === "scheduler" ? "Scheduler" : tab === "kpis" ? "Business KPIs" : tab === "feedback" ? "Feedback" : "Outreach"}</h1></div><div className="topbar-actions"><EnvBadge env={health?.env} /><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Settings"><Settings2 size={18} /></button></div></header>
+        <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open menu"><Menu size={20} /></button><div><div className="eyebrow">KALISOFT AI / SALES PIPELINE</div><h1>{tab === "overview" ? "Good work starts with a clear signal." : tab === "contacts" ? "Contacts" : tab === "email" ? "Email connections" : tab === "signals" ? "Signal desk" : tab === "scheduler" ? "Scheduler" : tab === "kpis" ? "Business KPIs" : tab === "feedback" ? "Feedback" : "Outreach"}</h1></div><div className="topbar-actions"><EnvBadge env={health?.env} /><button className="text-button" onClick={() => setTour(true)}><Sparkles size={15} /> Take the tour</button><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Settings"><Settings2 size={18} /></button></div></header>
         {tab === "overview" && <Overview onNavigate={setTab} onNotice={setNotice} health={health} setHealth={setHealth} />}
         {tab === "contacts" && <Contacts onNotice={setNotice} />}
         {tab === "email" && <EmailConnections onNotice={setNotice} />}
@@ -90,6 +91,7 @@ function App() {
         {tab === "kpis" && <Kpis onNotice={setNotice} />}
         {tab === "feedback" && <Feedback onNotice={setNotice} />}
       </main>
+      {tour && <Walkthrough onClose={() => setTour(false)} />}
       {notice && <div className={`toast ${notice.type === "error" ? "error" : ""}`}><span>{notice.type === "error" ? <CircleAlert size={17} /> : <Check size={17} />}</span>{notice.text}<button onClick={() => setNotice(null)} aria-label="Dismiss"><X size={15} /></button></div>}
     </div>
   );
@@ -132,12 +134,36 @@ function EnvBadge({ env }) {
   return <span title={`Environment: ${normalized}`} style={{ ...style, border: "1px solid", borderRadius: 999, padding: "2px 10px", fontSize: 11, fontWeight: 700, letterSpacing: 0.5 }}>{label}</span>;
 }
 
+function HowItWorks({ stats }) {
+  const steps = [
+    { icon: UploadCloud, label: "Import", value: stats ? `${stats.total ?? 0} contacts` : "—", tab: "contacts" },
+    { icon: Sparkles, label: "Classified", value: stats ? `${Object.keys(stats.by_intent || {}).length} intents` : "—", tab: "contacts" },
+    { icon: Search, label: "Signals", value: "LinkedIn · Reddit · YouTube", tab: "signals" },
+    { icon: Send, label: "Outreach", value: "Human-approved", tab: "outreach" },
+  ];
+  return (
+    <div className="panel" style={{ marginBottom: 16, padding: "12px 16px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <span className="section-kicker" style={{ marginRight: 8 }}>HOW IT WORKS</span>
+        {steps.map((s, i) => (
+          <span key={s.label} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }} title={s.label}>
+              <s.icon size={15} /><b>{s.label}</b><small className="muted">{s.value}</small>
+            </span>
+            {i < steps.length - 1 && <ArrowUpRight size={14} className="muted" />}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Overview({ onNavigate, onNotice, health, setHealth }) {
   const [stats, setStats] = useState(null);
   const [contacts, setContacts] = useState([]);
   const refresh = async () => { try { const [nextStats, nextContacts, nextHealth] = await Promise.all([request("/contacts/stats"), request("/contacts?q=") , request("/health")]); setStats(nextStats); setContacts(nextContacts.slice(0, 5)); setHealth(nextHealth); } catch (error) { onNotice({ type: "error", text: error.message }); } };
   useEffect(() => { refresh(); }, []);
-  return <div className="content"><div className="welcome-row"><div><div className="section-kicker">MONDAY, SEPTEMBER 14, 2026</div><h2>Pipeline at a glance</h2><p className="muted">A quiet view of what needs your attention next.</p></div><button className="primary-button" onClick={() => onNavigate("contacts")}><Plus size={17} /> Add contact</button></div><div className="metric-grid"><Metric label="Total contacts" value={stats?.total ?? "--"} detail="across your workspace" icon={Users} /><Metric label="Ready to reach" value={stats ? Object.values(stats.by_intent || {}).reduce((sum, value) => sum + value, 0) : "--"} detail="classified signals" icon={Sparkles} accent /><Metric label="API status" value={health?.status === "healthy" ? "Live" : "--"} detail={health?.database === "ok" ? "database connected" : "checking services"} icon={Activity} /></div><div className="two-column"><section className="panel"><div className="panel-heading"><div><div className="section-kicker">RECENTLY ADDED</div><h3>Latest contacts</h3></div><button className="text-button" onClick={() => onNavigate("contacts")}>View all <ArrowUpRight size={15} /></button></div><ContactRows contacts={contacts} /></section><section className="panel signal-panel"><div className="panel-heading"><div><div className="section-kicker">SYSTEM PULSE</div><h3>Connected services</h3></div><button className="icon-button" onClick={refresh} aria-label="Refresh services"><RefreshCw size={17} /></button></div><Service status={health?.database === "ok"} icon={Database} label="PostgreSQL / SQLite" value={health?.database === "ok" ? "Connected" : "Degraded"} /><Service status={health?.gcs_available} icon={UploadCloud} label="Google Cloud Storage" value={health?.gcs_available ? "Available" : "Optional"} /><Service status={health?.google_signin_configured} icon={ShieldCheck} label="Google Sign-In" value={health?.google_signin_configured ? "Configured" : "Not configured"} /></section></div><SecurityTrust /></div>;
+  return <div className="content"><div className="welcome-row"><div><div className="section-kicker">MONDAY, SEPTEMBER 14, 2026</div><h2>Pipeline at a glance</h2><p className="muted">A quiet view of what needs your attention next.</p></div><button className="primary-button" onClick={() => onNavigate("contacts")}><Plus size={17} /> Add contact</button></div><HowItWorks stats={stats} /><div className="metric-grid"><Metric label="Total contacts" value={stats?.total ?? "--"} detail="across your workspace" icon={Users} /><Metric label="Ready to reach" value={stats ? Object.values(stats.by_intent || {}).reduce((sum, value) => sum + value, 0) : "--"} detail="classified signals" icon={Sparkles} accent /><Metric label="API status" value={health?.status === "healthy" ? "Live" : "--"} detail={health?.database === "ok" ? "database connected" : "checking services"} icon={Activity} /></div><div className="two-column"><section className="panel"><div className="panel-heading"><div><div className="section-kicker">RECENTLY ADDED</div><h3>Latest contacts</h3></div><button className="text-button" onClick={() => onNavigate("contacts")}>View all <ArrowUpRight size={15} /></button></div><ContactRows contacts={contacts} /></section><section className="panel signal-panel"><div className="panel-heading"><div><div className="section-kicker">SYSTEM PULSE</div><h3>Connected services</h3></div><button className="icon-button" onClick={refresh} aria-label="Refresh services"><RefreshCw size={17} /></button></div><Service status={health?.database === "ok"} icon={Database} label="PostgreSQL / SQLite" value={health?.database === "ok" ? "Connected" : "Degraded"} /><Service status={health?.gcs_available} icon={UploadCloud} label="Google Cloud Storage" value={health?.gcs_available ? "Available" : "Optional"} /><Service status={health?.google_signin_configured} icon={ShieldCheck} label="Google Sign-In" value={health?.google_signin_configured ? "Configured" : "Not configured"} /></section></div><SecurityTrust /></div>;
 }
 
 function Metric({ label, value, detail, icon: Icon, accent }) { return <div className={`metric ${accent ? "accent" : ""}`}><div className="metric-icon"><Icon size={18} /></div><div className="metric-label">{label}</div><div className="metric-value">{value}</div><div className="metric-detail">{detail}</div></div>; }
@@ -459,6 +485,46 @@ function Feedback({ onNotice }) {
             {!items.length && <div className="empty-state"><MessageSquarePlus size={22} /><p>No feedback yet.</p><small>Your suggestions shape the roadmap.</small></div>}
           </div>
         </section>
+      </div>
+    </div>
+  );
+}
+
+const TOUR_KEY = "kalisoft_tour_done";
+const TOUR_STEPS = [
+  { icon: UploadCloud, title: "1. Import your contacts", text: "Bring CSV / Excel / VCF files or sync the GCS bucket (kalisoftai-datahub). Real exports with blank first rows are handled automatically — sector, turnover and exporter fields land as tags." },
+  { icon: Sparkles, title: "2. Auto-classification", text: "Every contact is segregated by domain, intent (hiring / procurement / sales) and context the moment it enters your workspace." },
+  { icon: Search, title: "3. Catch live signals", text: "LinkedIn, Reddit and YouTube scans surface hiring and procurement cues — secured by your Google account (ADC)." },
+  { icon: Send, title: "4. Review, approve, send", text: "Gemma-personalised campaigns stay human-in-the-loop: nothing sends until you approve. Email, WhatsApp, LinkedIn or WeChat." },
+  { icon: BarChart3, title: "5. Watch the KPIs", text: "Funnel, delivery rate and AI spend update in real time on the KPIs tab. Nightly snapshots keep the history." },
+];
+
+function Walkthrough({ onClose }) {
+  const [step, setStep] = useState(0);
+  const current = TOUR_STEPS[step];
+  const last = step === TOUR_STEPS.length - 1;
+  const finish = () => { sessionStorage.setItem(TOUR_KEY, "1"); onClose(); };
+  return (
+    <div className="scrim" style={{ display: "grid", placeItems: "center", zIndex: 50 }} role="dialog" aria-modal="true" aria-label="Product walkthrough">
+      <div className="panel" style={{ maxWidth: 440, padding: 24, background: "var(--panel, #fff)" }}>
+        <div className="panel-heading">
+          <div><div className="section-kicker">WELCOME TOUR</div><h3>How Kalisoft AI works</h3></div>
+          <button className="icon-button" onClick={finish} aria-label="Skip tour"><X size={17} /></button>
+        </div>
+        <div style={{ textAlign: "center", padding: "8px 0 4px" }}>
+          <div className="metric-icon" style={{ margin: "0 auto 10px" }}><current.icon size={22} /></div>
+          <h3 style={{ margin: "0 0 6px" }}>{current.title}</h3>
+          <p className="muted" style={{ minHeight: 66 }}>{current.text}</p>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+          <span style={{ display: "flex", gap: 5 }}>
+            {TOUR_STEPS.map((s, i) => <span key={s.title} style={{ width: 8, height: 8, borderRadius: 99, background: i <= step ? "#1d4fa3" : "#d5dae3" }} />)}
+          </span>
+          <span style={{ display: "flex", gap: 8 }}>
+            {step > 0 && <button className="secondary-button" onClick={() => setStep(step - 1)}>Back</button>}
+            <button className="primary-button" onClick={() => (last ? finish() : setStep(step + 1))}>{last ? "Start working" : "Next"}</button>
+          </span>
+        </div>
       </div>
     </div>
   );

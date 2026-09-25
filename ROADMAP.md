@@ -371,6 +371,7 @@ Upload the repo docs + this `ROADMAP.md`, then run these prompts/scenarios:
 | 2026-09-14 | Sign-in page with plans (Free 2 AI users → Scale) + WhatsApp cost transparency (Meta India rate card) |
 | 2026-09-14 | Auth: Google placeholder detected; restricted production login for `ai.solutions@kalisoftai.in` (403 for others) |
 | 2026-09-25 | ADC update (Google-secured APIs), YouTube Data API stub, customized scheduler + business-KPI endpoints, UAT/Prod env strategy |
+| 2026-09-25 | Feedback + Gmail mail notification, security guardrails trust panel, guided walkthrough tour + "How it works" strip; importer: blank-first-row xlsx headers + turnover/sector/exporter/requirements mapping (verified against real `kalisoftai-datahub` exports) |
 | _next_ | Gemma 4 personalisation, region co-location, Sarvam voice, Wechaty live, BigQuery, multi-tenant RLS, knowledge catalog graph DB |
 
 ---
