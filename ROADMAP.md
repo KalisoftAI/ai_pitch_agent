@@ -372,6 +372,7 @@ Upload the repo docs + this `ROADMAP.md`, then run these prompts/scenarios:
 | 2026-09-14 | Auth: Google placeholder detected; restricted production login for `ai.solutions@kalisoftai.in` (403 for others) |
 | 2026-09-25 | ADC update (Google-secured APIs), YouTube Data API stub, customized scheduler + business-KPI endpoints, UAT/Prod env strategy |
 | 2026-09-25 | Feedback + Gmail mail notification, security guardrails trust panel, guided walkthrough tour + "How it works" strip; importer: blank-first-row xlsx headers + turnover/sector/exporter/requirements mapping (verified against real `kalisoftai-datahub` exports) |
+| 2026-09-25 | Docs: Cloud Functions multi-bucket scheduler, prompts-as-config (`kalisoftai-datahub/prompts`), intent/graph JSON with confidence + human review, connectors/MCP pricing decorators, Reddit format spec |
 | _next_ | Gemma 4 personalisation, region co-location, Sarvam voice, Wechaty live, BigQuery, multi-tenant RLS, knowledge catalog graph DB |
 
 ---
@@ -437,3 +438,255 @@ with our last 3 campaigns?") instead of scanning lists.
 **UI environment indicator:** the frontend reads `GET /api/health.env` and shows a
 colored badge — **green** = production, **amber** = staging/UAT, **blue** = local dev —
 so testers always know which environment they are using.
+
+---
+
+## 12. Cloud Functions — customized multi-bucket scheduler (design)
+
+> **Design only — not yet implemented.** Goal: let each user schedule harvests from
+> *any* GCS bucket (not just `all-sales-contacts-data/`), classify intent on the way
+> in, pick the model per job, and land a data dump in the folder they choose —
+> synced back to the UI. Built to be **cost-effective by default**.
+
+### System design
+
+```text
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    CUSTOMIZED SCHEDULER — CLOUD FUNCTIONS                     │
+│                                                                              │
+│  UI: "New harvest job"                                                       │
+│   ├─ source bucket(s)   [kalisoftai-datahub/Clients_data/ ▾] [+ add bucket]  │
+│   ├─ intent filter      [procurement ▾]  (hiring|procurement|sales|any)      │
+│   ├─ model              (•) Gemini Flash — fast, cheap                       │
+│   │                     ( ) Gemma 4 27B — deep, per-call cost                │
+│   │                     [x] echo fallback if budget exceeded                 │
+│   ├─ dump to folder     [users/{uid}/dumps/procurement-sep/]                 │
+│   └─ schedule           [0 6 * * *]  ← user-editable cron                    │
+│                                                                              │
+│        │ saves job config to Postgres (harvest_jobs)                         │
+│        v                                                                     │
+│  ┌───────────────────┐   cron fires    ┌──────────────────────────────────┐  │
+│  │ Cloud Scheduler    │───────────────► │ Cloud Function (2nd gen)          │  │
+│  │  job per user cron │  OIDC-authed    │  kalisoft-bucket-harvester        │  │
+│  └───────────────────┘                 │                                  │  │
+│                                        │  1. load job config               │  │
+│                                        │  2. list source bucket objects    │  │
+│                                        │  3. pull prompt pack from ────────┼──┼──► gs://kalisoftai-datahub/prompts/
+│                                        │  4. classify intent per record    │  │     intent-classify.json
+│                                        │     (model selected in UI)        │  │     entity-extract.json
+│                                        │  5. keep only matching intent     │  │     graph-small.json
+│                                        │  6. write dump (JSONL + manifest) │  │     graph-large.json
+│                                        └──────────────┬───────────────────┘  │
+│                                                       │                       │
+│                           gs://<user-chosen folder>/  │  dump.jsonl + manifest.json
+│                                                       v                       │
+│                                        ┌──────────────────────────────────┐  │
+│                                        │ FastAPI  /api/connectors/sync     │  │
+│                                        │  • validates manifest             │  │
+│                                        │  • dedupe-inserts contacts        │  │
+│                                        │  • writes KPI snapshot            │  │
+│                                        └──────────────┬───────────────────┘  │
+│                                                       │ push / poll           │
+│                                                       v                       │
+│                                        UI refresh — rich decorators:          │
+│                                        toast "24 new procurement contacts",   │
+│                                        KPI cards tick up, badge on Contacts   │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Why Cloud Functions (not another Cloud Run service)
+- **Pay-per-invocation** — a 6 AM harvest that runs 40 s/day costs ~$0 on the free
+  tier; no idle container. Cloud Run min-instances=0 already helps, but Functions
+  are the cheapest fit for short bursty jobs.
+- **Eventarc native** — the same function can later trigger on
+  `google.storage.object.finalize` (drop a file → harvest immediately) with zero
+  code forks.
+- **Isolated retries/timeout** — per-job 9-min cap, independent of the API's SLO.
+
+### Cost guardrails
+| Control | Default | Purpose |
+|---|---|---|
+| Model per job | Gemini Flash | Flash for classify; Gemma 4 only when user opts in |
+| Max objects/job | 500 | caps runaway buckets |
+| Token budget check | `LLM_MONTHLY_TOKEN_BUDGET` | job degrades to `echo` (skip AI) when exhausted |
+| Dump format | JSONL + manifest | stream-parse, no big-memory reads |
+| Schedule jitter | +0–10 min | avoids thundering-herd at :00 |
+
+---
+
+## 13. Prompts-as-config — `gs://kalisoftai-datahub/prompts/`
+
+> Prompts live in GCS, **versioned as JSON**, not hard-coded. The app fetches the
+> prompt pack at job start (cached 5 min), so prompt tweaks ship without a deploy.
+> Every prompt declares its model hint, output schema and confidence policy.
+
+```text
+kalisoftai-datahub/prompts/
+├── intent-classify.json      # small graph: record → intent + confidence
+├── entity-extract.json       # contact/company/person extraction
+├── graph-small.json          # per-record mini-graph (nodes+edges, inline)
+├── graph-large.json          # nightly cross-record graph job (Gemma 4)
+├── outreach-personalise.json # Gemma 4 campaign personalisation
+└── manifest.json             # {name: {version, sha256, updated_at}}
+```
+
+### Prompt pack format (example: `intent-classify.json`)
+
+```json
+{
+  "id": "intent-classify",
+  "version": 3,
+  "model_hint": "gemini-2.0-flash",
+  "fallback_model": "gemma-4-27b-it",
+  "system": "You classify B2B sales records into exactly one intent.",
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "intent": {"enum": ["hiring", "procurement", "sales", "partnership", "support", "general"]},
+      "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+      "rationale": {"type": "string", "maxLength": 280}
+    },
+    "required": ["intent", "confidence"]
+  },
+  "confidence_threshold": 0.65,
+  "human_review_below": 0.65
+}
+```
+
+### Intent → context JSON contract (what the UI renders)
+
+Every classified record carries a **small graph** (per-record) inline:
+
+```json
+{
+  "record_id": "gcs://.../Contacts ( Pune, Chennai nd others ).xlsx#row3",
+  "intent": "procurement",
+  "confidence": 0.87,
+  "graph": {
+    "nodes": [
+      {"id": "c1", "type": "company",  "label": "Animets Engg. Pvt. Ltd."},
+      {"id": "p1", "type": "person",   "label": "Jaydeep Muley", "role": "CEO"},
+      {"id": "i1", "type": "intent",   "label": "procurement"},
+      {"id": "s1", "type": "sector",   "label": "Machinery / Machine Tools"}
+    ],
+    "edges": [
+      {"from": "p1", "to": "c1", "rel": "works_at",    "confidence": 0.98},
+      {"from": "c1", "to": "i1", "rel": "has_intent",  "confidence": 0.87},
+      {"from": "c1", "to": "s1", "rel": "in_sector",   "confidence": 0.95}
+    ]
+  },
+  "human_review": false
+}
+```
+
+| Graph size | Model | When | Output |
+|---|---|---|---|
+| **small** (per record) | Gemini Flash | on ingest / upload | intent + 3–6 node mini-graph + confidence |
+| **large** (cross-record) | Gemma 4 27B | nightly batch | company⇄person⇄signal⇄campaign edges merged into catalog |
+
+**Confidence → human review:** any node/edge below the prompt pack's
+`confidence_threshold` is flagged `human_review: true`; the UI renders those
+amber in the graph explorer and queues them on the review screen. Approving or
+correcting an edge writes back to the catalog (audit-logged) and feeds the
+weekly prompt-eval — a self-improving loop.
+
+---
+
+## 14. Connectors, MCP tools & pricing decorators (design)
+
+> **Design only.** One connector interface behind the API; each connector can be
+> exposed as an **MCP tool** (for agentic flows) and renders in the UI with a
+> **rich decorator** (status pill, price hint, last-run).
+
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│ CONNECTOR LAYER (FastAPI)            every connector exposes:        │
+│                                       • run(config) → records        │
+│  ┌─────────────┐ ┌─────────────┐     • price_estimate(config) → ₹    │
+│  │ GCS buckets │ │ Gmail/IMAP  │     • mcp_tool schema (name/args)   │
+│  └─────────────┘ └─────────────┘     • ui decorator (icon/pill/hint) │
+│  ┌─────────────┐ ┌─────────────┐                                     │
+│  │ Reddit      │ │ YouTube     │     UI "Connectors" gallery:         │
+│  │ (PRAW+fmt)  │ │ (Data v3)   │     ┌─────────────────────────────┐  │
+│  └─────────────┘ └─────────────┘     │ [GCS] connected · ₹0.00/run │  │
+│  ┌─────────────┐ ┌─────────────┐     │ [Reddit] needs key · ₹0.04/ │  │
+│  │ LinkedIn    │ │ GA4         │     │   1k posts · last run 6h ago│  │
+│  └─────────────┘ └─────────────┘     │ [YouTube] API key · ₹0.05/  │  │
+│                                      │   100 searches              │  │
+│  MCP bridge: /mcp/tools lists all ──►└─────────────────────────────┘  │
+│  connectors as tools for agents      (price shown BEFORE you run)     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Price transparency rule:** every connector and model choice shows its estimated
+unit price in the UI *before* the user clicks run — same pattern as the WhatsApp
+cost calculator already on the sign-in page.
+
+### Model selection = cost control (per user requirement)
+
+| User picks | Model | Best for | Approx cost* |
+|---|---|---|---|
+| "Fast & cheap" (default) | **Gemini 2.0 Flash** | intent classify, small graphs | ~₹0.03 / 1k records |
+| "Deep analysis" | **Gemma 4 27B** | nightly large graph, personalisation | Vertex pricing, budget-capped |
+| "Offline / $0" | **echo** provider | tests, budget-exhausted fallback | ₹0 |
+
+\*Indicative only — real figures come from the `model_usage` ledger
+(`/api/kpi/costs`); the ledger is the source of truth for invoice-grade numbers.
+
+---
+
+## 15. Reddit formatted posts + checkers (future scope)
+
+> **Future scope.** Structured Reddit intake so posts arrive pre-formatted and
+> pre-checked instead of raw stubs.
+
+```text
+PRAW stream (subreddits: jobs, recruiting, forhire, procurement)
+        │
+        v
+┌─────────────────────────────┐
+│ format checker               │  must match hiring-post pattern:
+│  • title  [Hiring]/[ForHire] │  [Hiring][Location][Role] ...
+│  • flair / salary / remote   │  else → quarantine queue
+└──────────────┬──────────────┘
+               v
+┌─────────────────────────────┐
+│ content checkers             │
+│  • PII guardrail (drop)      │
+│  • spam score (Flash, small) │
+│  • intent + confidence (JSON)│
+└──────────────┬──────────────┘
+               v
+     reddit_posts (formatted)  →  UI card: title · role · budget · confidence pill
+```
+
+- [ ] **R1** — PRAW credentials + subreddit config per workspace
+- [ ] **R2** — format checker (title pattern, flair, salary/remote extraction)
+- [ ] **R3** — spam/PII checkers wired to existing guardrails
+- [ ] **R4** — intent JSON (small graph) per post, human-review queue < 0.65
+- [ ] **R5** — UI card renderer for formatted posts
+
+---
+
+## 16. Dynamic nodes & edges (future scope, extends §10)
+
+> The graph starts **static** (nightly large-graph job) and becomes **dynamic**:
+> the UI lets users add a node ("this person moved to a new company") or draw an
+> edge ("these two companies are partners") directly in the explorer. Each manual
+> edit is stored as a `confidence: 1.0, source: "human"` edge — human truth always
+> outranks model inference, and every edit is audit-logged.
+
+```text
+   user drags edge in UI ──► POST /api/graph/edge {from,to,rel}
+                                  │
+                                  v
+                    stored confidence=1.0 source=human
+                                  │
+              nightly Gemma 4 large-graph job merges:
+              model edges (confidence<1) yield to human edges on conflict
+```
+
+- [ ] **D1** — `POST /api/graph/node|edge` (human-authored, confidence 1.0)
+- [ ] **D2** — conflict rule: human edge > model edge; model re-derives around it
+- [ ] **D3** — explorer canvas (React Flow) with drag-to-connect
+- [ ] **D4** — prompt-eval loop: accepted/rejected model edges tune the prompt pack
