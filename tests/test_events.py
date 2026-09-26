@@ -410,6 +410,35 @@ def test_preview_only_does_not_queue(client, auth_headers):
     assert client.get("/api/events/messages/all", headers=auth_headers).json()["items"] == []
 
 
+def test_schedule_without_a_template_uses_the_default(client, auth_headers):
+    _import(client, auth_headers)
+    event = _first_event(client, auth_headers)
+    ids = [row["id"] for row in client.get("/api/events/recipients", headers=auth_headers).json()]
+
+    response = client.post(
+        f"/api/events/{event['id']}/schedule",
+        headers=auth_headers,
+        json={"recipient_ids": ids},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["queued"] == 3
+    queued = client.get("/api/events/messages/all", headers=auth_headers).json()["items"]
+    assert all("{{" not in row["body"] for row in queued)
+
+
+def test_schedule_rejects_an_explicitly_empty_template(client, auth_headers):
+    _import(client, auth_headers)
+    event = _first_event(client, auth_headers)
+    ids = [row["id"] for row in client.get("/api/events/recipients", headers=auth_headers).json()]
+    response = client.post(
+        f"/api/events/{event['id']}/schedule",
+        headers=auth_headers,
+        json={"recipient_ids": ids, "template": "   "},
+    )
+    assert response.status_code == 422
+    assert "empty" in response.json()["detail"]
+
+
 def test_aware_schedule_is_stored_as_naive_utc(client, auth_headers):
     _import(client, auth_headers)
     event = _first_event(client, auth_headers)

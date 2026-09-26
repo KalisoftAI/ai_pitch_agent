@@ -454,7 +454,9 @@ class EventTemplateOut(BaseModel):
 
 class EventScheduleIn(BaseModel):
     recipient_ids: list[int] = Field(default_factory=list, max_length=200)
-    template: str = Field(..., min_length=1, max_length=4_096)
+    # Omitted means "use the default event template"; an empty string is a
+    # client bug and is rejected by the router.
+    template: Optional[str] = Field(default=None, max_length=4_096)
     scheduled_at: Optional[datetime] = None
     preview_only: bool = False
 

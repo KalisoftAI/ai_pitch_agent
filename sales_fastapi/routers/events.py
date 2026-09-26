@@ -642,7 +642,9 @@ def schedule_event_messages(
     db: Session = Depends(get_db),
 ):
     event = _get_event(db, user, event_id)
-    template = payload.template.strip()
+    template = (
+        payload.template if payload.template is not None else DEFAULT_EVENT_TEMPLATE
+    ).strip()
     if not template:
         raise HTTPException(status_code=422, detail="Message template cannot be empty")
     if len(template) > 4_096:
