@@ -81,6 +81,7 @@ Secrets:
 Variables:
 - `GCP_PROJECT_ID`, `GCP_REGION`, `ARTIFACT_REPOSITORY`
 - `CLOUD_SQL_INSTANCE`, `CORS_ORIGINS`, `ALLOWED_HOSTS`, `GCS_BUCKET`
+- `GOOGLE_ALLOWED_DOMAINS`, `GMAIL_OAUTH_ENABLED`, `GOOGLE_OAUTH_REDIRECT_URI`, `FRONTEND_URL`
 
 The Artifact Registry job in `docker-publish.yml` runs only when `GCP_PROJECT_ID`
 is set, so GHCR-only publishing works out of the box.
@@ -258,7 +259,8 @@ To enable it:
 
 1. **Google Cloud Console → APIs & Services → OAuth consent screen**
    - User type: External; fill app name + support email; add scopes `openid`,
-     `email`, `profile`; add test users (or publish the app).
+     `email`, `profile`, and `https://www.googleapis.com/auth/gmail.readonly`;
+     add test users (or publish the app).
 2. **Credentials → Create credentials → OAuth client ID → Web application**
 3. **Authorized JavaScript origins** (required by Google Identity Services):
    ```
@@ -267,25 +269,31 @@ To enable it:
    http://localhost:5173
    http://localhost:8000
    ```
-   (No redirect URI is needed for the Google Identity Services ID-token flow.)
-4. Copy the **Client ID** and update the secret:
+4. **Authorized redirect URI** (required for Gmail OAuth):
+   ```
+   https://kalisoft-sales-19782268668.asia-south1.run.app/api/email/google/callback
+   http://localhost:8000/api/email/google/callback
+   ```
+5. Copy the **Client ID** and update the secret:
    ```bash
    printf '%s' "<CLIENT_ID>.apps.googleusercontent.com" \
      | gcloud secrets versions add GOOGLE_CLIENT_ID --data-file=- --project gen-lang-client-0132243782
-   # server-side secret only if you later add a code-exchange flow:
    printf '%s' "<CLIENT_SECRET>" \
      | gcloud secrets versions add GOOGLE_CLIENT_SECRET --data-file=- --project gen-lang-client-0132243782
    ```
-5. **Create a new revision** so Cloud Run picks up `:latest`:
+6. Set the OAuth callback and frontend URL in the Cloud Run environment:
    ```bash
    gcloud run services update kalisoft-sales --region asia-south1 \
+     --set-env-vars "GMAIL_OAUTH_ENABLED=true,GOOGLE_OAUTH_REDIRECT_URI=https://kalisoft-sales-19782268668.asia-south1.run.app/api/email/google/callback,FRONTEND_URL=https://kalisoftai.in" \
      --update-secrets GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest,GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:latest
    ```
-6. Verify: `/api/config` now returns the client id, and the sign-in page shows the
-   Google button.
+7. Verify: `/api/config` returns the client id and
+   `google_gmail_oauth_configured: true`; the sign-in page shows the Google
+   button and Email connections shows the Gmail OAuth action.
 
 Set `GOOGLE_ALLOWED_DOMAINS` (e.g. `kalisoftai.in,kalisoftai.com`) so only your
-domain can sign in.
+domain can sign in. Gmail access is read-only and refresh tokens are encrypted
+with the application secret; they are never returned by the API.
 
 ### Temporary local/dev login
 While OAuth is being set up, a dev login is available when `AUTH_DEV_MODE=true`
@@ -304,5 +312,55 @@ The production config validator now allows `AUTH_DEV_MODE=true` **only** when
 `ai.solutions@kalisoftai.in` can sign in. Switch to real Google OAuth (above) and
 set `AUTH_DEV_MODE=false` to retire this.
 
+---
 
+## 11. Events dashboard & scheduled WhatsApp
 
+The **Events** tab imports the hand-maintained `events list.xlsx` workbook. The
+file is *not* shipped in the container (`data/` is git-ignored and excluded by
+`.dockerignore.sales`), so in production you upload it from the UI:
+
+```
+POST /api/events/import        multipart: file=<workbook.xlsx>
+```
+
+Re-importing is safe: events are keyed by a fingerprint of their link (or
+title + date), contacts by normalised phone, so a second import updates rows
+instead of duplicating them. The local-data fallback (`EVENTS_LOCAL_DIR` /
+`EVENTS_WORKBOOK_NAME`) only applies to a dev machine where `data/` exists.
+
+### Endpoints
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/api/events/summary` | counts for the metric cards |
+| GET | `/api/events` | filters: `q`, `status`, `mode`, `order`, `limit` |
+| GET | `/api/events/recipients` | contacts-sheet recipients |
+| GET | `/api/events/{id}/message-template` | default template + rendered preview |
+| POST | `/api/events/{id}/schedule` | queue (or `preview_only`) per recipient |
+| GET | `/api/events/messages/all` | outreach queue with status counts |
+| POST | `/api/events/messages/{id}/send` | send one message now |
+| POST | `/api/events/messages/{id}/cancel` | cancel a queued message |
+| POST | `/api/events/messages/send-due` | dispatch everything whose time has passed |
+
+### Nothing sends implicitly
+
+Queued messages stay `queued` until an explicit action:
+
+1. an operator clicks **Send** on a row, or
+2. **Send due now** is clicked, or
+3. Cloud Scheduler calls `POST /api/events/messages/send-due` every 15 minutes
+   (registered as the `events_whatsapp_due` standard task).
+
+```bash
+gcloud scheduler jobs create http events-whatsapp-due \
+  --location=asia-south1 --schedule="*/15 * * * *" \
+  --uri="https://kalisoft-sales-19782268668.asia-south1.run.app/api/events/messages/send-due" \
+  --http-method=POST \
+  --oidc-service-account-email=kalisoft-sales@gen-lang-client-0132243782.iam.gserviceaccount.com
+```
+
+`WHATSAPP_ENABLED=true` (plus `WECHATY_GATEWAY_TOKEN` / `WECHATY_WEBHOOK_SECRET`)
+is required before anything leaves the app; queueing works with the channel
+disabled, sending returns HTTP 503. Every import, queue, cancel and send is
+written to the audit log with PII redaction.

@@ -373,7 +373,8 @@ Upload the repo docs + this `ROADMAP.md`, then run these prompts/scenarios:
 | 2026-09-25 | ADC update (Google-secured APIs), YouTube Data API stub, customized scheduler + business-KPI endpoints, UAT/Prod env strategy |
 | 2026-09-25 | Feedback + Gmail mail notification, security guardrails trust panel, guided walkthrough tour + "How it works" strip; importer: blank-first-row xlsx headers + turnover/sector/exporter/requirements mapping (verified against real `kalisoftai-datahub` exports) |
 | 2026-09-25 | Docs: Cloud Functions multi-bucket scheduler, prompts-as-config (`kalisoftai-datahub/prompts`), intent/graph JSON with confidence + human review, connectors/MCP pricing decorators, Reddit format spec |
-| _next_ | Gemma 4 personalisation, region co-location, Sarvam voice, Wechaty live, BigQuery, multi-tenant RLS, knowledge catalog graph DB |
+| 2026-09-25 | GA4 website KPI snapshot, KalisoftAI brand asset, and account catalog → quote → invoice future-scope design |
+| _next_ | Gemma 4 personalisation, region co-location, Sarvam voice, Wechaty live, BigQuery, multi-tenant RLS, knowledge catalog graph DB, Account template + quotes/catalog/invoice (matrices.xlsx) |
 
 ---
 
@@ -690,3 +691,47 @@ PRAW stream (subreddits: jobs, recruiting, forhire, procurement)
 - [ ] **D2** — conflict rule: human edge > model edge; model re-derives around it
 - [ ] **D3** — explorer canvas (React Flow) with drag-to-connect
 - [ ] **D4** — prompt-eval loop: accepted/rejected model edges tune the prompt pack
+
+---
+
+## 17. Account catalog, quotes & invoices (future scope)
+
+> **Design only — not yet implemented.** The approved service catalog, account model,
+> quote workflow, and invoice workflow are specified in
+> [`docs/ACCOUNT_TEMPLATES.md`](docs/ACCOUNT_TEMPLATES.md). The initial catalog is
+> derived from the local `data/All-project-matrices.xlsx` workbook; the workbook stays
+> ignored by Git until an approved import path is ready.
+
+### Workflow
+
+```text
+Approved workbook export
+        │ validate, normalize, version
+        v
+Service catalog ──► account requirements ──► Gemma 4 recommendation
+                                             │ human selects plan
+                                             v
+                                  quote draft + server totals
+                                             │ human approval
+                                             v
+                                  invoice draft + tax checks
+                                             │ human approval
+                                             v
+                                    immutable invoice delivery
+```
+
+### Routing boundary
+
+Gemma 4 is planned for catalog extraction, account matching, quote summaries, and
+invoice explanations. The application remains authoritative for price ranges, tax,
+discounts, totals, invoice numbers, permissions, and status transitions. All generated
+commercial documents require human approval.
+
+### Phased delivery
+- [ ] **A1** — Confirm service IDs, tax fields, numbering, and approval roles.
+- [ ] **A2** — Add reviewed workbook import and catalog version history.
+- [ ] **A3** — Add user-scoped account, quote, and invoice data models.
+- [ ] **A4** — Implement deterministic totals, audit events, and idempotency.
+- [ ] **A5** — Add Gemma 4 tasks behind a feature flag.
+- [ ] **A6** — Add review/approval UI and PDF delivery.
+- [ ] **A7** — Complete tax-compliance review before production enablement.

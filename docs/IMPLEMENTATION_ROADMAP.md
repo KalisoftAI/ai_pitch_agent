@@ -490,3 +490,15 @@ it is not in the current production revision.
   migrations if desired.
 - Frontend: componentisation, i18n, deeper accessibility (focus traps, live regions).
 
+### 13.7 Account catalog, quote & invoice service
+- The design and workbook mapping are tracked in [`ACCOUNT_TEMPLATES.md`](ACCOUNT_TEMPLATES.md).
+- Start with a reviewed `data/All-project-matrices.xlsx` import and a versioned service
+  catalog; the workbook remains ignored by Git until the controlled import path exists.
+- Add user-scoped account, quote, and invoice models only after service IDs, tax fields,
+  numbering, and approval roles are confirmed.
+- Route catalog extraction, account matching, and customer-facing summaries through
+  Gemma 4 behind a feature flag. Keep prices, tax, discounts, totals, invoice numbers,
+  and status transitions deterministic and server-owned.
+- Require human approval before sending a quote or finalizing an invoice; do not treat
+  model output as a financial authority.
+

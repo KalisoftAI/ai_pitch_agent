@@ -15,7 +15,9 @@ from .routers import (
     campaigns_router,
     contacts_router,
     email_router,
+    events_router,
     feedback_router,
+    google_email_router,
     governance_router,
     llm_router,
     scheduler_router,
@@ -71,6 +73,8 @@ app.include_router(templates_router, prefix=api_prefix)
 app.include_router(campaigns_router, prefix=api_prefix)
 app.include_router(scheduler_router, prefix=api_prefix)
 app.include_router(feedback_router, prefix=api_prefix)
+app.include_router(google_email_router, prefix=api_prefix)
+app.include_router(events_router, prefix=api_prefix)
 
 
 @app.get("/", include_in_schema=False)

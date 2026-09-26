@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = Field(default="", alias="GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET: str = Field(default="", alias="GOOGLE_CLIENT_SECRET")
     GOOGLE_ALLOWED_DOMAINS: str = Field(default="", alias="GOOGLE_ALLOWED_DOMAINS")
+    GMAIL_OAUTH_ENABLED: bool = Field(default=True, alias="GMAIL_OAUTH_ENABLED")
+    GOOGLE_OAUTH_REDIRECT_URI: str = Field(default="", alias="GOOGLE_OAUTH_REDIRECT_URI")
+    FRONTEND_URL: str = Field(default="http://localhost:5173", alias="FRONTEND_URL")
     AUTH_DEV_MODE: bool = Field(default=False, alias="AUTH_DEV_MODE")
     # When dev mode is enabled, restrict it to these emails (comma-separated).
     AUTH_DEV_ALLOWED_EMAILS: str = Field(default="", alias="AUTH_DEV_ALLOWED_EMAILS")
@@ -57,7 +60,7 @@ class Settings(BaseSettings):
     IMAP_USER: str = Field(default="", alias="IMAP_USER")
 
     # --- AI ---
-    GEMMA_MODEL: str = Field(default="gemma-3-27b-it", alias="GEMMA_MODEL")
+    GEMMA_MODEL: str = Field(default="gemma-4-27b-it", alias="GEMMA_MODEL")
     GEMINI_API_KEY: str = Field(default="", alias="GEMINI_API_KEY")
 
     # --- WhatsApp ---
@@ -77,6 +80,16 @@ class Settings(BaseSettings):
     REDDIT_CLIENT_ID: str = Field(default="", alias="REDDIT_CLIENT_ID")
     REDDIT_CLIENT_SECRET: str = Field(default="", alias="REDDIT_CLIENT_SECRET")
     YOUTUBE_API_KEY: str = Field(default="", alias="YOUTUBE_API_KEY")
+
+    # --- Event workbook / WhatsApp scheduling ---
+    # The workbook is not shipped in the container, so imports are uploaded
+    # through the API; EVENTS_WORKBOOK_NAME is the local-data fallback name.
+    EVENTS_WORKBOOK_NAME: str = Field(default="events list.xlsx", alias="EVENTS_WORKBOOK_NAME")
+    EVENTS_LOCAL_DIR: str = Field(default="data", alias="EVENTS_LOCAL_DIR")
+    EVENTS_MAX_RECIPIENTS_PER_MESSAGE: int = Field(
+        default=200, alias="EVENTS_MAX_RECIPIENTS_PER_MESSAGE"
+    )
+    EVENTS_DEFAULT_LEAD_MINUTES: int = Field(default=60, alias="EVENTS_DEFAULT_LEAD_MINUTES")
 
     # --- Security ---
     SECRET_KEY: str = Field(default="change-this-secret", alias="SECRET_KEY")
@@ -138,6 +151,15 @@ class Settings(BaseSettings):
         if client_id.startswith("your-client-id"):
             return False
         return True
+
+    @property
+    def google_gmail_oauth_configured(self) -> bool:
+        return bool(
+            self.GMAIL_OAUTH_ENABLED
+            and self.google_signin_configured
+            and self.GOOGLE_CLIENT_SECRET.strip()
+            and self.GOOGLE_OAUTH_REDIRECT_URI.strip()
+        )
 
     @property
     def auth_dev_allowed_list(self) -> list[str]:

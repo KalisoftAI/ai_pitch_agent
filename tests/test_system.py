@@ -4,6 +4,7 @@ def test_config_is_public(client):
     body = resp.json()
     assert body["project_name"]
     assert "dev_mode" in body
+    assert "google_gmail_oauth_configured" in body
     assert "google_client_secret" not in body
 
 

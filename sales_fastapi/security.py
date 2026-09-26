@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -89,6 +90,34 @@ def decode_access_token(token: str) -> dict:
 # --------------------------------------------------------------------------
 # Google ID token verification
 # --------------------------------------------------------------------------
+def create_oauth_state(user_id: int, purpose: str) -> str:
+    now = datetime.now(timezone.utc)
+    return jwt.encode(
+        {
+            "sub": str(user_id),
+            "purpose": purpose,
+            "nonce": secrets.token_urlsafe(18),
+            "iat": int(now.timestamp()),
+            "exp": int((now + timedelta(minutes=10)).timestamp()),
+        },
+        settings.SECRET_KEY,
+        algorithm=settings.ALGORITHM,
+    )
+
+
+def decode_oauth_state(token: str, purpose: str) -> int:
+    try:
+        claims = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    except jwt.PyJWTError as exc:
+        raise HTTPException(status_code=400, detail="Invalid or expired OAuth state") from exc
+    if claims.get("purpose") != purpose:
+        raise HTTPException(status_code=400, detail="Invalid OAuth state purpose")
+    try:
+        return int(claims["sub"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail="Invalid OAuth state subject") from exc
+
+
 def verify_google_id_token(token: str) -> dict:
     """Return the Google profile claims for a valid ID token.
 

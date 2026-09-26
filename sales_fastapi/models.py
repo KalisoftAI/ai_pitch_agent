@@ -6,6 +6,7 @@ from sqlalchemy import (
     JSON,
     Boolean,
     DateTime,
+    ForeignKey,
     Integer,
     String,
     Text,
@@ -89,6 +90,22 @@ class EmailConnection(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
+class GoogleMailbox(Base):
+    __tablename__ = "google_mailboxes"
+    __table_args__ = (UniqueConstraint("user_id", "email_address", name="uq_google_mailbox_user_email"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True)
+    email_address: Mapped[str] = mapped_column(String(320), index=True)
+    access_token_encrypted: Mapped[str] = mapped_column(Text, default="")
+    refresh_token_encrypted: Mapped[str] = mapped_column(Text, default="")
+    token_expiry: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    scopes: Mapped[str] = mapped_column(Text, default="")
+    is_connected: Mapped[bool] = mapped_column(Boolean, default=False)
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
 class LinkedInProfile(Base):
     __tablename__ = "linkedin_profiles"
 
@@ -126,6 +143,70 @@ class WhatsAppMessage(Base):
     message: Mapped[str] = mapped_column(Text, default="")
     status: Mapped[str] = mapped_column(String(32), default="pending")
     sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class Event(Base):
+    """An exhibition, webinar or meetup imported from the event workbook."""
+
+    __tablename__ = "events"
+    __table_args__ = (UniqueConstraint("user_id", "fingerprint", name="uq_event_user_fingerprint"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True)
+    fingerprint: Mapped[str] = mapped_column(String(64), default="")
+    title: Mapped[str] = mapped_column(String(255), index=True, default="")
+    event_url: Mapped[str] = mapped_column(String(512), default="")
+    starts_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    ends_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    when_text: Mapped[str] = mapped_column(String(512), default="")
+    location: Mapped[str] = mapped_column(String(512), default="")
+    mode: Mapped[str] = mapped_column(String(32), default="unknown", index=True)
+    status: Mapped[str] = mapped_column(String(32), default="upcoming", index=True)
+    organiser: Mapped[str] = mapped_column(String(255), default="")
+    attendance: Mapped[str] = mapped_column(String(128), default="")
+    about: Mapped[str] = mapped_column(Text, default="")
+    todo: Mapped[str] = mapped_column(Text, default="")
+    source_sheet: Mapped[str] = mapped_column(String(64), default="")
+    source_row: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class EventRecipient(Base):
+    """A WhatsApp contact extracted from the workbook contacts sheet."""
+
+    __tablename__ = "event_recipients"
+    __table_args__ = (UniqueConstraint("user_id", "phone", name="uq_event_recipient_user_phone"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True)
+    phone: Mapped[str] = mapped_column(String(32), index=True, default="")
+    name: Mapped[str] = mapped_column(String(255), default="")
+    company: Mapped[str] = mapped_column(String(255), default="", index=True)
+    notes: Mapped[str] = mapped_column(Text, default="")
+    source_sheet: Mapped[str] = mapped_column(String(64), default="")
+    source_row: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class EventMessage(Base):
+    """A queued WhatsApp message for one event recipient."""
+
+    __tablename__ = "event_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True)
+    event_id: Mapped[int] = mapped_column(Integer, ForeignKey("events.id"), index=True)
+    recipient_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("event_recipients.id"), index=True
+    )
+    phone: Mapped[str] = mapped_column(String(32), default="")
+    body: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(32), default="queued", index=True)
+    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    error: Mapped[str] = mapped_column(String(512), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 

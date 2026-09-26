@@ -5,6 +5,17 @@
 *.db
 *.sqlite3
 .env
+.env.*
+*.env
+cloudrun.env*
+credentials.json
+secrets*.json
+*-credentials.json
+service-account*.json
+*.pem
+*.key
+*.p12
+*.pfx
 .venv
 venv
 tests

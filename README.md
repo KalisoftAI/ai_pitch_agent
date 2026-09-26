@@ -13,7 +13,7 @@ The FastAPI workspace (`sales_fastapi/` + React `frontend/`) is the actively dev
 - **Google-secured APIs (ADC)** — LinkedIn, Reddit and now **YouTube Data API v3** (`POST /api/social/youtube/search`); ADC works on Cloud Run, `GOOGLE_APPLICATION_CREDENTIALS` locally.
 - **Feedback + mail notification** — `POST /api/feedback` stores feedback and notifies the team by Gmail SMTP; **Feedback** tab in the UI with star rating.
 - **Data-security guardrails UI** — `GET /api/security/status` drives the "Your data, guarded" panel (Google Sign-In, per-user isolation, Fernet encryption, PII redaction, audit trail, rate limits, LLM guardrails, retention).
-- **Engaging next-scope section** — sign-in page previews Gemma 4 personalisation, knowledge-catalog graph DB, YouTube signals, smart notifications, BigQuery KPI warehouse, multi-tenant RLS.
+- **Engaging next-scope section** — sign-in page previews Gemma 4 personalisation, knowledge-catalog graph DB, YouTube signals, smart notifications, BigQuery KPI warehouse, multi-tenant RLS, and the Account catalog → quote → invoice workflow.
 - **UAT/Prod parity** — env badge in the UI (DEV/UAT/PROD) fed by `/api/health`; CD pipeline maps `main`→production, `UAT`→staging, `DEV`→development Cloud Run services.
 
 ### Run it
@@ -872,5 +872,6 @@ Deploy secrets (Secret Manager): `SALES_SECRET_KEY`, `SALES_DATABASE_URL`,
 - **Gemma:** routed but disabled until an API key is supplied (see future scope).
 - **CI/CD:** `main`→production, `UAT`→staging, `DEV`→development; build in GitHub Actions → Artifact Registry → Cloud Run.
 
-See [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md), [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
-and [`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md) §13 (future scope).
+See [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md), [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md),
+[`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md) §13 (future scope), and
+[`docs/ACCOUNT_TEMPLATES.md`](docs/ACCOUNT_TEMPLATES.md) (account catalog, quotes, invoices).

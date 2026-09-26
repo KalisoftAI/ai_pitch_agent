@@ -178,7 +178,7 @@ def normalise_record(record: dict[str, Any]) -> dict[str, Any] | None:
     return {
         "company": company,
         "name": name,
-        "email": email_address or f"unknown-{hashlib.md5((company or name).encode()).hexdigest()[:12]}@placeholder.local",
+        "email": email_address or f"unknown-{hashlib.md5((company or name).encode(), usedforsecurity=False).hexdigest()[:12]}@placeholder.local",
         "phone": _pick(record, "phone", "contact (phone)", "mobile", "phone number", "contact number", "tel"),
         "address": _pick(record, "address", "address (ahmednagar unit)", "location", "city"),
         "linkedin_company": _pick(record, "linkedin", "linkedin (company / key scm profile)", "linkedin url", "website"),

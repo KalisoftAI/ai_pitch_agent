@@ -9,6 +9,7 @@ Endpoints
     GET  /api/kpi/pipeline           – contact pipeline funnel metrics
     GET  /api/kpi/outreach           – outreach / campaign performance
     GET  /api/kpi/costs              – LLM usage & cost summary
+    GET  /api/kpi/website            – GA4 website metrics (from GCS snapshot)
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from ..analytics import load_ga4_snapshot
 from ..database import get_db
 from ..models import (
     Campaign,
@@ -32,7 +34,9 @@ from ..models import (
     WhatsAppMessage,
 )
 from ..scheduler import scheduler_service
-from ..security import get_current_user
+from ..schemas import SchedulerRunIn
+from ..security import decrypt_secret, get_current_user
+from ..services import MailSender
 
 router = APIRouter(tags=["scheduler", "kpi"])
 
@@ -42,14 +46,46 @@ router = APIRouter(tags=["scheduler", "kpi"])
 # ---------------------------------------------------------------------------
 
 @router.post("/scheduler/run")
-def run_scheduler(user: User = Depends(get_current_user)):
+def run_scheduler(payload: SchedulerRunIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Enqueue the standard pipeline tasks for this user (manual cron sweep)."""
     task_ids = scheduler_service.enqueue_standard_tasks(user_id=user.id)
-    return {
+    result = {
         "enqueued": len(task_ids),
         "task_ids": task_ids,
         "backend": scheduler_service.backend_status(),
+        "notification": {"status": "disabled" if not payload.notify_email else "not_configured"},
     }
+    if not payload.notify_email:
+        return result
+
+    connection = (
+        db.query(EmailConnection)
+        .filter(EmailConnection.user_id == user.id)
+        .order_by(EmailConnection.is_connected.desc(), EmailConnection.id.asc())
+        .first()
+    )
+    if connection is None or not connection.smtp_host or not connection.email_address:
+        return result
+
+    task_lines = "\n".join(f"- {task_id}" for task_id in task_ids)
+    body = (
+        f"Hi {user.name or 'there'},\n\n"
+        f"Your cron sweep has been queued for {user.email}.\n\n"
+        f"Tasks queued: {len(task_ids)}\n{task_lines}\n\n"
+        f"Queue backend: {scheduler_service.backend_status()}\n"
+        "The tasks will be processed by the configured worker."
+    )
+    try:
+        MailSender(
+            connection.smtp_host,
+            connection.smtp_port,
+            connection.email_address,
+            decrypt_secret(connection.secret_encrypted),
+        ).send(user.email, "Kalisoft cron sweep queued", body, connection.email_address)
+        result["notification"] = {"status": "sent", "to": user.email}
+    except Exception:  # noqa: BLE001
+        result["notification"] = {"status": "failed", "to": user.email}
+    return result
 
 
 @router.get("/scheduler/status")
@@ -212,3 +248,9 @@ def kpi_costs(user: User = Depends(get_current_user), db: Session = Depends(get_
         "total_cost_micros": total_cost,
         "total_cost_usd": round(total_cost / 1_000_000, 6),
     }
+
+
+@router.get("/kpi/website")
+def kpi_website(user: User = Depends(get_current_user)):
+    """GA4 website metrics parsed from the GCS 'Reports snapshot' export."""
+    return load_ga4_snapshot()

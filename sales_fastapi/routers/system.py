@@ -33,6 +33,7 @@ def public_config():
         "project_name": settings.PROJECT_NAME,
         "version": settings.VERSION,
         "google_client_id": settings.GOOGLE_CLIENT_ID if settings.google_signin_configured else "",
+        "google_gmail_oauth_configured": settings.google_gmail_oauth_configured,
         "dev_mode": settings.AUTH_DEV_MODE,
     }
 
@@ -48,6 +49,7 @@ def health(request: Request):
         "redis": _redis_ping(),
         "gcs_available": GCSStorage().available,
         "google_signin_configured": settings.google_signin_configured,
+        "google_gmail_oauth_configured": settings.google_gmail_oauth_configured,
         "dev_mode": settings.AUTH_DEV_MODE,
     }
 

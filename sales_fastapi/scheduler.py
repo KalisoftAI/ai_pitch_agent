@@ -28,6 +28,11 @@ STANDARD_TASKS: List[Dict[str, Any]] = [
     {"name": "reddit_hiring_alerts", "cron": "0 8 * * *", "description": "Daily Reddit hiring-thread sweep"},
     {"name": "youtube_signal_scan", "cron": "0 9 * * *", "description": "YouTube company/tech signal scan (future)"},
     {"name": "whatsapp_reminders", "cron": "0 10 * * *", "description": "Queue follow-up WhatsApp reminders"},
+    {
+        "name": "events_whatsapp_due",
+        "cron": "*/15 * * * *",
+        "description": "Dispatch queued event WhatsApp messages whose schedule time has passed",
+    },
     {"name": "kpi_snapshot", "cron": "0 23 * * *", "description": "Nightly business-KPI snapshot"},
 ]
 

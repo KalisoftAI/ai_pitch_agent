@@ -1,9 +1,17 @@
 # Secrets & credentials
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+!*.env.example
 cloudrun.env*
 credentials.json
+secrets*.json
+*-credentials.json
+service-account*.json
+*.pem
+*.key
+*.p12
+*.pfx
 
 # Python
 __pycache__/
@@ -50,3 +58,4 @@ htmlcov/
 # data
 /data/*
 !/data/DEPLOYMENT.md
+/data/All-project-matrices.xlsx

@@ -40,7 +40,7 @@ GRANT ALL PRIVILEGES ON SCHEMA public TO sales_user;
 # Add these lines to your .env file:
 DB_NAME=sales_db
 DB_USER=sales_user
-DB_PASSWORD=YourSecurePassword123!
+DB_PASSWORD=<your-database-password>
 DB_HOST=localhost
 DB_PORT=5432
 ```
@@ -255,17 +255,17 @@ pip install psycopg2-binary
 ### Use Strong Passwords
 ```bash
 # Bad:
-DB_PASSWORD=password123
+DB_PASSWORD=<your-database-password>
 
 # Good:
-DB_PASSWORD=K@lSoft$uPer_P@ssw0rd!x2024
+DB_PASSWORD=<your-database-password>
 ```
 
 ### Use Different Credentials for Production
 ```env
 # Production .env:
 DB_USER=prod_sales_user
-DB_PASSWORD=very_secure_password_randomly_generated
+DB_PASSWORD=<your-database-password>
 DB_HOST=production-db.example.com
 DB_PORT=5432
 ```

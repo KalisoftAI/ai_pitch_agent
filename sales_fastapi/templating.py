@@ -29,6 +29,24 @@ def render(text: str, context: dict[str, Any]) -> str:
     return _PLACEHOLDER.sub(replace, text or "")
 
 
+def render_optional(text: str, context: dict[str, Any]) -> str:
+    """Like :func:`render`, but drops placeholders whose value is empty.
+
+    Optional fields such as ``{{company_suffix}}`` disappear instead of leaking
+    into the message, while genuinely unknown placeholders stay visible so typos
+    are still spotted.
+    """
+
+    def replace(match: re.Match[str]) -> str:
+        key = match.group(1)
+        if key not in context:
+            return match.group(0)
+        value = context.get(key)
+        return str(value) if value not in (None, "") else ""
+
+    return _PLACEHOLDER.sub(replace, text or "")
+
+
 def contact_context(contact: Any, extra: dict[str, Any] | None = None) -> dict[str, Any]:
     context = {
         "name": getattr(contact, "name", "") or "",
