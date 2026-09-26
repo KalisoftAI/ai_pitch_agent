@@ -364,3 +364,50 @@ gcloud scheduler jobs create http events-whatsapp-due \
 is required before anything leaves the app; queueing works with the channel
 disabled, sending returns HTTP 503. Every import, queue, cancel and send is
 written to the audit log with PII redaction.
+
+---
+
+## 12. Deploying a revision (Cloud Build)
+
+`gcloud builds submit` uploads the working tree, so the upload allowlist lives
+in `.gcloudignore` (secrets, `data/`, `*.db`, keys and docs are excluded) with
+`.gitignore` as the second layer. Nothing sensitive is uploaded or published.
+
+Pre-flight, because `gcloud run deploy --set-env-vars` **replaces** the whole
+environment and a missing substitution silently breaks the service:
+
+```bash
+# 1. the instance must be real, not the REPLACE_... placeholder
+gcloud secrets list --project gen-lang-client-0132243782    # SALES_SECRET_KEY, SALES_DATABASE_URL, GOOGLE_CLIENT_ID/SECRET, GEMINI_API_KEY
+gcloud run services describe kalisoft-sales --region asia-south1 --format="value(spec.template.spec.containers[0].env)"
+```
+
+Then build and deploy in one shot:
+
+```bash
+gcloud builds submit --config cloudbuild.fastapi.yaml --project gen-lang-client-0132243782 \
+  --substitutions=_CLOUD_SQL_INSTANCE=gen-lang-client-0132243782:us-central1:kalisoft-sales-data,_ALLOWED_HOSTS=*.run.app,kalisoftai.in,www.kalisoftai.in,_CORS_ORIGINS=https://kalisoftai.in,https://www.kalisoftai.in
+```
+
+Notes:
+
+- `AUTH_DEV_MODE` / `AUTH_DEV_ALLOWED_EMAILS` are substitutions (not hardcoded).
+  They default to the documented allowlist because `GOOGLE_CLIENT_ID` is still a
+  placeholder; deploying with `AUTH_DEV_MODE=false` would leave nobody able to
+  sign in. Switch both to `false`/empty once real Google OAuth is configured.
+- `WHATSAPP_ENABLED` defaults to `false`: the Events queue works, and
+  `/messages/send-due` answers 503 until the Wechaty gateway exists. Enabling it
+  also needs `WECHATY_GATEWAY_TOKEN` and `WECHATY_WEBHOOK_SECRET` added to the
+  `--set-secrets` list of the build config.
+- Schema: `init_db()` runs `create_all` on startup, so the new `events`,
+  `event_recipients` and `event_messages` tables appear automatically. The
+  `alembic_version` row stays behind, so stamp it once to keep future migrations
+  usable (otherwise `alembic upgrade head` fails with "table events already
+  exists"):
+  ```bash
+  gcloud run jobs create alembic-stamp --image <same image> --region asia-south1 \
+    --command --set-env-vars=... --set-secrets=... \
+    --add-cloudsql-instances=gen-lang-client-0132243782:us-central1:kalisoft-sales-data
+  ```
+- The workbook is not in the image: upload `events list.xlsx` from the Events
+  tab (or `POST /api/events/import`) after the deploy.

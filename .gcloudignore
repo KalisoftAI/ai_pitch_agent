@@ -1,0 +1,51 @@
+# Explicit upload allowlist/denylist for `gcloud builds submit`.
+# gcloud falls back to .gitignore when this file is absent; keep both in sync.
+# Nothing here may contain real credentials or customer data.
+
+# secrets and credentials - never upload
+.env
+.env.*
+*.env
+cloudrun.env*
+credentials.json
+secrets*.json
+*-credentials.json
+service-account*.json
+*.pem
+*.key
+*.p12
+*.pfx
+token.json
+application_default_credentials.json
+
+# customer data and local state
+data/
+*.db
+*.sqlite3
+*.sqlite
+
+# vcs, tooling, docs
+.git
+.github
+.venv
+venv
+**/__pycache__
+**/*.pyc
+.ruff_cache
+.pytest_cache
+.mypy_cache
+.ipynb_checkpoints
+node_modules
+notebooks
+staticfiles
+tests
+docs
+*.md
+!ROADMAP.md
+
+# editor / os noise
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+*.log

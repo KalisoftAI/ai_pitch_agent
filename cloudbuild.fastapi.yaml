@@ -26,7 +26,7 @@ steps:
       - "--allow-unauthenticated"
       - "--add-cloudsql-instances=${_CLOUD_SQL_INSTANCE}"
       - "--set-secrets=SECRET_KEY=SALES_SECRET_KEY:latest,DATABASE_URL=SALES_DATABASE_URL:latest,GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest,GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest"
-      - "--set-env-vars=ENV=production,GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_ALLOWED_DOMAINS=${_GOOGLE_ALLOWED_DOMAINS},GCS_BUCKET_CONTACTS=${_GCS_BUCKET},GCS_PATH_CONTACTS=${_GCS_PATH},CLOUD_SQL_CONNECTION_NAME=${_CLOUD_SQL_INSTANCE},CORS_ORIGINS=${_CORS_ORIGINS},ALLOWED_HOSTS=${_ALLOWED_HOSTS},RATE_LIMIT_ENABLED=true,AUTH_DEV_MODE=false,GMAIL_OAUTH_ENABLED=${_GMAIL_OAUTH_ENABLED},GOOGLE_OAUTH_REDIRECT_URI=${_GOOGLE_OAUTH_REDIRECT_URI},FRONTEND_URL=${_FRONTEND_URL}"
+      - "--set-env-vars=ENV=production,GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_ALLOWED_DOMAINS=${_GOOGLE_ALLOWED_DOMAINS},GCS_BUCKET_CONTACTS=${_GCS_BUCKET},GCS_PATH_CONTACTS=${_GCS_PATH},CLOUD_SQL_CONNECTION_NAME=${_CLOUD_SQL_INSTANCE},CORS_ORIGINS=${_CORS_ORIGINS},ALLOWED_HOSTS=${_ALLOWED_HOSTS},RATE_LIMIT_ENABLED=true,AUTH_DEV_MODE=${_AUTH_DEV_MODE},AUTH_DEV_ALLOWED_EMAILS=${_AUTH_DEV_ALLOWED_EMAILS},GMAIL_OAUTH_ENABLED=${_GMAIL_OAUTH_ENABLED},GOOGLE_OAUTH_REDIRECT_URI=${_GOOGLE_OAUTH_REDIRECT_URI},FRONTEND_URL=${_FRONTEND_URL},WHATSAPP_ENABLED=${_WHATSAPP_ENABLED},WECHATY_GATEWAY_URL=${_WECHATY_GATEWAY_URL}"
       - "--min-instances=0"
       - "--max-instances=${_MAX_INSTANCES}"
       - "--memory=512Mi"
@@ -63,6 +63,16 @@ substitutions:
   _GOOGLE_OAUTH_REDIRECT_URI: "https://kalisoft-sales-19782268668.asia-south1.run.app/api/email/google/callback"
   _FRONTEND_URL: "https://kalisoftai.in"
   _MAX_INSTANCES: "3"
+  # Keep sign-in reachable while GOOGLE_CLIENT_ID is still a placeholder:
+  # set both to false/empty once real Google OAuth is live, otherwise nobody
+  # can log in (config validation rejects AUTH_DEV_MODE=true without the
+  # allow-list).
+  _AUTH_DEV_MODE: "true"
+  _AUTH_DEV_ALLOWED_EMAILS: "ai.solutions@kalisoftai.in"
+  # WhatsApp sending stays off until the Wechaty gateway exists; queueing works
+  # regardless, and /messages/send-due returns 503 while disabled.
+  _WHATSAPP_ENABLED: "false"
+  _WECHATY_GATEWAY_URL: "http://localhost:8788"
 
 options:
   logging: CLOUD_LOGGING_ONLY
