@@ -74,6 +74,7 @@ function App() {
           <NavItem icon={Clock} label="Scheduler" active={tab === "scheduler"} onClick={() => { setTab("scheduler"); setMobileNav(false); }} />
           <NavItem icon={BarChart3} label="KPIs" active={tab === "kpis"} onClick={() => { setTab("kpis"); setMobileNav(false); }} />
           <NavItem icon={MessageSquarePlus} label="Feedback" active={tab === "feedback"} onClick={() => { setTab("feedback"); setMobileNav(false); }} />
+          <NavItem icon={Star} label="Recent changes" active={tab === "changelog"} onClick={() => { setTab("changelog"); setMobileNav(false); }} />
         </nav>
         <div className="sidebar-bottom">
           <div className="security-note"><ShieldCheck size={16} /><span>Private workspace<br /><small>Google verified access</small></span></div>
@@ -82,7 +83,7 @@ function App() {
       </aside>
       {mobileNav && <button className="scrim" aria-label="Close menu" onClick={() => setMobileNav(false)} />}
       <main className="main">
-        <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open menu"><Menu size={20} /></button><div><div className="eyebrow">KALISOFT AI / SALES PIPELINE</div><h1>{tab === "overview" ? "Good work starts with a clear signal." : tab === "contacts" ? "Contacts" : tab === "email" ? "Email connections" : tab === "events" ? "Events" : tab === "signals" ? "Signal desk" : tab === "scheduler" ? "Scheduler" : tab === "kpis" ? "Business KPIs" : tab === "feedback" ? "Feedback" : "Outreach"}</h1></div><div className="topbar-actions"><EnvBadge env={health?.env} /><button className="text-button" onClick={() => setTour(true)}><Sparkles size={15} /> Take the tour</button><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Settings"><Settings2 size={18} /></button></div></header>
+        <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open menu"><Menu size={20} /></button><div><div className="eyebrow">KALISOFT AI / SALES PIPELINE</div><h1>{tab === "overview" ? "Good work starts with a clear signal." : tab === "contacts" ? "Contacts" : tab === "email" ? "Email connections" : tab === "events" ? "Events" : tab === "signals" ? "Signal desk" : tab === "scheduler" ? "Scheduler" : tab === "kpis" ? "Business KPIs" : tab === "feedback" ? "Feedback" : tab === "changelog" ? "Recent changes" : "Outreach"}</h1></div><div className="topbar-actions"><EnvBadge env={health?.env} /><button className="text-button" onClick={() => setTour(true)}><Sparkles size={15} /> Take the tour</button><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Settings"><Settings2 size={18} /></button></div></header>
         {tab === "overview" && <Overview onNavigate={setTab} onNotice={setNotice} health={health} setHealth={setHealth} />}
         {tab === "contacts" && <Contacts onNotice={setNotice} />}
         {tab === "email" && <EmailConnections onNotice={setNotice} config={config} />}
@@ -92,6 +93,7 @@ function App() {
         {tab === "scheduler" && <Scheduler onNotice={setNotice} />}
         {tab === "kpis" && <Kpis onNotice={setNotice} />}
         {tab === "feedback" && <Feedback onNotice={setNotice} />}
+        {tab === "changelog" && <RecentChanges />}
       </main>
       {tour && <Walkthrough onClose={() => setTour(false)} />}
       {notice && <div className={`toast ${notice.type === "error" ? "error" : ""}`}><span>{notice.type === "error" ? <CircleAlert size={17} /> : <Check size={17} />}</span>{notice.text}<button onClick={() => setNotice(null)} aria-label="Dismiss"><X size={15} /></button></div>}
@@ -134,6 +136,67 @@ function EnvBadge({ env }) {
   const style = normalized === "production" ? { background: "#e5f6e5", color: "#187a2f", borderColor: "#187a2f" } : normalized === "staging" ? { background: "#fff4d6", color: "#8a5a00", borderColor: "#8a5a00" } : { background: "#e0ecff", color: "#1d4fa3", borderColor: "#1d4fa3" };
   const label = normalized === "production" ? "PROD" : normalized === "staging" ? "UAT" : "DEV";
   return <span title={`Environment: ${normalized}`} style={{ ...style, border: "1px solid", borderRadius: 999, padding: "2px 10px", fontSize: 11, fontWeight: 700, letterSpacing: 0.5 }}>{label}</span>;
+}
+
+const RECENT_CHANGES_SAMPLE = [
+  { module: "Quotation Management", area: "Sales", status: "shipped", progress: 100, date: "Oct 2026", detail: "Draft -> Sent -> Accepted / Rejected / Expired, revisions, PDF generation and email delivery." },
+  { module: "Purchase GST & Discount", area: "Purchase", status: "shipped", progress: 100, date: "Oct 2026", detail: "Line total = qty x rate, less discount %, plus GST %; applied on create, update and import." },
+  { module: "Production Auto-Status", area: "Production", status: "shipped", progress: 100, date: "Oct 2026", detail: "PLANNED -> IN PRODUCTION -> COMPLETED with completion_pct, balance_qty and completion_date." },
+  { module: "Sample-Data Onboarding", area: "Packaging", status: "in_progress", progress: 60, date: "Q4 2026", detail: "Read-only Jabil / Amber quote sample, packaging leads and GCS KPI inventory for new users." },
+  { module: "Update-Progress UI", area: "Platform", status: "in_progress", progress: 35, date: "Q4 2026", detail: "Timeline and per-module progress bars kept in sync with the recent-changes document." },
+  { module: "MCP Polymer Price Calculator", area: "MCP", status: "planned", progress: 0, date: "TBD", detail: "Local-only MCP tool for polymer price calculation; not part of the deployed service." },
+];
+
+const CHANGE_STATUS_STYLE = {
+  shipped: { label: "Shipped", background: "#e5f6e5", color: "#187a2f", borderColor: "#187a2f" },
+  in_progress: { label: "In progress", background: "#fff4d6", color: "#8a5a00", borderColor: "#8a5a00" },
+  planned: { label: "Planned", background: "#e0ecff", color: "#1d4fa3", borderColor: "#1d4fa3" },
+};
+
+function RecentChanges() {
+  const total = RECENT_CHANGES_SAMPLE.length;
+  const shipped = RECENT_CHANGES_SAMPLE.filter((item) => item.status === "shipped").length;
+  const overall = total ? Math.round(RECENT_CHANGES_SAMPLE.reduce((sum, item) => sum + item.progress, 0) / total) : 0;
+  return (
+    <div className="content">
+      <div className="welcome-row">
+        <div>
+          <div className="section-kicker">LATEST UPDATE PROGRESS</div>
+          <h2>Recent changes</h2>
+          <p className="muted">{shipped} of {total} modules shipped · {overall}% overall complete (sample data).</p>
+        </div>
+        <span className="section-kicker">{overall}% overall</span>
+      </div>
+      <div className="panel" style={{ padding: "12px 16px", marginBottom: 16 }}>
+        <div className="section-kicker" style={{ marginBottom: 8 }}>OVERALL PROGRESS</div>
+        <div style={{ height: 10, borderRadius: 999, background: "#e6ece9", overflow: "hidden" }}>
+          <div style={{ width: `${overall}%`, height: "100%", background: "#187a2f" }} />
+        </div>
+      </div>
+      <div className="two-column">
+        {RECENT_CHANGES_SAMPLE.map((item) => {
+          const badge = CHANGE_STATUS_STYLE[item.status] || CHANGE_STATUS_STYLE.planned;
+          return (
+            <section className="panel" key={item.module}>
+              <div className="panel-heading">
+                <div>
+                  <div className="section-kicker">{item.area} · {item.date}</div>
+                  <h3>{item.module}</h3>
+                </div>
+                <span style={{ ...badge, border: "1px solid", borderRadius: 999, padding: "2px 10px", fontSize: 11, fontWeight: 700 }}>{badge.label}</span>
+              </div>
+              <p className="muted">{item.detail}</p>
+              <div style={{ height: 8, borderRadius: 999, background: "#e6ece9", overflow: "hidden", marginTop: 10 }}>
+                <div style={{ width: `${item.progress}%`, height: "100%", background: badge.color }} />
+              </div>
+              <small className="muted">{item.progress}%</small>
+            </section>
+          );
+        })}
+      </div>
+      <p className="muted" style={{ marginTop: 12 }}>Sample data for the latest update progress view; edit <b>RECENT_CHANGES_SAMPLE</b> to refresh.</p>
+    </div>
+  );
 }
 
 function HowItWorks({ stats }) {
