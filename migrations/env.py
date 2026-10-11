@@ -20,7 +20,12 @@ from sales_fastapi import models  # noqa: F401,E402  (register tables on Base)
 from sales_fastapi.database import DATABASE_URL, Base  # noqa: E402
 
 config = context.config
-config.set_main_option("sqlalchemy.url", DATABASE_URL)
+# Alembic stores the URL in an ini file, and ConfigParser treats "%" as
+# interpolation syntax. Passwords holding a literal "%" (e.g. the URL-encoded
+# "%40" in the Cloud SQL credential) therefore abort the run with
+# "invalid interpolation syntax". Escape it here; ConfigParser unescapes "%%"
+# back to "%" when the value is read by engine_from_config below.
+config.set_main_option("sqlalchemy.url", DATABASE_URL.replace("%", "%%"))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
