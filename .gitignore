@@ -59,3 +59,11 @@ htmlcov/
 /data/*
 !/data/DEPLOYMENT.md
 /data/All-project-matrices.xlsx
+
+# Local sample data / raw extracts (transcribed, not for push)
+sample_data/
+/docs/local/
+
+# Local-only feature notes (MCP price calculator test artifacts)
+/docs/*.local.md
+
