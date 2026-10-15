@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.contrib.auth import logout as django_logout
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login
+from django.contrib.auth.views import LoginView
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.views.decorators.http import require_POST
@@ -42,6 +43,27 @@ def signup(request):
     else:
         form = SignupForm()
     return render(request, 'registration/signup.html', {'form': form})
+
+
+class CustomLoginView(LoginView):
+    """
+    Sign-in view with two niceties:
+      * already-authenticated users are sent straight to the app instead of
+        seeing the login form again;
+      * the "Remember me" checkbox controls session lifetime - unchecked
+        sessions end when the browser closes, checked ones last the default
+        SESSION_COOKIE_AGE (2 weeks).
+    """
+
+    redirect_authenticated_user = True
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        if self.request.POST.get('remember'):
+            self.request.session.set_expiry(settings.SESSION_COOKIE_AGE)
+        else:
+            self.request.session.set_expiry(0)
+        return response
 
 
 @require_POST

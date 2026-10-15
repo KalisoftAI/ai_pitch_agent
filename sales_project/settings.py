@@ -10,9 +10,22 @@ load_dotenv(dotenv_path=env_path)
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'change-me-in-production')
 DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
+def _env_list(name, default=''):
+    """Parse a comma-separated env var into a clean list (trimmed, no blanks)."""
+    raw = os.getenv(name, default) or ''
+    return [item.strip() for item in raw.split(',') if item.strip()]
 
-CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if os.getenv('CSRF_TRUSTED_ORIGINS') else []
+
+ALLOWED_HOSTS = _env_list('ALLOWED_HOSTS', '127.0.0.1,localhost')
+
+# CSRF trusted origins MUST include the site's own public origin once the app
+# is served over HTTPS (Django validates the Origin/Referer of every form POST,
+# including login/signup). We accept them from the env var and also derive the
+# origin from SITE_URL so a single value keeps links and CSRF in sync.
+CSRF_TRUSTED_ORIGINS = _env_list('CSRF_TRUSTED_ORIGINS')
+_site_url = (os.getenv('SITE_URL') or '').strip().rstrip('/')
+if _site_url.startswith(('https://', 'http://')) and _site_url not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append(_site_url)
 
 INSTALLED_APPS = [
     'django.contrib.auth',
@@ -47,6 +60,11 @@ ROOT_URLCONF = 'sales_project.urls'
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/app/'
 LOGOUT_REDIRECT_URL = '/login/'
+
+# Allow signing in with either the username or the email address.
+AUTHENTICATION_BACKENDS = [
+    'sales_project.auth_backends.EmailOrUsernameBackend',
+]
 
 TEMPLATES = [
     {

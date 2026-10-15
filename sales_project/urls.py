@@ -12,7 +12,7 @@ handler500 = 'sales_project.error_handlers.server_error'
 
 urlpatterns = [
     path('', TemplateView.as_view(template_name='landing.html'), name='landing'),
-    path('login/', auth_views.LoginView.as_view(), name='login'),
+    path('login/', views.CustomLoginView.as_view(), name='login'),
     path('logout/', views.custom_logout, name='logout'),
     path('signup/', views.signup, name='signup'),
     path('password-reset/', auth_views.PasswordResetView.as_view(), name='password_reset'),
