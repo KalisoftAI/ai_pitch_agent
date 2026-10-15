@@ -10,9 +10,6 @@ from . import gcs
 logger = logging.getLogger(__name__)
 
 
-logger = logging.getLogger(__name__)
-
-
 @login_required
 def csv_files_count(request):
     """API endpoint to get CSV file counts for all categories (user-scoped)."""
@@ -333,54 +330,220 @@ def csv_file_download(request, category, filename):
 
 
 @login_required
-def csv_file_delete(request, category, filename):
-    """Delete a CSV file for the authenticated user."""
-    if request.method == 'POST':
-        try:
-            result = gcs.csv_file_delete(category, filename, user=request.user)
-            if result:
-                return JsonResponse({'status': 'success', 'message': 'CSV file deleted successfully'})
-            else:
-                return JsonResponse({'status': 'error', 'message': 'Failed to delete CSV file'}, status=500)
-        except Exception as e:
-            logger.error(f"Error deleting CSV file: {e}")
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-    else:
-        return JsonResponse({'status': 'error', 'message': 'POST method required'}, status=405)
+def csv_file_delete(request):
+    """Delete a CSV file for the authenticated user.
+
+    Expects JSON body: {"category": "...", "filename": "..."} — matching what
+    the dashboard's executeCsvDelete() posts to /app/api/csv/delete/.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST method required'}, status=405)
+
+    try:
+        data = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON body'}, status=400)
+
+    category = (data.get('category') or '').strip().lower()
+    filename = (data.get('filename') or '').strip()
+    if not category or not filename:
+        return JsonResponse({'success': False, 'error': 'Category and filename are required'}, status=400)
+    if category not in ('linkedin', 'suppliers', 'buyers', 'events'):
+        return JsonResponse({'success': False, 'error': 'Invalid category'}, status=400)
+    if '/' in filename or '\\' in filename or '..' in filename:
+        return JsonResponse({'success': False, 'error': 'Invalid filename'}, status=400)
+
+    try:
+        result = gcs.delete_csv_file(category, filename, user=request.user)
+        if result:
+            return JsonResponse({'success': True, 'message': 'CSV file deleted successfully'})
+        return JsonResponse({'success': False, 'error': 'Failed to delete CSV file'}, status=500)
+    except Exception as e:
+        logger.error(f"Error deleting CSV file: {e}")
+        return JsonResponse({'success': False, 'error': 'Failed to delete CSV file'}, status=500)
 
 
 @login_required
 def upload_contacts(request):
-    """API endpoint to upload multiple contacts for the authenticated user."""
-    if request.method == 'POST':
-        try:
-            import json as json_mod
-            data = json_mod.loads(request.body)
-            category = data.get('category', 'linkedin')
-            contacts = data.get('contacts', [])
-            
-            if not contacts:
-                return JsonResponse({'status': 'error', 'message': 'No contacts provided'}, status=400)
-            
+    """
+    API endpoint to upload contacts for the authenticated user.
+
+    Accepts two formats:
+      1. multipart/form-data with 'file' (a .csv) + 'category' — what the
+         dashboard's Upload-CSV modal actually sends. The raw CSV is stored
+         in GCS (so it shows up under CSV Files) and each valid row is also
+         saved as an individual contact JSON.
+      2. application/json {"category": "...", "contacts": [{"uid","data"}]}
+         — legacy bulk-JSON format.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST method required'}, status=405)
+
+    import csv as csv_mod
+    import hashlib
+    import io
+    import re as re_mod
+
+    VALID_CATEGORIES = ('linkedin', 'suppliers', 'buyers', 'events')
+
+    try:
+        content_type = (request.content_type or '').lower()
+
+        # ------------------------------------------------------------------
+        # Format 1: multipart CSV upload (the dashboard modal)
+        # ------------------------------------------------------------------
+        if content_type.startswith('multipart/form-data'):
+            category = (request.POST.get('category') or 'linkedin').strip().lower()
+            if category not in VALID_CATEGORIES:
+                return JsonResponse({'success': False, 'error': f'Invalid category: {category}'}, status=400)
+
+            upload = request.FILES.get('file')
+            if upload is None:
+                return JsonResponse({'success': False, 'error': 'No CSV file provided'}, status=400)
+
+            filename = getattr(upload, 'name', '') or 'upload.csv'
+            if not filename.lower().endswith('.csv'):
+                return JsonResponse({'success': False, 'error': 'Please upload a valid CSV file.'}, status=400)
+
+            raw = upload.read()
+            if not raw.strip():
+                return JsonResponse({'success': False, 'error': 'The CSV file is empty.'}, status=400)
+
+            # Persist the raw CSV so it appears in the CSV Files list.
+            upload.seek(0)
+            blob_path = gcs.upload_csv_file(category, upload, filename, user=request.user)
+            if not blob_path:
+                return JsonResponse(
+                    {'success': False,
+                     'error': 'Storage backend unavailable - CSV could not be saved'},
+                    status=502,
+                )
+
+            warnings = []
+            try:
+                text = raw.decode('utf-8-sig')
+            except UnicodeDecodeError:
+                text = raw.decode('latin-1', errors='replace')
+
+            reader = csv_mod.DictReader(io.StringIO(text))
+            if not reader.fieldnames:
+                return JsonResponse({
+                    'success': True,
+                    'message': f'CSV "{filename}" uploaded. No header row found, so no contacts were extracted.',
+                    'warnings': ['CSV has no header row; file stored but no contacts extracted.'],
+                })
+
+            header_map = {(h or '').strip().lower(): h for h in reader.fieldnames}
+
+            def _col(*names):
+                for n in names:
+                    if n in header_map:
+                        return header_map[n]
+                return None
+
+            name_col = _col('name', 'full name', 'full_name', 'contact name', 'contact')
+            company_col = _col('company', 'company name', 'organisation', 'organization', 'account')
+            email_col = _col('email', 'email address', 'e-mail', 'mail')
+            phone_col = _col('phone', 'phone number', 'mobile', 'tel', 'telephone')
+            linkedin_col = _col('linkedin_url', 'linkedin', 'linkedin profile', 'profile url', 'linkedin url')
+            website_col = _col('website', 'web site', 'url', 'domain')
+            tags_col = _col('tags', 'tag', 'labels')
+            notes_col = _col('notes', 'note', 'remarks', 'comment')
+
+            if not any([name_col, email_col, company_col]):
+                return JsonResponse({
+                    'success': False,
+                    'error': "CSV must contain at least one of these columns: Name, Email, or Company.",
+                }, status=400)
+
+            from django.utils import timezone as _tz
+            now = _tz.now().isoformat()
             success_count = 0
-            for contact in contacts:
-                uid = contact.get('uid')
-                contact_data = contact.get('data')
-                if uid and contact_data:
-                    result = gcs.upload_contact(category, uid, contact_data, user=request.user)
-                    if result:
-                        success_count += 1
-            
+            skipped = 0
+
+            for row_num, row in enumerate(reader, start=2):
+                name = (row.get(name_col) or '').strip() if name_col else ''
+                company = (row.get(company_col) or '').strip() if company_col else ''
+                email = (row.get(email_col) or '').strip() if email_col else ''
+                if not any([name, company, email]):
+                    skipped += 1
+                    continue
+
+                linkedin_url = (row.get(linkedin_col) or '').strip() if linkedin_col else ''
+                uid = linkedin_url.rstrip('/').split('/')[-1] if linkedin_url else ''
+                if not uid:
+                    basis = email or f'{name}-{company}'
+                    slug = re_mod.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-') or 'contact'
+                    uid = f"{slug}-{hashlib.md5(basis.encode('utf-8')).hexdigest()[:8]}"
+
+                contact_data = {
+                    'name': name or (email.split('@')[0] if email else company),
+                    'company': company,
+                    'email': email,
+                    'phone': (row.get(phone_col) or '').strip() if phone_col else '',
+                    'linkedin_url': linkedin_url,
+                    'website': (row.get(website_col) or '').strip() if website_col else '',
+                    'tags': [t.strip() for t in (row.get(tags_col) or '').split(';') if t.strip()] if tags_col else [],
+                    'notes': (row.get(notes_col) or '').strip() if notes_col else '',
+                    'created_at': now,
+                    'updated_at': now,
+                }
+
+                if gcs.upload_contact(category, uid, contact_data, user=request.user):
+                    success_count += 1
+                else:
+                    skipped += 1
+                    warnings.append(f'Row {row_num}: failed to save contact (storage error).')
+
+            message = f'CSV "{filename}" uploaded. {success_count} contact(s) extracted.'
+            if skipped:
+                warnings.append(f'{skipped} row(s) skipped (empty or failed to save).')
             return JsonResponse({
-                'status': 'success', 
-                'message': f'{success_count} contacts uploaded successfully',
-                'total': len(contacts)
+                'success': True,
+                'message': message,
+                'warnings': warnings,
+                'uploaded': 1,
+                'extracted': success_count,
+                'skipped': skipped,
+                'blob_path': blob_path,
             })
-        except Exception as e:
-            logger.error(f"Error uploading contacts: {e}")
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-    else:
-        return JsonResponse({'status': 'error', 'message': 'POST method required'}, status=405)
+
+        # ------------------------------------------------------------------
+        # Format 2: legacy JSON bulk body {"category", "contacts": [...]}
+        # ------------------------------------------------------------------
+        try:
+            data = json.loads(request.body or '{}')
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Invalid request body'}, status=400)
+
+        category = (data.get('category') or 'linkedin').strip().lower()
+        if category not in VALID_CATEGORIES:
+            return JsonResponse({'success': False, 'error': f'Invalid category: {category}'}, status=400)
+
+        contacts = data.get('contacts', [])
+        if not contacts or not isinstance(contacts, list):
+            return JsonResponse({'success': False, 'error': 'No contacts provided'}, status=400)
+
+        success_count = 0
+        for contact in contacts:
+            if not isinstance(contact, dict):
+                continue
+            uid = contact.get('uid')
+            contact_data = contact.get('data')
+            if uid and isinstance(contact_data, dict):
+                result = gcs.upload_contact(category, uid, contact_data, user=request.user)
+                if result:
+                    success_count += 1
+
+        return JsonResponse({
+            'success': True,
+            'message': f'{success_count} contacts uploaded successfully',
+            'status': 'success',
+            'total': len(contacts),
+        })
+    except Exception as e:
+        logger.error(f"Error uploading contacts: {e}")
+        return JsonResponse({'success': False, 'error': 'Failed to upload contacts'}, status=500)
 
 
 # ---------------------------------------------------------------------------
