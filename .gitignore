@@ -58,6 +58,7 @@ htmlcov/
 # data
 /data/*
 !/data/DEPLOYMENT.md
+!/data/all-metadata/
 /data/All-project-matrices.xlsx
 
 # Local sample data / raw extracts (transcribed, not for push)
