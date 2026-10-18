@@ -35,6 +35,9 @@
   § 19. KPIs — Master Table
   § 20. Integration Status
   § 21. Growth Roadmap
+  § 22. Oct-Roadmap Data Pipeline (NEW)
+  § 23. Client Data Routing — Kalika vs AG-Vision (NEW)
+  § 24. GCS Upload Log (NEW)
 ```
 
 ---
@@ -1352,16 +1355,325 @@
 
 ---
 
+## § 22. OCT-ROADMAP DATA PIPELINE
+
+```
+  ┌──────────────────────────────────────────────────────────────────────┐
+  │              OCT-ROADMAP PROCESSING PIPELINE                         │
+  └──────────────────────────────────────────────────────────────────────┘
+
+  [Source]                    [Process]                   [Output]
+  ─────────                   ─────────                   ────────
+
+  ┌──────────────────┐
+  │ Oct-Roadmap.xlsx │
+  │ (8 sheets)       │
+  │ 145 data rows    │
+  └────────┬─────────┘
+           │
+           ▼
+  ┌──────────────────────────────────────────────────────────────────┐
+  │  PREPROCESSING ENGINE (Python + openpyxl)                        │
+  │                                                                  │
+  │  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐    │
+  │  │ Sheet Parser   │  │ Stats          │  │ Client         │    │
+  │  │ (8 sheets)     │  │ Extractor      │  │ Classifier     │    │
+  │  │                │  │                │  │                │    │
+  │  │ High Level     │  │ 66 metrics     │  │ Kalika →       │    │
+  │  │ Sales-info     │  │ 29 KPIs        │  │   kalika_      │    │
+  │  │ CRM question   │  │ 33 features    │  │   enterprises  │    │
+  │  │ Kalika_Erp_Feat│  │ 19 questions   │  │                │    │
+  │  │ gcs paths      │  │ 18 team tasks  │  │ AG-Vision →    │    │
+  │  │ sales stories  │  │ 13 accounting  │  │   kalisoftai_  │    │
+  │  │ accounting     │  │  92 AG objects │  │   client_data  │    │
+  │  │ Marketing      │  │                │  │                │    │
+  │  └────────────────┘  └────────────────┘  └────────────────┘    │
+  └──────────────────────────┬───────────────────────────────────────┘
+                              │
+                              ▼
+  ┌──────────────────────────────────────────────────────────────────┐
+  │  OUTPUT: Oct-Roadmap-Processed.xlsx                               │
+  │                                                                  │
+  │  8 Sheets:                                                       │
+  │  ┌────────────────────┬───────┬──────────────────────────────┐  │
+  │  │ Sheet              │ Rows  │ Content                       │  │
+  │  ├────────────────────┼───────┼──────────────────────────────┤  │
+  │  │ Executive Summary  │ 66    │ All metrics by category       │  │
+  │  │ Kalika ERP Features│ 33+12 │ Features + module summary     │  │
+  │  │ CRM Evaluation     │ 19    │ Zoho questions (4 groups)     │  │
+  │  │ GCS Bucket Map     │ 22    │ Object routing + status       │  │
+  │  │ Team & Workflows   │ 18    │ 9 members, assignments        │  │
+  │  │ Accounting         │ 13    │ Tally migration requirements  │  │
+  │  │ AG-Vision Client   │ 10    │ SAP modules + placements      │  │
+  │  │ Stats Dashboard    │ 29    │ KPIs with ASCII bar charts    │  │
+  │  └────────────────────┴───────┴──────────────────────────────┘  │
+  └──────────────────────────┬───────────────────────────────────────┘
+                              │
+                    ┌─────────┴─────────┐
+                    ▼                   ▼
+  ┌─────────────────────────┐ ┌─────────────────────────┐
+  │ kalika_enterprises      │ │ kalisoftai_client_data  │
+  │                         │ │                         │
+  │ sales-2025-27/          │ │ AG-Vision/              │
+  │   Oct-Roadmap.xlsx      │ │   Oct-Roadmap-Processed │
+  │   (source, 282 KB)      │ │   .xlsx (20 KB)         │
+  │                         │ │                         │
+  │ ERP-V1/                 │ │                         │
+  │   Oct-Roadmap-          │ │                         │
+  │   Processed.xlsx        │ │                         │
+  │   (20 KB)               │ │                         │
+  └─────────────────────────┘ └─────────────────────────┘
+```
+
+### 22.1 — Source Sheet Breakdown
+
+| # | Sheet | Rows | Content | Client |
+|---|---|---|---|---|
+| 1 | High Level Tasks | 42 | APIs, ERP, meetings, GCS paths, ZOHO CRM | Kalika |
+| 2 | Sales-info | ~20 | LinkedIn leads (Lesley, Kea — South Africa), sales intent | Kalika |
+| 3 | CRM question | 27 | 19 Zoho CRM evaluation questions (4 categories) | Kalika |
+| 4 | Kalika_Erp_Feat | 33 | ERP features across 12 modules (all LIVE) | Kalika |
+| 5 | gcs folder paths | 8 | 7 quotation paths in `kalisoftai-official-docs` | KalisoftAI |
+| 6 | sales stories | 15 | Workflows, team assignments, catalog references | Kalika |
+| 7 | kalika accounting | 3 | Tally requirements, payment alerts, invoice lifecycle | Kalika |
+| 8 | Marketing | 2 | Google Reviews, Google Analytics | Kalika |
+
+### 22.2 — Key Stats Extracted
+
+```
+  ╭──────────────────────────────────────────────────────────────────╮
+  │  OCT-ROADMAP — KEY NUMBERS                                       │
+  ╰──────────────────────────────────────────────────────────────────╯
+
+  SOURCE DATA
+  ───────────
+  Sheets:              8
+  Non-empty rows:      145
+  Unique team members: 9
+
+  KALIKA ERP
+  ──────────
+  Features:            33 (100% LIVE)
+  Modules:             12
+  Top modules:         Master Data (5), Sales (4), Procurement (4),
+                       Inventory (4), Production (4)
+
+  CRM EVALUATION
+  ──────────────
+  Total questions:     19
+  Categories:          4 (Core CRM, Integrations, Sales/Acct, Security)
+
+  SALES
+  ─────
+  LinkedIn leads:      2 (Lesley Mncina, Kea Mokhongane — South Africa)
+  Lead rate:           ZAR 250/hr (~$15, ~INR 1,441)
+  Sales stories:       15 workflows
+  Catalog sets:        3
+
+  ACCOUNTING
+  ──────────
+  Current software:    Tally
+  Payment alert types: 2 (incoming + outgoing)
+  Invoice lifecycle:   4 stages (Created → Due → Pending → Completed)
+  Team:                Vaishnavi (lead), Ganesh (reconciliation)
+
+  MEETINGS
+  ────────
+  Daily morning:       10:30 AM (Tejaswini)
+  Daily evening:       4:00 PM (team)
+  ERP weekly:          10:00-11:00 AM (Jaideep, Pooja, Tejaswini)
+
+  GCS QUOTATIONS
+  ──────────────
+  Quotation paths:     7
+  Bucket:              kalisoftai-official-docs/Quotations/
+```
+
+### 22.3 — ERP Module Feature Distribution
+
+```
+  Module             Features    Bar
+  ──────────────────────────────────────────────────────
+  Master Data        5           ████████████████████
+  Sales              4           ████████████████
+  Procurement        4           ████████████████
+  Inventory          4           ████████████████
+  Production         4           ████████████████
+  Dashboard          3           ████████████
+  Dispatch           2           ████████
+  Reports            2           ████████
+  Authentication     1           ████
+  Planning           1           ████
+  Alerts             1           ████
+  Data Import        1           ████
+  Audit              1           ████
+  ──────────────────────────────────────────────────────
+  TOTAL              33          100% LIVE
+```
+
+---
+
+## § 23. CLIENT DATA ROUTING — KALIKA vs AG-VISION
+
+```
+  ┌──────────────────────────────────────────────────────────────────────┐
+  │                    CLIENT DATA ROUTING MAP                           │
+  └──────────────────────────────────────────────────────────────────────┘
+
+                    ┌─────────────────────────┐
+                    │   Oct-Roadmap.xlsx      │
+                    │   (8 sheets, mixed)     │
+                    └───────────┬─────────────┘
+                                │
+                    ┌───────────┴─────────────┐
+                    │   CLIENT CLASSIFIER      │
+                    │                          │
+                    │  Kalika?    AG-Vision?   │
+                    │  ERP, Sales, Accounting  │  SAP, Placements
+                    │  Contacts, Marketing     │  Curriculum, Roadmap
+                    └───────┬─────────┬───────┘
+                            │         │
+              ┌─────────────▼──┐   ┌──▼──────────────────┐
+              │ KALIKA ENTERPRISES│   │ KALISOFTAI_CLIENT_DATA│
+              │ (kalika_enterprises)│ │ /AG-Vision/           │
+              │                 │   │                       │
+              │ Existing:       │   │ Existing:             │
+              │  ERP-V1/ (8)    │   │  92 objects           │
+              │  Contacts/ (9)  │   │  34.9 MB              │
+              │  sales-contacts/│   │                       │
+              │  docs/ (5)      │   │ SAP Modules:          │
+              │  images/ (13)   │   │  ABAP, HCM, PP,       │
+              │  sales-2025-27/ │   │  SD, MM, FICO         │
+              │                 │   │                       │
+              │ NEW UPLOADS:    │   │ NEW UPLOADS:          │
+              │  sales-2025-27/ │   │  AG-Vision/           │
+              │   Oct-Roadmap   │   │   Oct-Roadmap-        │
+              │   .xlsx (282KB) │   │   Processed.xlsx      │
+              │                 │   │   (20 KB)             │
+              │  ERP-V1/        │   │                       │
+              │   Oct-Roadmap-  │   │                       │
+              │   Processed     │   │                       │
+              │   .xlsx (20KB)  │   │                       │
+              └─────────────────┘   └───────────────────────┘
+```
+
+### 23.1 — Kalika Enterprises (kalika_enterprises)
+
+| Prefix | Objects | Size | Content | Updated |
+|---|---|---|---|---|
+| `ERP-V1/` | **9** | 94.5 MB | Catalog, SOP, ERP docs + **new processed roadmap** | 2026-10-18 |
+| `Contacts/` | 9 | 33.4 MB | WhatsApp chats, VCF contacts | 2026-09-03 |
+| `sales-contacts/` | 7 | 14.5 MB | Contact spreadsheets | 2026-09-03 |
+| `images and videos/` | 13 | 14.2 MB | Product/media files | 2026-10-05 |
+| `docs/` | 9 | 2.2 MB | Invoices, logos, GA reports | 2026-09-06 |
+| `sales-2025-27/` | **3** | 0.4 MB | GST invoices + **updated roadmap** | 2026-10-18 |
+| Root files | 2 | 4.7 MB | Catalog PDFs | 2026-09-03 |
+
+### 23.2 — AG-Vision (kalisoftai_client_data/AG-Vision/)
+
+| Category | Items | Size | GCS Path |
+|---|---|---|---|
+| SAP S/4HANA ABAP | Curriculum + Roadmap PDFs | 1.7 MB | `AG-Vision/` |
+| SAP S/4HANA HCM (HR) | Curriculum + Roadmap PDFs | 2.7 MB | `AG-Vision/` |
+| SAP S/4HANA PP | Curriculum + Roadmap PDFs | 1.7 MB | `AG-Vision/` |
+| SAP S/4HANA SD | Curriculum + Roadmap PDFs | 1.7 MB | `AG-Vision/` |
+| SAP S/4HANA MM | Curriculum + Roadmap PDFs | 1.7 MB | `AG-Vision/` |
+| SAP S/4HANA FICO | Curriculum + Roadmap PDFs | 1.8 MB | `AG-Vision/` |
+| Main data | AG VISION data.xlsx | 10.4 MB | `AG-Vision/` |
+| Image catalog | new-ag-images.xlsx | 10.3 MB | `AG-Vision/` |
+| Placements | 80 student photos | ~5 MB | `AG-Vision/placements/` |
+| **NEW: Processed roadmap** | **Oct-Roadmap-Processed.xlsx** | **20 KB** | `AG-Vision/` |
+| **TOTAL** | **93 objects** | **34.9 MB** | |
+
+### 23.3 — AG-Vision SAP Module Coverage
+
+```
+  ┌──────────────────────────────────────────────────────────────────┐
+  │  AG-VISION — SAP S/4HANA MODULE MAP                              │
+  └──────────────────────────────────────────────────────────────────┘
+
+  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+  │  ABAP        │  │  HCM (HR)    │  │  PP          │
+  │  ──────────  │  │  ──────────  │  │  ──────────  │
+  │  Curriculum  │  │  Curriculum  │  │  Curriculum  │
+  │  Roadmap     │  │  Roadmap     │  │  Roadmap     │
+  │  1.7 MB      │  │  2.7 MB      │  │  1.7 MB      │
+  └──────────────┘  └──────────────┘  └──────────────┘
+  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+  │  SD          │  │  MM          │  │  FICO        │
+  │  ──────────  │  │  ──────────  │  │  ──────────  │
+  │  Curriculum  │  │  Curriculum  │  │  Curriculum  │
+  │  Roadmap     │  │  Roadmap     │  │  Roadmap     │
+  │  1.7 MB      │  │  1.7 MB      │  │  1.8 MB      │
+  └──────────────┘  └──────────────┘  └──────────────┘
+
+  6 modules × 2 PDFs each = 12 PDFs (~11.3 MB)
+  + 80 placement photos (~5 MB)
+  + 2 data files (~20.7 MB)
+  = 93 objects, 34.9 MB total
+```
+
+---
+
+## § 24. GCS UPLOAD LOG
+
+```
+  ╔══════════════════════════════════════════════════════════════════════════════════╗
+  ║  GCS UPLOAD LOG — 2026-10-18 10:07 UTC                                         ║
+  ╠══════════════════════════════════════════════════════════════════════════════════╣
+  ║                                                                                  ║
+  ║  #  BUCKET                  PATH                              SIZE    CLIENT     ║
+  ║  ────────────────────────────────────────────────────────────────────────────   ║
+  ║  1  kalika_enterprises      sales-2025-27/Oct-Roadmap.xlsx   282 KB  Kalika    ║
+  ║  2  kalika_enterprises      ERP-V1/Oct-Roadmap-Processed     20 KB   Kalika    ║
+  ║                              .xlsx                                                   ║
+  ║  3  kalisoftai_client_data  AG-Vision/Oct-Roadmap-Processed  20 KB   AG-Vision ║
+  ║                              .xlsx                                                   ║
+  ║                                                                                  ║
+  ║  Metadata attached to each object:                                               ║
+  ║    source        = Oct-Roadmap.xlsx                                              ║
+  ║    processed_by  = KalisoftAI Sales Pipeline                                     ║
+  ║    client        = Kalika | AG-Vision                                            ║
+  ║    uploaded_at   = 2026-10-18T10:07:14Z                                          ║
+  ║    description   = Processed roadmap with stats + KPIs                           ║
+  ║                                                                                  ║
+  ╚══════════════════════════════════════════════════════════════════════════════════╝
+```
+
+| # | Bucket | Destination | Size | Client | Status |
+|---|---|---|---|---|---|
+| 1 | `kalika_enterprises` | `sales-2025-27/Oct-Roadmap.xlsx` | 282 KB | Kalika | ✅ Uploaded |
+| 2 | `kalika_enterprises` | `ERP-V1/Oct-Roadmap-Processed.xlsx` | 20 KB | Kalika | ✅ Uploaded |
+| 3 | `kalisoftai_client_data` | `AG-Vision/Oct-Roadmap-Processed.xlsx` | 20 KB | AG-Vision | ✅ Uploaded |
+
+### Local Artifacts
+
+| File | Path | Size | Purpose |
+|---|---|---|---|
+| `Oct-Roadmap.xlsx` | `data/all-metadata/` | 282 KB | Source (user-updated) |
+| `Oct-Roadmap-Processed.xlsx` | `data/all-metadata/` | 20 KB | Processed (8 sheets, 66 metrics) |
+
+---
+
 ```
   ╔══════════════════════════════════════════════════════════════════════════════════╗
   ║  DOCUMENT INFO                                                                   ║
   ║  ─────────────                                                                   ║
   ║  File      : data/all-metadata/SALES_LEAD_METADATA.md                           ║
   ║  Project   : gen-lang-client-0132243782                                          ║
-  ║  Branch    : sales-gcp-migration @ d081461                                      ║
+  ║  Branch    : feature/oct-roadmap-metadata                                        ║
   ║  Service   : kalisoft-sales (Cloud Run, asia-south1)                            ║
   ║  Author    : KalisoftAI Engineering                                              ║
   ║  Updated   : 2026-10-18                                                         ║
-  ║  Version   : 2.0                                                                ║
+  ║  Version   : 3.0 (added §22-24: Oct-Roadmap pipeline, client routing, GCS log)  ║
+  ║                                                                                  ║
+  ║  RELATED FILES:                                                                  ║
+  ║    data/all-metadata/Oct-Roadmap.xlsx           (source, 282 KB)                ║
+  ║    data/all-metadata/Oct-Roadmap-Processed.xlsx (processed, 20 KB, 8 sheets)    ║
+  ║                                                                                  ║
+  ║  GCS UPLOADS:                                                                    ║
+  ║    gs://kalika_enterprises/sales-2025-27/Oct-Roadmap.xlsx                      ║
+  ║    gs://kalika_enterprises/ERP-V1/Oct-Roadmap-Processed.xlsx                   ║
+  ║    gs://kalisoftai_client_data/AG-Vision/Oct-Roadmap-Processed.xlsx            ║
   ╚══════════════════════════════════════════════════════════════════════════════════╝
 ```

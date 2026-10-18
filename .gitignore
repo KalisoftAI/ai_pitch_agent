@@ -68,3 +68,8 @@ sample_data/
 # Local-only feature notes (MCP price calculator test artifacts)
 /docs/*.local.md
 
+
+# Excel lock files
+~$*.xlsx
+~$*.xls
+~$*.docx
