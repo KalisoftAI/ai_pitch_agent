@@ -55,18 +55,12 @@ htmlcov/
 # Local databases
 *.db
 
-# data
-/data/*
-!/data/DEPLOYMENT.md
-!/data/all-metadata/
-/data/All-project-matrices.xlsx
+# data & docs (local-only: sample data, GCS extracts, tracking sheets, client docs)
+/data/
+/docs/
 
 # Local sample data / raw extracts (transcribed, not for push)
 sample_data/
-/docs/local/
-
-# Local-only feature notes (MCP price calculator test artifacts)
-/docs/*.local.md
 
 
 # Excel lock files
