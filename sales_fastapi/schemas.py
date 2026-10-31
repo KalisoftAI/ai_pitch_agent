@@ -11,6 +11,15 @@ class GoogleLoginIn(BaseModel):
     id_token: str = Field(..., description="Google Identity Services ID token (JWT)")
 
 
+class PasswordLoginIn(BaseModel):
+    username: str = Field(..., min_length=2, max_length=320, description="Username or email")
+    password: str = Field(..., min_length=4, max_length=128)
+
+
+class SetPasswordIn(BaseModel):
+    password: str = Field(..., min_length=6, max_length=128)
+
+
 class TokenOut(BaseModel):
     access_token: str
     token_type: str = "bearer"
@@ -32,7 +41,7 @@ class ContactBase(BaseModel):
     company: str = Field(default="", max_length=255)
     name: str = Field(default="", max_length=255)
     email: str = Field(..., min_length=3, max_length=320)
-    phone: str = Field(default="", max_length=64)
+    phone: str = Field(default="", max_length=512)
     domain: str = Field(default="", max_length=255)
     intent: str = Field(default="", max_length=64)
     context: str = Field(default="", max_length=10_000)
@@ -42,7 +51,7 @@ class ContactBase(BaseModel):
     purchase_contact_name: str = Field(default="", max_length=255)
     purchase_contact_role: str = Field(default="", max_length=255)
     purchase_contact_email: str = Field(default="", max_length=320)
-    purchase_contact_phone: str = Field(default="", max_length=64)
+    purchase_contact_phone: str = Field(default="", max_length=512)
     tags: list[str] = Field(default_factory=list)
     notes: str = Field(default="", max_length=10_000)
 

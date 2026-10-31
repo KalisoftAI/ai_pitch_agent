@@ -60,6 +60,29 @@ def decrypt_secret(token: str) -> str:
 
 
 # --------------------------------------------------------------------------
+# Username / password (PBKDF2 — no extra dependency)
+# --------------------------------------------------------------------------
+_PBKDF2_ITERATIONS = 120_000
+
+
+def hash_password(plain: str) -> str:
+    salt = secrets.token_hex(16)
+    digest = hashlib.pbkdf2_hmac("sha256", plain.encode(), salt.encode(), _PBKDF2_ITERATIONS)
+    return f"pbkdf2${_PBKDF2_ITERATIONS}${salt}${digest.hex()}"
+
+
+def verify_password(plain: str, stored: str) -> bool:
+    try:
+        scheme, iterations, salt, hex_digest = stored.split("$")
+        if scheme != "pbkdf2":
+            return False
+        digest = hashlib.pbkdf2_hmac("sha256", plain.encode(), salt.encode(), int(iterations))
+        return secrets.compare_digest(digest.hex(), hex_digest)
+    except (ValueError, AttributeError):
+        return False
+
+
+# --------------------------------------------------------------------------
 # JWT session tokens
 # --------------------------------------------------------------------------
 def create_access_token(user: User) -> tuple[str, int]:
@@ -187,4 +210,19 @@ def get_current_user(
     user = db.get(User, user_id)
     if user is None or not user.is_active:
         raise HTTPException(status_code=401, detail="User not found or inactive")
+    return user
+
+
+def require_admin(user: User = Depends(get_current_user)) -> User:
+    """Admin-only access (report upload, sync triggers, integration settings).
+
+    Admins are configured via ADMIN_EMAILS; the default is the Kalika operations
+    account (ai.solutions@kalisoftai.in). Non-admin users keep read-only dashboards.
+    """
+    email = (user.email or "").strip().lower()
+    if email not in settings.admin_emails:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required for this action",
+        )
     return user

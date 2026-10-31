@@ -1,0 +1,68 @@
+{
+  "chat": "Kalika Order's (WhatsApp export)",
+  "total_messages": 429,
+  "media_omitted_refs": 23,
+  "date_range": {
+    "first": "28/11/2024",
+    "last": "29/10/2026"
+  },
+  "active_days": 162,
+  "participants": {
+    "Narayan KALIKA": 231,
+    "Damini Kalika Production Karande": 70,
+    "KALIKA TARPOULIN": 28,
+    "Abhishek Bhagwat Kalika Enterprises": 28,
+    "Prachi Jadhav Kalika Ent": 22,
+    "Kalika Enterprises Ahmednagar": 11,
+    "Bharat Kumbharkar Mothe Sir": 11,
+    "Poonam Kalika Enterprises": 7,
+    "Ashish Chavan Ke": 6,
+    "Lekharm Bopp Tape Operatpr": 5
+  },
+  "keyword_patterns": {
+    "order": 186,
+    "quantity": 31,
+    "follow-up": 20,
+    "payment": 1,
+    "rate/price": 3,
+    "invoice/bill": 1,
+    "dispatch/delivery": 5
+  },
+  "samples": {
+    "order": [
+      "[28/11/2024] Narayan KALIKA: Order 400mm cable tie",
+      "[04/12/2024] Narayan KALIKA: Pls order on urgent",
+      "[09/12/2024] Damini Kalika Production Karande: Baby Core order",
+      "[10/12/2024] Narayan KALIKA: Has the order been placed??",
+      "[12/12/2024] Damini Kalika Production Karande: Please order baby core",
+      "[15/12/2024] Abhishek Bhagwat Kalika Enterprises: Please order blue colour hdpe Tarpaulin roll only 3 roll in stock",
+      "[18/12/2024] Damini Kalika Production Karande: Baby core order",
+      "[22/12/2024] Damini Kalika Production Karande: Baby core order"
+    ],
+    "rate/price": [
+      "[25/02/2025] Abhishek Bhagwat Kalika Enterprises: Plz order pp HDPE woven fabric roll for engine covers",
+      "[07/04/2026] Prachi Jadhav Kalika Ent: This order is in rate revision. As soon as the rate is received and the purchase order comes, I will order the material.",
+      "[04/08/2026] Bharat Kumbharkar Mothe Sir: Asmita tarpaulin rate"
+    ],
+    "dispatch/delivery": [
+      "[03/09/2026] Narayan KALIKA: Check TATA yesterday dispatched",
+      "[03/09/2026] Narayan KALIKA: Other TATA pending dispatch but stock not available",
+      "[06/09/2026] Narayan KALIKA: Dispatched",
+      "[15/09/2026] Prachi Jadhav Kalika Ent: @shree veer transport"
+    ],
+    "payment": [
+      "[10/12/2024] Narayan KALIKA: PI received make payment"
+    ],
+    "follow-up": [
+      "[10/12/2024] KALIKA TARPOULIN: Tomorrow morning 9.00 am, we will get the bopp tape jumbo material",
+      "[02/01/2025] Narayan KALIKA: Amit Speciality Purchase _Kalika.vcf (file attached)",
+      "[02/01/2025] Narayan KALIKA: Ajay Wagh Hookup Wire C-33 _Kalika.vcf (file attached)",
+      "[16/01/2025] Damini Kalika Production Karande: Kalika printed jumbo Roll order please",
+      "[19/02/2025] Damini Kalika Production Karande: Kalika printed jumbo Roll order",
+      "[18/05/2025] Abhishek Bhagwat Kalika Enterprises: Please order 10×14 zip lock bag @⁨Prachi_jadhav 💫 Kalika⁩",
+      "[07/04/2026] Narayan KALIKA: @⁨Kalika Enterprises Vaishnavi⁩ look into",
+      "[31/05/2026] Narayan KALIKA: @⁨KALIKA TARPOULIN⁩ @⁨Lekharm Bopp Tape Operatpr⁩ @⁨Kalika Enterprises Ahmednagar⁩ As discussed rani & tape operator required jumbo rolls"
+    ]
+  },
+  "attachments_in_zip": 25
+}

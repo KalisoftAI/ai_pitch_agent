@@ -57,6 +57,57 @@ STANDARD_TASKS: List[Dict[str, Any]] = [
         "cron": "*/15 * * * *",
         "description": "Dispatch queued event WhatsApp messages whose schedule time has passed",
     },
+    {
+        "name": "pipeline_feedback_due",
+        "cron": "0 * * * *",
+        "description": "Send-due pass over feedback-pipeline queued WhatsApp messages (recent orders / new customers / leads)",
+    },
+    {
+        "name": "build_interaction_dump",
+        "cron": "0 2 * * *",
+        "description": "Nightly: parse WhatsApp chat exports (kalika backup/) + app outbox into interaction_dump.json with attachment details",
+    },
+    {
+        "name": "erp_dispatch_sync",
+        "cron": "0 6 * * *",
+        "description": "Daily 06:00: pull latest ERP report (ERP-V1/Reports) and upsert Dispatch + Orders for the sales dashboard/forecast",
+    },
+    {
+        "name": "voice_transcription_sync",
+        "cron": "30 3 * * *",
+        "description": "09:00 IST: transcribe call recordings + layered tone/lead analysis (Gemma SLM first via Ollama, Gemini fallback)",
+    },
+    # --- Daily 20:00-22:00 IST window (UTC = 14:30-16:30) ---
+    {
+        "name": "daily_guardrail_checks",
+        "cron": "30 14 * * *",
+        "description": "20:00 IST: run preflight guardrail checks (config/security/data/ERP/LLM/UAT) and store the report",
+    },
+    {
+        "name": "daily_llm_prompt_refine",
+        "cron": "30 15 * * *",
+        "description": "21:00 IST: refine the weekly prompt samples against last week's outcomes (human review required)",
+    },
+    {
+        "name": "daily_uat_report",
+        "cron": "30 16 * * *",
+        "description": "22:00 IST: UAT daily digest — ERP sync status, journey events, pending feedback, model usage",
+    },
+    {
+        "name": "weekly_uat_review",
+        "cron": "30 14 * * 1",
+        "description": "Monday 20:00 IST: weekly UAT review — feature enablement, stories, RL pattern candidates",
+    },
+    {
+        "name": "youtube_channel_sync",
+        "cron": "0 7 * * *",
+        "description": "Daily 07:00: refresh YouTube channel stats via Data API v3 (Analytics API = OAuth, next scope)",
+    },
+    {
+        "name": "rebuild_graph_preprocessing",
+        "cron": "30 2 * * *",
+        "description": "Nightly: networkx graph preprocessing (contacts x domains x intents x chats x ERP customers) -> nodes/edges/gexf for future graph DB",
+    },
     {"name": "kpi_snapshot", "cron": "0 23 * * *", "description": "Nightly business-KPI snapshot"},
 ]
 

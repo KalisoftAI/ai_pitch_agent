@@ -80,6 +80,32 @@ class Settings(BaseSettings):
     REDDIT_CLIENT_ID: str = Field(default="", alias="REDDIT_CLIENT_ID")
     REDDIT_CLIENT_SECRET: str = Field(default="", alias="REDDIT_CLIENT_SECRET")
     YOUTUBE_API_KEY: str = Field(default="", alias="YOUTUBE_API_KEY")
+    YOUTUBE_CHANNEL_ID: str = Field(default="", alias="YOUTUBE_CHANNEL_ID")
+
+    # --- ERP report sync (ERP-V1/Reports -> Dispatch/Orders) ---
+    ERP_REPORT_PREFIX: str = Field(default="ERP-V1/Reports/", alias="ERP_REPORT_PREFIX")
+    ERP_CACHE_PATH: str = Field(default="gcs_data", alias="ERP_CACHE_PATH")
+    ADMIN_EMAILS: str = Field(default="ai.solutions@kalisoftai.in", alias="ADMIN_EMAILS")
+
+    # --- Deployment phases: preprod / stage / uat / prod ---
+    DEPLOY_ENV: str = Field(default="preprod", alias="DEPLOY_ENV")
+    UAT_ENABLED: bool = Field(default=True, alias="UAT_ENABLED")
+    UAT_ENABLED_UNTIL: str = Field(default="2026-11-06", alias="UAT_ENABLED_UNTIL")  # one-week UAT window
+    HUMAN_REVIEW_REQUIRED: bool = Field(default=True, alias="HUMAN_REVIEW_REQUIRED")
+    GEMINI_FLASH_MODEL: str = Field(default="gemini-2.5-flash", alias="GEMINI_FLASH_MODEL")
+
+    # --- Voice/SLM pipeline (Gemma first for on-device layers) ---
+    VOICE_SLM_FIRST: bool = Field(default=True, alias="VOICE_SLM_FIRST")
+    VOICE_SLM_MODEL: str = Field(default="", alias="VOICE_SLM_MODEL")  # falls back to LLM_GEMMA_MODEL
+    VOICE_GCS_PREFIX: str = Field(default="call_recording/Vaishnavi-samp/", alias="VOICE_GCS_PREFIX")
+
+    @property
+    def voice_slm_model(self) -> str:
+        return self.VOICE_SLM_MODEL or self.LLM_GEMMA_MODEL
+
+    @property
+    def admin_emails(self) -> set[str]:
+        return {e.strip().lower() for e in self.ADMIN_EMAILS.split(",") if e.strip()}
 
     # --- Event workbook / WhatsApp scheduling ---
     # The workbook is not shipped in the container, so imports are uploaded

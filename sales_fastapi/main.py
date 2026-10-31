@@ -14,16 +14,23 @@ from .routers import (
     auth_router,
     campaigns_router,
     contacts_router,
+    dashboard_router,
     email_router,
+    erp_router,
     events_router,
+    feedback_pipeline_router,
     feedback_router,
     google_email_router,
     governance_router,
+    journey_router,
     llm_router,
+    ops_router,
     scheduler_router,
     social_router,
     system_router,
+    team_router,
     templates_router,
+    voice_router,
     whatsapp_router,
 )
 
@@ -65,16 +72,23 @@ app.include_router(system_router, prefix=api_prefix)
 app.include_router(auth_router, prefix=api_prefix)
 app.include_router(contacts_router, prefix=api_prefix)
 app.include_router(email_router, prefix=api_prefix)
+app.include_router(erp_router, prefix=api_prefix)
 app.include_router(social_router, prefix=api_prefix)
 app.include_router(governance_router, prefix=api_prefix)
 app.include_router(llm_router, prefix=api_prefix)
 app.include_router(whatsapp_router, prefix=api_prefix)
+app.include_router(voice_router, prefix=api_prefix)
 app.include_router(templates_router, prefix=api_prefix)
 app.include_router(campaigns_router, prefix=api_prefix)
 app.include_router(scheduler_router, prefix=api_prefix)
 app.include_router(feedback_router, prefix=api_prefix)
+app.include_router(feedback_pipeline_router, prefix=api_prefix)
 app.include_router(google_email_router, prefix=api_prefix)
+app.include_router(journey_router, prefix=api_prefix)
+app.include_router(ops_router, prefix=api_prefix)
 app.include_router(events_router, prefix=api_prefix)
+app.include_router(dashboard_router, prefix=api_prefix)
+app.include_router(team_router, prefix=api_prefix)
 
 
 @app.get("/", include_in_schema=False)

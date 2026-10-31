@@ -64,6 +64,6 @@ sample_data/
 
 
 # Excel lock files
-~$*.xlsx
-~$*.xls
-~$*.docx
+*.xlsx
+*.xls
+*.docx

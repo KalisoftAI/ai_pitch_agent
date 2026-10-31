@@ -1,0 +1,116 @@
+{
+  "user": "ai.solutions@kalisoftai.in",
+  "files": [
+    {
+      "gcs_path": "sales-contacts/marketing_list_kalika (1).xlsx#removed duplicates - mail list",
+      "rows_parsed": 514,
+      "imported": 0,
+      "skipped_duplicate": 514,
+      "skipped_no_contact_info": 0,
+      "existing_updated_empty_fields": 264
+    },
+    {
+      "gcs_path": "sales-contacts/marketing_list_kalika (1).xlsx#main list",
+      "rows_parsed": 152,
+      "imported": 0,
+      "skipped_duplicate": 152,
+      "skipped_no_contact_info": 0,
+      "existing_updated_empty_fields": 10
+    },
+    {
+      "gcs_path": "sales-contacts/marketing_list_kalika (1).xlsx#Sheet1",
+      "rows_parsed": 1126,
+      "imported": 0,
+      "skipped_duplicate": 1126,
+      "skipped_no_contact_info": 0,
+      "existing_updated_empty_fields": 1
+    },
+    {
+      "gcs_path": "sales-contacts/pune region contacts (1).xlsx#Sheet1",
+      "rows_parsed": 79,
+      "imported": 0,
+      "skipped_duplicate": 78,
+      "skipped_no_contact_info": 1,
+      "existing_updated_empty_fields": 0
+    },
+    {
+      "gcs_path": "sales-contacts/pune region contacts (1).xlsx#Sheet2",
+      "rows_parsed": 33,
+      "imported": 0,
+      "skipped_duplicate": 33,
+      "skipped_no_contact_info": 0,
+      "existing_updated_empty_fields": 0
+    },
+    {
+      "gcs_path": "sales-contacts/pune region contacts (1).xlsx#packvision contacts",
+      "rows_parsed": 41,
+      "imported": 28,
+      "skipped_duplicate": 12,
+      "skipped_no_contact_info": 1,
+      "existing_updated_empty_fields": 0
+    },
+    {
+      "gcs_path": "sales-contacts/pune region contacts (1).xlsx#gadekar sir contacts",
+      "rows_parsed": 88,
+      "imported": 0,
+      "skipped_duplicate": 36,
+      "skipped_no_contact_info": 52,
+      "existing_updated_empty_fields": 0
+    },
+    {
+      "gcs_path": "sales-contacts/pune region contacts (1).xlsx#Sheet11",
+      "rows_parsed": 22,
+      "imported": 0,
+      "skipped_duplicate": 22,
+      "skipped_no_contact_info": 0,
+      "existing_updated_empty_fields": 0
+    },
+    {
+      "gcs_path": "sales-contacts/pune region contacts (1).xlsx#Sheet3",
+      "rows_parsed": 857,
+      "imported": 47,
+      "skipped_duplicate": 0,
+      "skipped_no_contact_info": 810,
+      "existing_updated_empty_fields": 0
+    },
+    {
+      "gcs_path": "sales-contacts/pune region contacts (1).xlsx#Sheet4",
+      "rows_parsed": 853,
+      "imported": 18,
+      "skipped_duplicate": 1,
+      "skipped_no_contact_info": 834,
+      "existing_updated_empty_fields": 0
+    },
+    {
+      "gcs_path": "sales-contacts/Sales-data.xlsx#out-off-state",
+      "rows_parsed": 48,
+      "imported": 44,
+      "skipped_duplicate": 4,
+      "skipped_no_contact_info": 0,
+      "existing_updated_empty_fields": 0
+    },
+    {
+      "gcs_path": "sales-contacts/Sales-data.xlsx#Packvision",
+      "rows_parsed": 111,
+      "imported": 0,
+      "skipped_duplicate": 111,
+      "skipped_no_contact_info": 0,
+      "existing_updated_empty_fields": 0
+    },
+    {
+      "gcs_path": "sales-contacts/Sales-data.xlsx#sales-person1",
+      "rows_parsed": 88,
+      "imported": 0,
+      "skipped_duplicate": 36,
+      "skipped_no_contact_info": 52,
+      "existing_updated_empty_fields": 0
+    }
+  ],
+  "totals": {
+    "imported": 137,
+    "skipped_duplicate": 2125,
+    "skipped_no_contact_info": 1750,
+    "existing_updated_empty_fields": 275
+  },
+  "db_total_contacts": 8795
+}

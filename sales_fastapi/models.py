@@ -28,6 +28,7 @@ class User(Base):
     picture: Mapped[str] = mapped_column(String(512), default="")
     domain: Mapped[str] = mapped_column(String(255), default="", index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    password_hash: Mapped[str] = mapped_column(String(255), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
@@ -323,4 +324,135 @@ class CampaignMessage(Base):
     error: Mapped[str] = mapped_column(String(512), default="")
     provider_id: Mapped[str] = mapped_column(String(128), default="")
     sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class ErpDispatch(Base):
+    """Dispatch rows synced daily from the ERP report (ERP-V1/Reports -> Dispatch)."""
+
+    __tablename__ = "erp_dispatch"
+    __table_args__ = (UniqueConstraint("report_date", "dispatch_no", name="uq_erp_dispatch_day_no"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    report_date: Mapped[str] = mapped_column(String(10), index=True, default="")
+    dispatch_no: Mapped[str] = mapped_column(String(64), index=True, default="")
+    customer: Mapped[str] = mapped_column(String(255), index=True, default="")
+    plant: Mapped[str] = mapped_column(String(64), index=True, default="")
+    sales_person: Mapped[str] = mapped_column(String(128), default="")
+    schedule_qty: Mapped[float] = mapped_column(Integer, default=0)
+    dispatched_qty: Mapped[float] = mapped_column(Integer, default=0)
+    balance_qty: Mapped[float] = mapped_column(Integer, default=0)
+    pct_complete: Mapped[float] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(32), index=True, default="")
+    synced_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class ErpOrder(Base):
+    """Order rows synced from the ERP report (Orders sheet)."""
+
+    __tablename__ = "erp_orders"
+    __table_args__ = (UniqueConstraint("report_date", "order_no", name="uq_erp_order_day_no"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    report_date: Mapped[str] = mapped_column(String(10), index=True, default="")
+    order_no: Mapped[str] = mapped_column(String(64), index=True, default="")
+    customer: Mapped[str] = mapped_column(String(255), index=True, default="")
+    order_date: Mapped[str] = mapped_column(String(10), index=True, default="")
+    required_date: Mapped[str] = mapped_column(String(10), default="")
+    status: Mapped[str] = mapped_column(String(32), index=True, default="")
+    total_value: Mapped[float] = mapped_column(Integer, default=0)
+    synced_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class IntegrationSetting(Base):
+    """Key/value settings (YouTube API key, channel id, sync schedule...)."""
+
+    __tablename__ = "integration_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    key: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    value: Mapped[str] = mapped_column(Text, default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+class SyncRun(Base):
+    """Audit trail for sync jobs (ERP dispatch, YouTube, graph, dump)."""
+
+    __tablename__ = "sync_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    job: Mapped[str] = mapped_column(String(64), index=True)
+    status: Mapped[str] = mapped_column(String(32), index=True, default="ok")
+    detail: Mapped[str] = mapped_column(Text, default="")
+    started_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class JourneyEvent(Base):
+    """Customer-journey event (stage transitions, feedback, purchases, stories)."""
+
+    __tablename__ = "journey_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    contact_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    customer_type: Mapped[str] = mapped_column(String(32), index=True, default="lead")
+    stage: Mapped[str] = mapped_column(String(32), index=True, default="awareness")
+    event: Mapped[str] = mapped_column(String(64), index=True, default="")
+    channel: Mapped[str] = mapped_column(String(32), default="")
+    detail: Mapped[str] = mapped_column(Text, default="")
+    meta: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class VoiceTranscript(Base):
+    """Call-recording transcription + layered analysis (sound, tone, context, lead)."""
+
+    __tablename__ = "voice_transcripts"
+    __table_args__ = (UniqueConstraint("gcs_path", name="uq_voice_transcript_path"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    gcs_path: Mapped[str] = mapped_column(String(512), unique=True, index=True)
+    file_name: Mapped[str] = mapped_column(String(255), index=True, default="")
+    size_bytes: Mapped[int] = mapped_column(Integer, default=0)
+    gcs_updated: Mapped[str] = mapped_column(String(64), default="")
+    duration_sec: Mapped[float] = mapped_column(Integer, default=0)
+    sample_rate: Mapped[int] = mapped_column(Integer, default=0)
+    channels: Mapped[int] = mapped_column(Integer, default=0)
+    mean_volume_db: Mapped[float] = mapped_column(Integer, default=0)
+    max_volume_db: Mapped[float] = mapped_column(Integer, default=0)
+    silence_ratio: Mapped[float] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(32), index=True, default="pending")
+    language: Mapped[str] = mapped_column(String(16), default="")
+    transcript: Mapped[str] = mapped_column(Text, default="")
+    speakers: Mapped[dict] = mapped_column(JSON, default=dict)
+    layers: Mapped[dict] = mapped_column(JSON, default=dict)
+    tone: Mapped[dict] = mapped_column(JSON, default=dict)
+    lead: Mapped[dict] = mapped_column(JSON, default=dict)
+    model: Mapped[str] = mapped_column(String(128), default="")
+    error: Mapped[str] = mapped_column(String(512), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class TeamMessage(Base):
+    """Internal team chat — daily rate reviews + field-executive voice/text updates.
+
+    kind: rate_review | field_update | general
+    status: pending -> approved | rejected  (two-option approval for field updates)
+    """
+
+    __tablename__ = "team_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    author_name: Mapped[str] = mapped_column(String(255), default="")
+    author_role: Mapped[str] = mapped_column(String(64), default="sales")
+    kind: Mapped[str] = mapped_column(String(32), index=True, default="general")
+    body: Mapped[str] = mapped_column(Text, default="")
+    transcript_id: Mapped[int] = mapped_column(Integer, default=0)
+    meta: Mapped[dict] = mapped_column(JSON, default=dict)
+    status: Mapped[str] = mapped_column(String(16), index=True, default="posted")
+    reviewed_by: Mapped[str] = mapped_column(String(255), default="")
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
