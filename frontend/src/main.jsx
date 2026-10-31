@@ -4,15 +4,18 @@ import {
   Activity, ArrowUpRight, BarChart3, Bell, BriefcaseBusiness, CalendarDays, Check, ChevronDown,
   CircleAlert, Clock, Database, Gauge, Link2, LogOut, Mail, MapPin, Menu, MessageSquarePlus, Mic, Plus, RefreshCw,
   Search, Send, Settings2, ShieldCheck, Sparkles, Square, Star, Trash2, UploadCloud, Users, Video, X, Zap,
-  Truck, TrendingUp, Calculator, Save,
+  Truck, TrendingUp, Calculator, Save, Package, FileDown, Bot,
 } from "lucide-react";
 import "./styles.css";
+import { SalesBi, Catalogue, CompanyVisits, SocialAi, Access } from "./features";
+import { KALISOFT_LOGO, KALIKA_LOGO } from "./branding";
 
 const API = "/api";
 const readToken = () => sessionStorage.getItem("sales_token") || "";
 
 async function request(path, options = {}) {
-  const headers = { ...(options.body ? { "Content-Type": "application/json" } : {}), ...(options.headers || {}) };
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+  const headers = { ...(options.body && !isFormData ? { "Content-Type": "application/json" } : {}), ...(options.headers || {}) };
   const token = readToken();
   if (token) headers.Authorization = `Bearer ${token}`;
   const response = await fetch(`${API}${path}`, { ...options, headers });
@@ -27,6 +30,15 @@ async function request(path, options = {}) {
   }
   return response.status === 204 ? null : response.json();
 }
+
+const TAB_TITLES = {
+  dash: "Kalika command center", field: "Field desk", overview: "Good work starts with a clear signal.",
+  contacts: "Contacts", email: "Email connections", events: "Events", signals: "Signal desk",
+  scheduler: "Scheduler", kpis: "Business KPIs", feedback: "Feedback", pipeline: "Feedback pipeline",
+  erp: "ERP & sales forecast", salesbi: "Sales analytics & BI", catalog: "Catalogue & rates",
+  visits: "Company visits", socialai: "Social & AI insights", access: "Users & access",
+  uat: "UAT & operations", changelog: "Recent changes", outreach: "Outreach",
+};
 
 function App() {
   const [config, setConfig] = useState(null);
@@ -63,7 +75,7 @@ function App() {
   return (
     <div className="shell">
       <aside className={`sidebar ${mobileNav ? "open" : ""}`}>
-        <div className="brand"><img src="/KalisoftAI-logo.png" alt="Kalisoft AI" className="brand-logo" /><span>Kalisoft <b>AI</b></span></div>
+        <div className="brand"><img src={KALISOFT_LOGO} alt="Kalisoft AI" className="brand-logo" /><span>Kalisoft <b>AI</b></span></div>
         <div className="workspace-label">Revenue workspace</div>
         <nav>
           <NavItem icon={Gauge} label="Dashboard" active={tab === "dash"} onClick={() => { setTab("dash"); setMobileNav(false); }} />
@@ -79,6 +91,11 @@ function App() {
           <NavItem icon={MessageSquarePlus} label="Feedback" active={tab === "feedback"} onClick={() => { setTab("feedback"); setMobileNav(false); }} />
           <NavItem icon={Zap} label="Feedback pipeline" active={tab === "pipeline"} onClick={() => { setTab("pipeline"); setMobileNav(false); }} />
           <NavItem icon={Truck} label="ERP & forecast" active={tab === "erp"} onClick={() => { setTab("erp"); setMobileNav(false); }} />
+          <NavItem icon={BarChart3} label="Sales BI" active={tab === "salesbi"} onClick={() => { setTab("salesbi"); setMobileNav(false); }} />
+          <NavItem icon={Package} label="Catalogue & rates" active={tab === "catalog"} onClick={() => { setTab("catalog"); setMobileNav(false); }} />
+          <NavItem icon={MapPin} label="Company visits" active={tab === "visits"} onClick={() => { setTab("visits"); setMobileNav(false); }} />
+          <NavItem icon={Bot} label="Social & AI" active={tab === "socialai"} onClick={() => { setTab("socialai"); setMobileNav(false); }} />
+          <NavItem icon={Users} label="Access" active={tab === "access"} onClick={() => { setTab("access"); setMobileNav(false); }} />
           <NavItem icon={ShieldCheck} label="UAT & ops" active={tab === "uat"} onClick={() => { setTab("uat"); setMobileNav(false); }} />
           <NavItem icon={Star} label="Recent changes" active={tab === "changelog"} onClick={() => { setTab("changelog"); setMobileNav(false); }} />
         </nav>
@@ -89,7 +106,7 @@ function App() {
       </aside>
       {mobileNav && <button className="scrim" aria-label="Close menu" onClick={() => setMobileNav(false)} />}
       <main className="main">
-        <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open menu"><Menu size={20} /></button><div><div className="eyebrow">KALISOFT AI / SALES PIPELINE</div><h1>{tab === "dash" ? "Kalika command center" : tab === "field" ? "Field desk" : tab === "overview" ? "Good work starts with a clear signal." : tab === "contacts" ? "Contacts" : tab === "email" ? "Email connections" : tab === "events" ? "Events" : tab === "signals" ? "Signal desk" : tab === "scheduler" ? "Scheduler" : tab === "kpis" ? "Business KPIs" : tab === "feedback" ? "Feedback" : tab === "pipeline" ? "Feedback pipeline" : tab === "erp" ? "ERP & sales forecast" : tab === "uat" ? "UAT & operations" : tab === "changelog" ? "Recent changes" : "Outreach"}</h1></div><div className="topbar-actions"><EnvBadge env={health?.env} /><button className="text-button" onClick={() => setTour(true)}><Sparkles size={15} /> Take the tour</button><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Settings"><Settings2 size={18} /></button></div></header>
+        <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open menu"><Menu size={20} /></button><div><div className="eyebrow">KALISOFT AI / SALES PIPELINE</div><h1>{TAB_TITLES[tab] || "Outreach"}</h1></div><div className="topbar-actions"><EnvBadge env={health?.env} /><button className="text-button" onClick={() => setTour(true)}><Sparkles size={15} /> Take the tour</button><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Settings"><Settings2 size={18} /></button></div></header>
         {tab === "dash" && <KalikaDash onNavigate={setTab} onNotice={setNotice} />}
         {tab === "field" && <FieldDesk onNotice={setNotice} user={user} />}
         {tab === "overview" && <Overview onNavigate={setTab} onNotice={setNotice} health={health} setHealth={setHealth} />}
@@ -103,6 +120,11 @@ function App() {
         {tab === "feedback" && <Feedback onNotice={setNotice} />}
         {tab === "pipeline" && <FeedbackPipeline onNotice={setNotice} />}
         {tab === "erp" && <ErpDashboard onNotice={setNotice} />}
+        {tab === "salesbi" && <SalesBi onNotice={setNotice} />}
+        {tab === "catalog" && <Catalogue onNotice={setNotice} />}
+        {tab === "visits" && <CompanyVisits onNotice={setNotice} />}
+        {tab === "socialai" && <SocialAi onNotice={setNotice} />}
+        {tab === "access" && <Access onNotice={setNotice} user={user} />}
         {tab === "uat" && <UatOps onNotice={setNotice} />}
         {tab === "changelog" && <RecentChanges />}
       </main>
@@ -114,13 +136,14 @@ function App() {
 
 async function requestPublicConfig() { const response = await fetch(`${API}/config`); if (!response.ok) throw new Error("API configuration unavailable"); return response.json(); }
 
-function LoadingScreen() { return <div className="loading-screen"><img src="/KalisoftAI-logo.png" alt="Kalisoft AI" className="brand-logo" /><span>Preparing your workspace...</span></div>; }
+function LoadingScreen() { return <div className="loading-screen"><img src={KALISOFT_LOGO} alt="Kalisoft AI" className="brand-logo" /><span>Preparing your workspace...</span></div>; }
 
 function Login({ config, onLogin, onNotice }) {
   const [email, setEmail] = useState("ai.solutions@kalisoftai.in");
   const [busy, setBusy] = useState(false);
   const [pwForm, setPwForm] = useState({ username: "", password: "" });
   const [pwBusy, setPwBusy] = useState(false);
+  const [gisFailed, setGisFailed] = useState(false);
   const login = async (idToken) => {
     setBusy(true);
     try { const result = await request("/auth/google", { method: "POST", body: JSON.stringify({ id_token: idToken }) }); sessionStorage.setItem("sales_token", result.access_token); onLogin(await request("/auth/me")); }
@@ -139,17 +162,44 @@ function Login({ config, onLogin, onNotice }) {
   };
   useEffect(() => {
     if (!config.google_client_id) return undefined;
-    const renderGoogleButton = () => {
-      if (!window.google?.accounts?.id) return;
-      window.google.accounts.id.initialize({ client_id: config.google_client_id, callback: (response) => login(response.credential) });
-      window.google.accounts.id.renderButton(document.getElementById("google-button"), { theme: "outline", size: "large", width: 320, shape: "rectangular" });
+    // Belt-and-suspenders: load the official GIS script if it is not present.
+    if (!document.querySelector('script[src*="accounts.google.com/gsi/client"]')) {
+      const script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      script.onerror = () => setGisFailed(true);
+      document.head.appendChild(script);
+    }
+    let cancelled = false;
+    let attempts = 0;
+    let timer;
+    const tryRender = () => {
+      if (cancelled) return;
+      if (!window.google?.accounts?.id) {
+        attempts += 1;
+        if (attempts > 300) { setGisFailed(true); return; } // ~30s then surface the failure
+        timer = window.setTimeout(tryRender, 100);
+        return;
+      }
+      window.google.accounts.id.initialize({
+        client_id: config.google_client_id,
+        callback: (response) => login(response.credential),
+        ux_mode: "popup",
+      });
+      const el = document.getElementById("google-button");
+      if (el && !el.hasChildNodes()) {
+        // Invisible official button overlays the custom design — width must match
+        // the container so the whole visible button stays clickable.
+        const width = Math.max(200, Math.min(400, el.parentElement?.clientWidth || 320));
+        window.google.accounts.id.renderButton(el, { theme: "outline", size: "large", width, shape: "pill", text: "signin_with", logo_alignment: "center" });
+      }
     };
-    renderGoogleButton();
-    const poll = window.setInterval(renderGoogleButton, 100);
-    const stop = window.setTimeout(() => window.clearInterval(poll), 10000);
-    return () => { window.clearInterval(poll); window.clearTimeout(stop); };
+    tryRender();
+    return () => { cancelled = true; if (timer) window.clearTimeout(timer); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.google_client_id]);
-  return <div className="login-page"><div className="login-art"><div className="art-grid" /><div className="art-copy"><div className="brand"><img src="/KalisoftAI-logo.png" alt="Kalisoft AI" className="brand-logo" /><span>Kalisoft <b>AI</b></span><img src="/kalika-logo.svg" alt="Kalika" className="brand-logo kalika-mark" /><span className="kalika-word">Kalika</span></div><h1>Turn scattered signals into your next best conversation.</h1><p>A focused workspace for the people, companies, and market cues that move your pipeline forward.</p><div className="art-stat"><span><b>01</b> verified workspace</span><span><b>02</b> live signal streams</span></div></div></div><section className="login-panel"><div className="panel-inner"><div className="eyebrow">PRIVATE SALES WORKSPACE</div><h2>Welcome back.</h2><p className="muted">Sign in with your verified Google account to continue.</p><div id="google-button" className={config.google_client_id ? "google-button" : "hidden"} />{!config.google_client_id && <div className="config-warning"><CircleAlert size={18} /><span>Google Sign-In is not configured on this environment.</span></div>}<form className="pw-login" onSubmit={passwordLogin}><label>Kalika username &amp; password</label><input value={pwForm.username} onChange={(e) => setPwForm({ ...pwForm, username: e.target.value })} placeholder="username" autoComplete="username" required /><input type="password" value={pwForm.password} onChange={(e) => setPwForm({ ...pwForm, password: e.target.value })} placeholder="password" autoComplete="current-password" required /><button className="primary-button" type="submit" disabled={pwBusy}>{pwBusy ? "Signing in..." : "Sign in"}</button><small>Demo: kalika / kalika123 (admin) · field / field123 (field executive)</small></form>{config.dev_mode && <div className="dev-login"><label>Local development access</label><div className="input-action"><input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" /><button onClick={() => login(`dev:${email}`)} disabled={busy}>{busy ? "Checking..." : "Enter"}<ArrowUpRight size={16} /></button></div><small>Enabled only when AUTH_DEV_MODE is true.</small></div>}<div className="login-footer"><ShieldCheck size={16} /> Your session is protected with short-lived tokens.</div></div></section></div>;
+  return <div className="login-page"><div className="login-art"><div className="art-grid" /><div className="art-copy"><div className="brand"><img src={KALISOFT_LOGO} alt="Kalisoft AI" className="brand-logo" /><span>Kalisoft <b>AI</b></span><span className="brand-divider" /><img src={KALIKA_LOGO} alt="Kalika Enterprises" className="brand-logo kalika-mark" /><span className="kalika-word">Kalika</span></div><h1>Turn scattered signals into your next best conversation.</h1><p>A focused workspace for the people, companies, and market cues that move your pipeline forward.</p><div className="art-stat"><span><b>01</b> verified workspace</span><span><b>02</b> live signal streams</span></div></div></div><section className="login-panel"><div className="panel-inner"><div className="eyebrow">PRIVATE SALES WORKSPACE</div><h2>Welcome back.</h2><p className="muted">Sign in with your verified Google account to continue.</p>{config.google_client_id ? (<><div className={`gsi-wrap${busy ? " busy" : ""}`}><div className="gsi-custom" aria-hidden="true"><svg className="gsi-logo" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.58 2.68-3.9 2.68-6.62z" /><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z" /><path fill="#FBBC05" d="M3.97 10.72a5.41 5.41 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33z" /><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.42 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z" /></svg><span>{busy ? "Signing in..." : "Sign in with Google"}</span></div><div id="google-button" className="gsi-native" /></div>{gisFailed && <div className="config-warning"><CircleAlert size={18} /><span>Google Sign-In script could not load (check network/ad-blocker), then refresh the page.</span></div>}</>) : (<div className="config-warning"><CircleAlert size={18} /><span>Google Sign-In is not configured on this environment.</span></div>)}<form className="pw-login" onSubmit={passwordLogin}><label>Kalika username &amp; password</label><input value={pwForm.username} onChange={(e) => setPwForm({ ...pwForm, username: e.target.value })} placeholder="username" autoComplete="username" required /><input type="password" value={pwForm.password} onChange={(e) => setPwForm({ ...pwForm, password: e.target.value })} placeholder="password" autoComplete="current-password" required /><button className="primary-button" type="submit" disabled={pwBusy}>{pwBusy ? "Signing in..." : "Sign in"}</button><small>Demo: kalika / kalika123 (admin) · field / field123 (field executive)</small></form>{config.dev_mode && <div className="dev-login"><label>Local development access</label><div className="input-action"><input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" /><button onClick={() => login(`dev:${email}`)} disabled={busy}>{busy ? "Checking..." : "Enter"}<ArrowUpRight size={16} /></button></div><small>Enabled only when AUTH_DEV_MODE is true.</small></div>}<div className="login-footer"><ShieldCheck size={16} /> Your session is protected with short-lived tokens.</div></div></section></div>;
 }
 
 function NavItem({ icon: Icon, label, active, onClick }) { return <button className={`nav-item ${active ? "active" : ""}`} onClick={onClick}><Icon size={18} /><span>{label}</span>{active && <ChevronDown size={15} className="nav-caret" />}</button>; }

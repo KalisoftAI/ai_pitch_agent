@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     GOOGLE_CLOUD_PROJECT: str = Field(default="", alias="GOOGLE_CLOUD_PROJECT")
     GCS_BUCKET_CONTACTS: str = Field(default="kalisoftai-datahub", alias="GCS_BUCKET_CONTACTS")
     GCS_PATH_CONTACTS: str = Field(default="all-sales-contacts-data", alias="GCS_PATH_CONTACTS")
+    GCS_BUCKET_MEDIA: str = Field(default="kalika_enterprises", alias="GCS_BUCKET_MEDIA")
+    GCS_PATH_VISITS: str = Field(default="sales-app/visits/", alias="GCS_PATH_VISITS")
 
     # --- Database ---
     # If DATABASE_URL is set it wins. Otherwise the app builds a Postgres URL
@@ -43,6 +45,15 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = Field(default="", alias="GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET: str = Field(default="", alias="GOOGLE_CLIENT_SECRET")
     GOOGLE_ALLOWED_DOMAINS: str = Field(default="", alias="GOOGLE_ALLOWED_DOMAINS")
+    # Strict sign-in allowlist. When set, ONLY these emails may sign in with
+    # Google (domain check is skipped). Comma-separated.
+    GOOGLE_ALLOWED_EMAILS: str = Field(
+        default="ai.solutions@kalisoftai.in,kalikaenterprises@gmail.com",
+        alias="GOOGLE_ALLOWED_EMAILS",
+    )
+    # Authorized redirect URI for the Google sign-in flow (GIS). The Gmail
+    # mailbox OAuth callback stays in GOOGLE_OAUTH_REDIRECT_URI.
+    GOOGLE_REDIRECT_URI: str = Field(default="", alias="GOOGLE_REDIRECT_URI")
     GMAIL_OAUTH_ENABLED: bool = Field(default=True, alias="GMAIL_OAUTH_ENABLED")
     GOOGLE_OAUTH_REDIRECT_URI: str = Field(default="", alias="GOOGLE_OAUTH_REDIRECT_URI")
     FRONTEND_URL: str = Field(default="http://localhost:5173", alias="FRONTEND_URL")
@@ -77,10 +88,13 @@ class Settings(BaseSettings):
     # --- LinkedIn / Reddit / YouTube (Google-secured APIs) ---
     LINKEDIN_CLIENT_ID: str = Field(default="", alias="LINKEDIN_CLIENT_ID")
     LINKEDIN_CLIENT_SECRET: str = Field(default="", alias="LINKEDIN_CLIENT_SECRET")
+    LINKEDIN_ACCESS_TOKEN: str = Field(default="", alias="LINKEDIN_ACCESS_TOKEN")
     REDDIT_CLIENT_ID: str = Field(default="", alias="REDDIT_CLIENT_ID")
     REDDIT_CLIENT_SECRET: str = Field(default="", alias="REDDIT_CLIENT_SECRET")
     YOUTUBE_API_KEY: str = Field(default="", alias="YOUTUBE_API_KEY")
     YOUTUBE_CHANNEL_ID: str = Field(default="", alias="YOUTUBE_CHANNEL_ID")
+    INSTAGRAM_ACCESS_TOKEN: str = Field(default="", alias="INSTAGRAM_ACCESS_TOKEN")
+    INSTAGRAM_ACCOUNT_ID: str = Field(default="", alias="INSTAGRAM_ACCOUNT_ID")
 
     # --- ERP report sync (ERP-V1/Reports -> Dispatch/Orders) ---
     ERP_REPORT_PREFIX: str = Field(default="ERP-V1/Reports/", alias="ERP_REPORT_PREFIX")
@@ -90,14 +104,20 @@ class Settings(BaseSettings):
     # --- Deployment phases: preprod / stage / uat / prod ---
     DEPLOY_ENV: str = Field(default="preprod", alias="DEPLOY_ENV")
     UAT_ENABLED: bool = Field(default=True, alias="UAT_ENABLED")
-    UAT_ENABLED_UNTIL: str = Field(default="2026-11-06", alias="UAT_ENABLED_UNTIL")  # one-week UAT window
+    UAT_ENABLED_UNTIL: str = Field(
+        default="2026-11-06", alias="UAT_ENABLED_UNTIL"
+    )  # one-week UAT window
     HUMAN_REVIEW_REQUIRED: bool = Field(default=True, alias="HUMAN_REVIEW_REQUIRED")
     GEMINI_FLASH_MODEL: str = Field(default="gemini-2.5-flash", alias="GEMINI_FLASH_MODEL")
 
     # --- Voice/SLM pipeline (Gemma first for on-device layers) ---
     VOICE_SLM_FIRST: bool = Field(default=True, alias="VOICE_SLM_FIRST")
-    VOICE_SLM_MODEL: str = Field(default="", alias="VOICE_SLM_MODEL")  # falls back to LLM_GEMMA_MODEL
-    VOICE_GCS_PREFIX: str = Field(default="call_recording/Vaishnavi-samp/", alias="VOICE_GCS_PREFIX")
+    VOICE_SLM_MODEL: str = Field(
+        default="", alias="VOICE_SLM_MODEL"
+    )  # falls back to LLM_GEMMA_MODEL
+    VOICE_GCS_PREFIX: str = Field(
+        default="call_recording/Vaishnavi-samp/", alias="VOICE_GCS_PREFIX"
+    )
 
     @property
     def voice_slm_model(self) -> str:
@@ -106,6 +126,10 @@ class Settings(BaseSettings):
     @property
     def admin_emails(self) -> set[str]:
         return {e.strip().lower() for e in self.ADMIN_EMAILS.split(",") if e.strip()}
+
+    @property
+    def google_allowed_emails(self) -> set[str]:
+        return {e.strip().lower() for e in self.GOOGLE_ALLOWED_EMAILS.split(",") if e.strip()}
 
     # --- Event workbook / WhatsApp scheduling ---
     # The workbook is not shipped in the container, so imports are uploaded

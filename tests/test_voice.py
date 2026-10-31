@@ -1,6 +1,7 @@
 """Voice pipeline tests: audio probe, layered prompts, heuristics, API ingest,
 lead provisioning, and status/stats endpoints. No network calls required.
 """
+
 import io
 import math
 import struct
@@ -9,7 +10,10 @@ import wave
 import pytest
 
 from sales_fastapi.voice_analysis import (
-    MIME, PROMPTS, analyze, heuristic_layers, probe_audio,
+    PROMPTS,
+    analyze,
+    heuristic_layers,
+    probe_audio,
 )
 
 SAMPLE_TRANSCRIPT = (
@@ -26,8 +30,10 @@ def _wav_bytes(seconds=1.0, rate=16000, freq=440.0):
         w.setnchannels(1)
         w.setsampwidth(2)
         w.setframerate(rate)
-        frames = b"".join(struct.pack("<h", int(12000 * math.sin(2 * math.pi * freq * t / rate)))
-                          for t in range(int(rate * seconds)))
+        frames = b"".join(
+            struct.pack("<h", int(12000 * math.sin(2 * math.pi * freq * t / rate)))
+            for t in range(int(rate * seconds))
+        )
         w.writeframes(frames)
     return buf.getvalue()
 
@@ -58,8 +64,14 @@ def test_layer_prompts_defined():
 
 
 def test_heuristic_layers_extract_lead_context_tone():
-    audio = {"duration_sec": 40.0, "mean_volume_db": -22.0, "max_volume_db": -3.0,
-             "silence_ratio": 0.18, "channels": 1, "sample_rate": 16000}
+    audio = {
+        "duration_sec": 40.0,
+        "mean_volume_db": -22.0,
+        "max_volume_db": -3.0,
+        "silence_ratio": 0.18,
+        "channels": 1,
+        "sample_rate": 16000,
+    }
     out = heuristic_layers(SAMPLE_TRANSCRIPT, audio)
     assert out["mode"] == "heuristic"
     ctx = out["l2_context"]
@@ -68,7 +80,7 @@ def test_heuristic_layers_extract_lead_context_tone():
     assert ctx["rates_quoted"]
     tone = out["l3_tone"]
     assert tone["sentiment"] in ("positive", "neutral", "negative")
-    assert tone["urgency"] == "high"          # "urgent"
+    assert tone["urgency"] == "high"  # "urgent"
     assert tone["interest"] == "high"
     assert tone["noise"] in ("clean", "some", "noisy")
     lead = out["l4_lead"]
@@ -84,7 +96,9 @@ def test_analyze_falls_back_without_key():
 
 
 def test_negative_tone_and_intent():
-    out = heuristic_layers("Customer: no need, expensive hai, late delivery problem thi", {"silence_ratio": 0.05})
+    out = heuristic_layers(
+        "Customer: no need, expensive hai, late delivery problem thi", {"silence_ratio": 0.05}
+    )
     assert out["l3_tone"]["sentiment"] == "negative"
     assert out["l4_lead"]["intent"] in ("support", "not_interested", "other")
 
@@ -98,9 +112,16 @@ def test_voice_status(client, auth_headers):
 
 
 def test_voice_ingest_and_provision(client, auth_headers):
-    r = client.post("/api/voice/ingest", headers=auth_headers,
-                    json={"file_name": "sample-call.m4a", "transcript": SAMPLE_TRANSCRIPT,
-                          "language": "mixed", "duration_sec": 42})
+    r = client.post(
+        "/api/voice/ingest",
+        headers=auth_headers,
+        json={
+            "file_name": "sample-call.m4a",
+            "transcript": SAMPLE_TRANSCRIPT,
+            "language": "mixed",
+            "duration_sec": 42,
+        },
+    )
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["id"] > 0
@@ -115,7 +136,7 @@ def test_voice_ingest_and_provision(client, auth_headers):
 
     prov = client.post(f"/api/voice/provision/{tid}", headers=auth_headers).json()
     assert prov["created"] is True
-    assert prov["stage"] == "evaluation"          # intent=order
+    assert prov["stage"] == "evaluation"  # intent=order
     assert prov["recommended_template"]
     # idempotent: second provision reuses the contact
     prov2 = client.post(f"/api/voice/provision/{tid}", headers=auth_headers).json()
@@ -127,8 +148,11 @@ def test_voice_ingest_and_provision(client, auth_headers):
 
 
 def test_voice_transcripts_and_stats(client, auth_headers):
-    client.post("/api/voice/ingest", headers=auth_headers,
-                json={"file_name": "a.m4a", "transcript": SAMPLE_TRANSCRIPT})
+    client.post(
+        "/api/voice/ingest",
+        headers=auth_headers,
+        json={"file_name": "a.m4a", "transcript": SAMPLE_TRANSCRIPT},
+    )
     lst = client.get("/api/voice/transcripts", headers=auth_headers).json()
     assert len(lst) >= 1 and lst[0]["lead"]["intent"] == "order"
     st = client.get("/api/voice/stats", headers=auth_headers).json()
@@ -150,19 +174,47 @@ def test_gemma_chain_used_first(monkeypatch):
     def fake_ollama(base_url, model, prompt, **kw):
         calls["n"] += 1
         if "extract context as JSON" in prompt:
-            return {"purpose": "rate enquiry", "products": ["VCI bags"], "quantities": ["500 kg"],
-                    "rates_quoted": [], "objections": [], "competitors": [], "commitments": [],
-                    "summary": "wants 500kg VCI"}
+            return {
+                "purpose": "rate enquiry",
+                "products": ["VCI bags"],
+                "quantities": ["500 kg"],
+                "rates_quoted": [],
+                "objections": [],
+                "competitors": [],
+                "commitments": [],
+                "summary": "wants 500kg VCI",
+            }
         if "Analyse the customer" in prompt:
-            return {"sentiment": "positive", "urgency": "high", "politeness": "high",
-                    "interest": "high", "noise": "clean", "speech_pace": "normal", "notes": "gemma"}
-        return {"name": "Patil", "company": "ACME", "phone": "9822000000", "email": "",
-                "intent": "order", "products": ["VCI bags"], "estimated_qty": "500 kg",
-                "next_action": "send quote", "recommended_template": "WA-ORD-01", "confidence": 0.81}
+            return {
+                "sentiment": "positive",
+                "urgency": "high",
+                "politeness": "high",
+                "interest": "high",
+                "noise": "clean",
+                "speech_pace": "normal",
+                "notes": "gemma",
+            }
+        return {
+            "name": "Patil",
+            "company": "ACME",
+            "phone": "9822000000",
+            "email": "",
+            "intent": "order",
+            "products": ["VCI bags"],
+            "estimated_qty": "500 kg",
+            "next_action": "send quote",
+            "recommended_template": "WA-ORD-01",
+            "confidence": 0.81,
+        }
 
     monkeypatch.setattr(va, "ollama_json", fake_ollama)
-    out = va.analyze(SAMPLE_TRANSCRIPT, {"duration_sec": 40}, api_key="", slm_first=True,
-                     slm_model="gemma-4-27b-it")
+    out = va.analyze(
+        SAMPLE_TRANSCRIPT,
+        {"duration_sec": 40},
+        api_key="",
+        slm_first=True,
+        slm_model="gemma-4-27b-it",
+    )
     assert out["mode"] == "gemma"
     assert out["model"] == "gemma-4-27b-it"
     assert out["l4_lead"]["confidence"] == 0.81
@@ -171,7 +223,10 @@ def test_gemma_chain_used_first(monkeypatch):
 
 def test_gemma_failure_falls_back_to_heuristic(monkeypatch):
     import sales_fastapi.voice_analysis as va
-    monkeypatch.setattr(va, "ollama_json", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("down")))
+
+    monkeypatch.setattr(
+        va, "ollama_json", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("down"))
+    )
     out = va.analyze(SAMPLE_TRANSCRIPT, {"duration_sec": 20}, api_key="", slm_first=True)
     assert out["mode"] == "heuristic"
     assert out["l4_lead"]["phone"] == "9822000000"

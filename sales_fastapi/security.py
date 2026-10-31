@@ -178,12 +178,29 @@ def verify_google_id_token(token: str) -> dict:
     except ValueError as exc:
         raise HTTPException(status_code=401, detail=f"Invalid Google token: {exc}") from exc
 
+    # Normalise the verified email before any authorisation decision. The email
+    # is taken only from the verified ID token claims, never from the client.
+    email = (claims.get("email") or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=401, detail="Google token has no email claim")
+    claims["email"] = email
+
     if not claims.get("email_verified", False):
         raise HTTPException(status_code=403, detail="Google email is not verified")
 
+    # Strict per-email allowlist (takes precedence over the domain check).
+    allowed_emails = settings.google_allowed_emails
+    if allowed_emails:
+        if email not in allowed_emails:
+            raise HTTPException(
+                status_code=403,
+                detail="This Google account is not authorized for this workspace",
+            )
+        return claims
+
     allowed = [d.strip().lower() for d in settings.GOOGLE_ALLOWED_DOMAINS.split(",") if d.strip()]
     if allowed:
-        email_domain = claims.get("email", "").split("@")[-1].lower()
+        email_domain = email.split("@")[-1].lower()
         if email_domain not in allowed:
             raise HTTPException(status_code=403, detail="Email domain not allowed")
     return claims
@@ -220,9 +237,30 @@ def require_admin(user: User = Depends(get_current_user)) -> User:
     account (ai.solutions@kalisoftai.in). Non-admin users keep read-only dashboards.
     """
     email = (user.email or "").strip().lower()
-    if email not in settings.admin_emails:
+    if email not in settings.admin_emails and (user.role or "").lower() != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required for this action",
         )
     return user
+
+
+def is_admin_user(user: User) -> bool:
+    email = (user.email or "").strip().lower()
+    return email in settings.admin_emails or (user.role or "").lower() == "admin"
+
+
+def require_roles(*roles: str):
+    allowed = {role.lower() for role in roles}
+
+    def dependency(user: User = Depends(get_current_user)) -> User:
+        if is_admin_user(user):
+            return user
+        if (user.role or "sales").lower() not in allowed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Role access required: {', '.join(sorted(allowed))}",
+            )
+        return user
+
+    return dependency

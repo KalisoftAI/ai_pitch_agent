@@ -6,6 +6,7 @@ from sqlalchemy import (
     JSON,
     Boolean,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     String,
@@ -29,6 +30,7 @@ class User(Base):
     domain: Mapped[str] = mapped_column(String(255), default="", index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     password_hash: Mapped[str] = mapped_column(String(255), default="")
+    role: Mapped[str] = mapped_column(String(32), default="sales", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
@@ -331,7 +333,9 @@ class ErpDispatch(Base):
     """Dispatch rows synced daily from the ERP report (ERP-V1/Reports -> Dispatch)."""
 
     __tablename__ = "erp_dispatch"
-    __table_args__ = (UniqueConstraint("report_date", "dispatch_no", name="uq_erp_dispatch_day_no"),)
+    __table_args__ = (
+        UniqueConstraint("report_date", "dispatch_no", name="uq_erp_dispatch_day_no"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     report_date: Mapped[str] = mapped_column(String(10), index=True, default="")
@@ -372,7 +376,9 @@ class IntegrationSetting(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     key: Mapped[str] = mapped_column(String(128), unique=True, index=True)
     value: Mapped[str] = mapped_column(Text, default="")
-    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
 
 
 class SyncRun(Base):
@@ -456,3 +462,88 @@ class TeamMessage(Base):
     reviewed_by: Mapped[str] = mapped_column(String(255), default="")
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class Product(Base):
+    """Sales product master."""
+
+    __tablename__ = "products"
+    __table_args__ = (UniqueConstraint("user_id", "code", name="uq_product_user_code"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    code: Mapped[str] = mapped_column(String(64), index=True, default="")
+    name: Mapped[str] = mapped_column(String(255), index=True)
+    category: Mapped[str] = mapped_column(String(128), default="", index=True)
+    unit: Mapped[str] = mapped_column(String(32), default="kg")
+    description: Mapped[str] = mapped_column(Text, default="")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ProductRate(Base):
+    """A product rate submission with internal approval workflow."""
+
+    __tablename__ = "product_rates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    product_id: Mapped[int] = mapped_column(Integer, ForeignKey("products.id"), index=True)
+    rate: Mapped[float] = mapped_column(Float, default=0)
+    currency: Mapped[str] = mapped_column(String(8), default="INR")
+    unit: Mapped[str] = mapped_column(String(32), default="kg")
+    effective_date: Mapped[str] = mapped_column(String(10), index=True, default="")
+    status: Mapped[str] = mapped_column(String(16), index=True, default="pending")
+    submitted_by: Mapped[str] = mapped_column(String(255), default="")
+    approved_by: Mapped[str] = mapped_column(String(255), default="")
+    notes: Mapped[str] = mapped_column(Text, default="")
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class CompanyVisit(Base):
+    """A salesperson's company visit with optional GCS media attachments."""
+
+    __tablename__ = "company_visits"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    contact_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    company: Mapped[str] = mapped_column(String(255), index=True, default="")
+    contact_name: Mapped[str] = mapped_column(String(255), default="")
+    contact_phone: Mapped[str] = mapped_column(String(64), default="")
+    visit_date: Mapped[str] = mapped_column(String(10), index=True, default="")
+    visit_type: Mapped[str] = mapped_column(String(32), index=True, default="in_person")
+    sales_person: Mapped[str] = mapped_column(String(255), index=True, default="")
+    purpose: Mapped[str] = mapped_column(String(512), default="")
+    notes: Mapped[str] = mapped_column(Text, default="")
+    outcome: Mapped[str] = mapped_column(String(64), default="")
+    next_action: Mapped[str] = mapped_column(Text, default="")
+    follow_up_date: Mapped[str] = mapped_column(String(10), default="")
+    status: Mapped[str] = mapped_column(String(32), index=True, default="completed")
+    media: Mapped[list] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class SocialMetric(Base):
+    """A platform metric snapshot (real API value or an explicit sync status)."""
+
+    __tablename__ = "social_metrics"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    platform: Mapped[str] = mapped_column(String(32), index=True, default="")
+    metric: Mapped[str] = mapped_column(String(64), index=True, default="")
+    value: Mapped[float] = mapped_column(Float, default=0)
+    period: Mapped[str] = mapped_column(String(16), index=True, default="")
+    meta: Mapped[dict] = mapped_column(JSON, default=dict)
+    captured_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

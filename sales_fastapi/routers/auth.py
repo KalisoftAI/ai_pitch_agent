@@ -28,22 +28,62 @@ def google_login(
     request: Request,
     db: Session = Depends(get_db),
 ) -> TokenOut:
-    claims = verify_google_id_token(payload.id_token)
-    email_address = claims["email"].lower()
+    try:
+        claims = verify_google_id_token(payload.id_token)
+    except HTTPException as exc:
+        # Audit blocked/failed sign-ins. Never log the token itself.
+        log_event(
+            db,
+            action="auth.login_blocked",
+            actor_user_id=0,
+            resource_type="user",
+            resource_id="",
+            status="blocked",
+            ip_address=request.client.host if request.client else "",
+            detail={"method": "google", "reason": str(exc.detail)[:200]},
+        )
+        db.commit()
+        raise
+    email_address = (claims.get("email") or "").strip().lower()
 
     user = db.query(User).filter(User.email == email_address).first()
     if user is None:
+        # Auto-provisioning is only reachable for allowlisted emails: the
+        # allowlist check in verify_google_id_token has already rejected every
+        # other account. Admin rights come only from explicit RBAC config
+        # (ADMIN_EMAILS / users.role), never from the email alone here.
         user = User(
             google_sub=claims.get("sub", email_address),
             email=email_address,
             name=claims.get("name", ""),
             picture=claims.get("picture", ""),
             domain=_domain_of(email_address),
+            role="sales",
         )
         db.add(user)
     else:
-        user.name = claims.get("name", user.name)
-        user.picture = claims.get("picture", user.picture)
+        if not user.is_active:
+            log_event(
+                db,
+                action="auth.login_blocked",
+                actor_user_id=user.id,
+                resource_type="user",
+                resource_id=str(user.id),
+                status="blocked",
+                ip_address=request.client.host if request.client else "",
+                detail={"method": "google", "reason": "account disabled"},
+            )
+            db.commit()
+            raise HTTPException(status_code=403, detail="Account disabled")
+        user.name = claims.get("name", "") or user.name
+        user.picture = claims.get("picture", "") or user.picture
+        # Link a dev/local placeholder subject to the real Google subject,
+        # preserving the existing user id and all related data.
+        sub = claims.get("sub", "")
+        if sub and user.google_sub.startswith(("dev-", "local:")):
+            conflict = db.query(User).filter(User.google_sub == sub, User.id != user.id).first()
+            if conflict is None:
+                user.google_sub = sub
     user.last_login_at = datetime.utcnow()
     db.commit()
     db.refresh(user)
@@ -80,7 +120,11 @@ def password_login(
     email_address = username if "@" in username else f"{username}@kalika.local"
 
     user = db.query(User).filter(User.email == email_address).first()
-    if user is None or not user.password_hash or not verify_password(payload.password, user.password_hash):
+    if (
+        user is None
+        or not user.password_hash
+        or not verify_password(payload.password, user.password_hash)
+    ):
         raise HTTPException(status_code=401, detail="Invalid username or password")
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account disabled")

@@ -129,6 +129,18 @@ class GCSStorage:
         except Exception:
             return False
 
+    def upload_bytes(
+        self, blob_name: str, data: bytes, content_type: str = "application/octet-stream"
+    ) -> bool:
+        if not self.available or self._client is None:
+            return False
+        try:
+            blob = self._client.bucket(self.bucket_name).blob(blob_name)
+            blob.upload_from_string(data, content_type=content_type or "application/octet-stream")
+            return True
+        except Exception:
+            return False
+
 
 # ==========================================================================
 # IMAP extraction

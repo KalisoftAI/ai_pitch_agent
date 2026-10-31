@@ -9,6 +9,7 @@ User picks a template per segment; the pipeline personalises variables and
 produces wa.me click-to-send links and/or queues rows into whatsapp_messages.
 QR-based sharing is intentionally NOT here yet (next scope).
 """
+
 from __future__ import annotations
 
 import os
@@ -24,12 +25,16 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models import Contact, User, WhatsAppMessage
 from ..pipeline_templates import (
-    RATE_BLOCK,
     SEGMENT_META,
     TEMPLATES,
+)
+from ..pipeline_templates import (
     fill as _fill,
+)
+from ..pipeline_templates import (
     first_phone as _first_phone,
-    norm_phone as _norm_phone,
+)
+from ..pipeline_templates import (
     wa_link as _wa_link,
 )
 from ..security import get_current_user
@@ -38,7 +43,9 @@ router = APIRouter(prefix="/pipeline", tags=["feedback-pipeline"])
 
 # ---------------------------------------------------------------- helpers
 _erp_cache: dict = {"at": 0.0, "rows": []}
-ERP_LOCAL = os.path.join(os.path.dirname(__file__), "..", "..", "gcs_data", "ERP-V1__kalika_report_2026-10-30.xlsx")
+ERP_LOCAL = os.path.join(
+    os.path.dirname(__file__), "..", "..", "gcs_data", "ERP-V1__kalika_report_2026-10-30.xlsx"
+)
 
 
 def _load_erp_orders() -> list[dict]:
@@ -52,21 +59,27 @@ def _load_erp_orders() -> list[dict]:
             df = pd.read_excel(path, sheet_name="Orders")
         else:  # fallback: read straight from GCS with ADC
             import io
+
             import google.auth
             from google.cloud import storage
+
             creds, _ = google.auth.default()
             client = storage.Client(credentials=creds)
-            blob = client.bucket("kalika_enterprises").blob("ERP-V1/Reports/kalika_report_2026-10-30.xlsx")
+            blob = client.bucket("kalika_enterprises").blob(
+                "ERP-V1/Reports/kalika_report_2026-10-30.xlsx"
+            )
             df = pd.read_excel(io.BytesIO(blob.download_as_bytes()), sheet_name="Orders")
         df.columns = [str(c).strip() for c in df.columns]
         for _, r in df.iterrows():
-            rows.append({
-                "order_no": str(r.get("Order No", "")).strip(),
-                "customer": str(r.get("Customer", "")).strip(),
-                "status": str(r.get("Status", "")).strip(),
-                "amount": float(pd.to_numeric(r.get("Total Value"), errors="coerce") or 0),
-                "order_date": str(r.get("Order Date", ""))[:10],
-            })
+            rows.append(
+                {
+                    "order_no": str(r.get("Order No", "")).strip(),
+                    "customer": str(r.get("Customer", "")).strip(),
+                    "status": str(r.get("Status", "")).strip(),
+                    "amount": float(pd.to_numeric(r.get("Total Value"), errors="coerce") or 0),
+                    "order_date": str(r.get("Order Date", ""))[:10],
+                }
+            )
     except Exception:
         rows = []
     _erp_cache.update({"at": time.time(), "rows": rows})
@@ -80,7 +93,6 @@ def _contact_phone_map(db: Session, user_id: int) -> list[Contact]:
 def _segment_rows(segment: str, db: Session, user: User, limit: int) -> list[dict]:
     """Build raw audience rows for a segment: {name, company, phone, context...}."""
     contacts = _contact_phone_map(db, user.id)
-    agent = user.name or "Team Kalika"
 
     if segment == "recent_orders":
         orders = _load_erp_orders()
@@ -95,12 +107,24 @@ def _segment_rows(segment: str, db: Session, user: User, limit: int) -> list[dic
                         phone = _first_phone(c.phone)
                         cname = c.name
                         break
-            rows.append({
-                "name": cname, "company": o["customer"], "phone": phone,
-                "order_no": o["order_no"], "amount": f"{o['amount']:,.0f}", "status": o["status"],
-                "order_date": o["order_date"], "matched": bool(phone),
-            })
-        rows.sort(key=lambda r: (not r["matched"], -(r["amount"] and float(str(r["amount"]).replace(",", "")) or 0)))
+            rows.append(
+                {
+                    "name": cname,
+                    "company": o["customer"],
+                    "phone": phone,
+                    "order_no": o["order_no"],
+                    "amount": f"{o['amount']:,.0f}",
+                    "status": o["status"],
+                    "order_date": o["order_date"],
+                    "matched": bool(phone),
+                }
+            )
+        rows.sort(
+            key=lambda r: (
+                not r["matched"],
+                -(r["amount"] and float(str(r["amount"]).replace(",", "")) or 0),
+            )
+        )
         return rows[:limit]
 
     if segment == "new_customers":
@@ -112,8 +136,14 @@ def _segment_rows(segment: str, db: Session, user: User, limit: int) -> list[dic
                 created = created.replace(tzinfo=timezone.utc)
             phone = _first_phone(c.phone)
             if created and created >= since and phone:
-                rows.append({"name": c.name, "company": c.company, "phone": phone,
-                             "notes": (c.notes or "")[:120]})
+                rows.append(
+                    {
+                        "name": c.name,
+                        "company": c.company,
+                        "phone": phone,
+                        "notes": (c.notes or "")[:120],
+                    }
+                )
         rows.sort(key=lambda r: r["company"] or r["name"])
         return rows[:limit]
 
@@ -124,13 +154,24 @@ def _segment_rows(segment: str, db: Session, user: User, limit: int) -> list[dic
             notes = (c.notes or "").lower()
             if not phone:
                 continue
-            if "call status" in notes or "requirements" in notes or c.intent in ("sales", "procurement"):
+            if (
+                "call status" in notes
+                or "requirements" in notes
+                or c.intent in ("sales", "procurement")
+            ):
                 status = ""
                 m = re.search(r"call status:\s*([^|]+)", notes)
                 if m:
                     status = m.group(1).strip()
-                rows.append({"name": c.name, "company": c.company, "phone": phone,
-                             "call_status": status, "intent": c.intent})
+                rows.append(
+                    {
+                        "name": c.name,
+                        "company": c.company,
+                        "phone": phone,
+                        "call_status": status,
+                        "intent": c.intent,
+                    }
+                )
         order_hint = {"not answered": 0, "busy": 1, "call later": 2, "details sent": 3}
         rows.sort(key=lambda r: order_hint.get((r["call_status"] or "").split(";")[0].lower(), 9))
         return rows[:limit]
@@ -156,8 +197,15 @@ def list_segments(user: User = Depends(get_current_user), db: Session = Depends(
     for key, meta in SEGMENT_META.items():
         rows = _segment_rows(key, db, user, 500)
         reachable = sum(1 for r in rows if r.get("phone"))
-        out.append({"id": key, **meta, "audience": len(rows), "with_phone": reachable,
-                    "templates": [t["id"] for t in TEMPLATES[key]]})
+        out.append(
+            {
+                "id": key,
+                **meta,
+                "audience": len(rows),
+                "with_phone": reachable,
+                "templates": [t["id"] for t in TEMPLATES[key]],
+            }
+        )
     return out
 
 
@@ -169,31 +217,51 @@ def list_templates(segment: str = Query(...), user: User = Depends(get_current_u
 
 
 @router.post("/preview")
-def preview(payload: PreviewIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    template = next((t for t in TEMPLATES.get(payload.segment, []) if t["id"] == payload.template_id), None)
+def preview(
+    payload: PreviewIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    template = next(
+        (t for t in TEMPLATES.get(payload.segment, []) if t["id"] == payload.template_id), None
+    )
     if not template:
         raise HTTPException(status_code=404, detail="Template not found for this segment")
     agent = user.name or "Team Kalika"
     rows = _segment_rows(payload.segment, db, user, payload.limit)
     items = []
     for r in rows:
-        msg = _fill(template["text"], name=r.get("name", ""), company=r.get("company", ""),
-                    agent=agent, order_no=r.get("order_no", ""), amount=r.get("amount", ""),
-                    status=r.get("status", ""))
-        items.append({**r, "message": msg,
-                      "wa_link": _wa_link(r["phone"], msg) if r.get("phone") else ""})
-    return {"segment": payload.segment, "template_id": payload.template_id,
-            "template_name": template["name"], "count": len(items), "items": items}
+        msg = _fill(
+            template["text"],
+            name=r.get("name", ""),
+            company=r.get("company", ""),
+            agent=agent,
+            order_no=r.get("order_no", ""),
+            amount=r.get("amount", ""),
+            status=r.get("status", ""),
+        )
+        items.append(
+            {**r, "message": msg, "wa_link": _wa_link(r["phone"], msg) if r.get("phone") else ""}
+        )
+    return {
+        "segment": payload.segment,
+        "template_id": payload.template_id,
+        "template_name": template["name"],
+        "count": len(items),
+        "items": items,
+    }
 
 
 @router.post("/queue")
-def queue_messages(payload: QueueIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def queue_messages(
+    payload: QueueIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
     """Queue personalised messages into whatsapp_messages (status=pending).
 
     Human-in-the-loop kept: rows are created as 'pending'; sending still happens
     through the reviewed send path / wa.me links from the preview.
     """
-    template = next((t for t in TEMPLATES.get(payload.segment, []) if t["id"] == payload.template_id), None)
+    template = next(
+        (t for t in TEMPLATES.get(payload.segment, []) if t["id"] == payload.template_id), None
+    )
     if not template:
         raise HTTPException(status_code=404, detail="Template not found for this segment")
     agent = user.name or "Team Kalika"
@@ -204,22 +272,47 @@ def queue_messages(payload: QueueIn, user: User = Depends(get_current_user), db:
         if payload.only_with_phone and not phone:
             skipped += 1
             continue
-        msg = _fill(template["text"], name=r.get("name", ""), company=r.get("company", ""),
-                    agent=agent, order_no=r.get("order_no", ""), amount=r.get("amount", ""),
-                    status=r.get("status", ""))
+        msg = _fill(
+            template["text"],
+            name=r.get("name", ""),
+            company=r.get("company", ""),
+            agent=agent,
+            order_no=r.get("order_no", ""),
+            amount=r.get("amount", ""),
+            status=r.get("status", ""),
+        )
         db.add(WhatsAppMessage(user_id=user.id, phone_number=phone, message=msg, status="pending"))
         queued += 1
     db.commit()
-    return {"queued": queued, "skipped_no_phone": skipped,
-            "segment": payload.segment, "template_id": payload.template_id}
+    return {
+        "queued": queued,
+        "skipped_no_phone": skipped,
+        "segment": payload.segment,
+        "template_id": payload.template_id,
+    }
 
 
 @router.get("/queue")
-def list_queued(limit: int = Query(default=50, ge=1, le=200),
-                user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    rows = (db.query(WhatsAppMessage)
-            .filter(WhatsAppMessage.user_id == user.id)
-            .order_by(WhatsAppMessage.id.desc()).limit(limit).all())
-    return [{"id": m.id, "phone": m.phone_number, "message": m.message,
-             "status": m.status, "created_at": str(m.created_at),
-             "wa_link": _wa_link(_first_phone(m.phone_number), m.message)} for m in rows]
+def list_queued(
+    limit: int = Query(default=50, ge=1, le=200),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    rows = (
+        db.query(WhatsAppMessage)
+        .filter(WhatsAppMessage.user_id == user.id)
+        .order_by(WhatsAppMessage.id.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "id": m.id,
+            "phone": m.phone_number,
+            "message": m.message,
+            "status": m.status,
+            "created_at": str(m.created_at),
+            "wa_link": _wa_link(_first_phone(m.phone_number), m.message),
+        }
+        for m in rows
+    ]

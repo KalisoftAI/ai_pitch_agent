@@ -53,9 +53,9 @@ def seed() -> None:
         # Kalika field/sales demo users with username+password sign-in
         from .security import hash_password
 
-        for username, display, pwd in (
-            ("kalika", "Kalika Admin", "kalika123"),
-            ("field", "Field Executive", "field123"),
+        for username, display, pwd, role in (
+            ("kalika", "Kalika Admin", "kalika123", "admin"),
+            ("field", "Field Executive", "field123", "field"),
         ):
             email_address = f"{username}@kalika.local"
             kuser = db.query(User).filter(User.email == email_address).first()
@@ -68,6 +68,7 @@ def seed() -> None:
                 )
                 db.add(kuser)
             kuser.password_hash = hash_password(pwd)
+            kuser.role = role
             db.commit()
 
         created = 0

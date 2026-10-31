@@ -34,6 +34,7 @@ class UserOut(BaseModel):
     name: str
     picture: str
     domain: str
+    role: str = "sales"
 
 
 # ---------- Contacts ----------

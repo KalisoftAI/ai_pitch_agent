@@ -1,25 +1,24 @@
 """Tests: preflight guardrail checks, UAT window, model catalog, prompt samples,
 journey events/stories/behaviours, and IST cron mapping.
 """
-from datetime import date
-
-import pytest
 
 from sales_fastapi.config import settings
 from sales_fastapi.customer_journey import (
-    PATTERNS, STAGES, behaviours, classify_customer_type, journey_summary, record_event, stories,
+    PATTERNS,
+    STAGES,
+    classify_customer_type,
 )
 from sales_fastapi.model_catalog import catalog, default_model
-from sales_fastapi.ops_checks import ist_to_utc_cron, run_checks
+from sales_fastapi.ops_checks import ist_to_utc_cron
 from sales_fastapi.scheduler import STANDARD_TASKS
 
 
 # ---------------------------------------------------------------- IST cron mapping
 def test_ist_to_utc_window():
-    assert ist_to_utc_cron(20, 0) == (14, 30)   # 20:00 IST -> 14:30 UTC
+    assert ist_to_utc_cron(20, 0) == (14, 30)  # 20:00 IST -> 14:30 UTC
     assert ist_to_utc_cron(21, 0) == (15, 30)
     assert ist_to_utc_cron(22, 0) == (16, 30)
-    assert ist_to_utc_cron(0, 0) == (18, 30)    # midnight IST -> 18:30 UTC prev day
+    assert ist_to_utc_cron(0, 0) == (18, 30)  # midnight IST -> 18:30 UTC prev day
 
 
 def test_ist_crons_registered():
@@ -38,7 +37,17 @@ def test_preflight_report_shape(client, auth_headers):
     assert {"generated_at", "summary", "checks"} <= set(data)
     assert data["summary"]["total"] == len(data["checks"])
     layers = {c["layer"] for c in data["checks"]}
-    assert {"config", "security", "auth", "data", "erp", "scheduler", "llm", "uat", "storage"} <= layers
+    assert {
+        "config",
+        "security",
+        "auth",
+        "data",
+        "erp",
+        "scheduler",
+        "llm",
+        "uat",
+        "storage",
+    } <= layers
     assert all(c["status"] in ("pass", "warn", "fail") for c in data["checks"])
 
 
@@ -85,6 +94,7 @@ def test_prompt_samples(client, auth_headers):
 
 def test_assets_exist_for_u1():
     from sales_fastapi.config import settings as s
+
     assert s.DEPLOY_ENV in ("preprod", "stage", "uat", "prod")
     assert s.HUMAN_REVIEW_REQUIRED is True
     assert "flash" in (s.GEMINI_FLASH_MODEL or "")
@@ -110,12 +120,21 @@ def test_journey_patterns_cover_stages():
 
 
 def test_journey_event_and_stories(client, auth_headers, db_session=None):
-    payload = {"contact_id": 101, "customer_type": "new_customer", "stage": "interest",
-               "event": "rate_requested", "channel": "whatsapp", "detail": "asked VCI price"}
+    payload = {
+        "contact_id": 101,
+        "customer_type": "new_customer",
+        "stage": "interest",
+        "event": "rate_requested",
+        "channel": "whatsapp",
+        "detail": "asked VCI price",
+    }
     r = client.post("/api/journey/event", json=payload, headers=auth_headers)
     assert r.status_code == 200, r.text
-    r2 = client.post("/api/journey/event",
-                     json={**payload, "stage": "evaluation", "event": "quotation_sent"}, headers=auth_headers)
+    r2 = client.post(
+        "/api/journey/event",
+        json={**payload, "stage": "evaluation", "event": "quotation_sent"},
+        headers=auth_headers,
+    )
     assert r2.status_code == 200
     stories_resp = client.get("/api/journey/stories", headers=auth_headers).json()
     assert len(stories_resp) >= 1
@@ -130,8 +149,11 @@ def test_journey_event_and_stories(client, auth_headers, db_session=None):
 
 
 def test_journey_rejects_bad_stage(client, auth_headers):
-    r = client.post("/api/journey/event",
-                    json={"contact_id": 1, "stage": "nonsense", "event": "x"}, headers=auth_headers)
+    r = client.post(
+        "/api/journey/event",
+        json={"contact_id": 1, "stage": "nonsense", "event": "x"},
+        headers=auth_headers,
+    )
     assert r.status_code in (422, 500)  # ValueError surfaces as server error or validation
 
 

@@ -3,6 +3,7 @@ pipeline template personalisation, and networkx graph preprocessing.
 
 Runs light: imports only stdlib + networkx modules (no FastAPI app).
 """
+
 import json
 import sys
 from pathlib import Path
@@ -15,11 +16,21 @@ pytest.importorskip("networkx", reason="networkx installed in .venv only")
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from sales_fastapi.interaction_dump import (  # noqa: E402
-    build_dump, classify_media, dump_stats, mail_record, parse_whatsapp_chat, read_chat_zip,
-)
-from sales_fastapi.pipeline_templates import TEMPLATES, fill, first_phone, norm_phone, wa_link  # noqa: E402
 from sales_fastapi.graph_build import build_graph, export_graph, graph_stats  # noqa: E402
+from sales_fastapi.interaction_dump import (  # noqa: E402
+    build_dump,
+    classify_media,
+    mail_record,
+    parse_whatsapp_chat,
+    read_chat_zip,
+)
+from sales_fastapi.pipeline_templates import (  # noqa: E402
+    TEMPLATES,
+    fill,
+    first_phone,
+    norm_phone,
+    wa_link,
+)
 
 CHAT_SAMPLE = """28/11/2024, 9:41:22 pm - Narayan KALIKA: Order 400mm cable tie
 28/11/2024, 9:42:10 pm - Damini Kalika Production Karande: Baby Core order
@@ -43,7 +54,11 @@ MAIL_SAMPLE = dict(
 def test_parse_chat_messages_and_continuation():
     parsed = parse_whatsapp_chat(CHAT_SAMPLE)
     assert parsed["message_count"] == 5
-    assert parsed["participants"] == ["Damini Kalika Production Karande", "KALIKA TARPOULIN", "Narayan KALIKA"]
+    assert parsed["participants"] == [
+        "Damini Kalika Production Karande",
+        "KALIKA TARPOULIN",
+        "Narayan KALIKA",
+    ]
     assert parsed["date_range"] == {"first": "2024-11-28", "last": "2024-11-29"}
     # multi-line continuation folds into previous message
     assert "multi-line continuation" in parsed["messages"][3]["text"]
@@ -63,6 +78,7 @@ def test_classify_media():
 
 def test_read_chat_zip(tmp_path):
     import zipfile
+
     zp = tmp_path / "WhatsApp Chat with TestBuyer.zip"
     with zipfile.ZipFile(zp, "w") as z:
         z.writestr("WhatsApp Chat with TestBuyer.txt", CHAT_SAMPLE)
@@ -77,9 +93,16 @@ def test_read_chat_zip(tmp_path):
 
 # ---------------------------------------------------------------- dump build
 def test_dump_with_mail_and_chat():
-    chats = [{"chat": "Kalika Order's", "message_count": 5, "participants": ["A", "B"],
-              "attachments": [{"name": "a.jpg", "size_bytes": 10, "media_type": "image"}],
-              "media_omitted_count": 1, "messages": []}]
+    chats = [
+        {
+            "chat": "Kalika Order's",
+            "message_count": 5,
+            "participants": ["A", "B"],
+            "attachments": [{"name": "a.jpg", "size_bytes": 10, "media_type": "image"}],
+            "media_omitted_count": 1,
+            "messages": [],
+        }
+    ]
     mails = [mail_record(**MAIL_SAMPLE)]
     dump = build_dump(chats, mails, sources=["test"])
     assert dump["stats"]["chats"] == 1
@@ -106,8 +129,15 @@ def test_phone_normalisation():
 
 
 def test_template_fill_and_wa_link():
-    msg = fill(TEMPLATES["recent_orders"][0]["text"], name="Patil", company="ACME",
-               order_no="LOC-101", amount="12,500", status="Dispatched", agent="Ai.Solutions")
+    msg = fill(
+        TEMPLATES["recent_orders"][0]["text"],
+        name="Patil",
+        company="ACME",
+        order_no="LOC-101",
+        amount="12,500",
+        status="Dispatched",
+        agent="Ai.Solutions",
+    )
     assert "LOC-101" in msg and "Patil" in msg and "12,500" in msg
     assert "{" not in msg  # no unfilled variables
     link = wa_link("919822000000", msg)
@@ -128,18 +158,50 @@ def test_template_catalog_integrity():
 @pytest.fixture()
 def sample_graph():
     contacts = [
-        {"id": 1, "company": "Acme Plast", "name": "Patil", "email": "p@acmeplast.in",
-         "phone": "98220 00000", "domain": "", "intent": "sales", "gcs_path": "sales-contacts/x.xlsx#s"},
-        {"id": 2, "company": "Samarth Enterprises", "name": "Manisha", "email": "samrthsales@gmail.com",
-         "phone": "9175341970", "domain": "", "intent": "procurement", "gcs_path": ""},
-        {"id": 3, "company": "NoDomain Co", "name": "", "email": "unknown-x@placeholder.local",
-         "phone": "", "domain": "", "intent": "general", "gcs_path": ""},
+        {
+            "id": 1,
+            "company": "Acme Plast",
+            "name": "Patil",
+            "email": "p@acmeplast.in",
+            "phone": "98220 00000",
+            "domain": "",
+            "intent": "sales",
+            "gcs_path": "sales-contacts/x.xlsx#s",
+        },
+        {
+            "id": 2,
+            "company": "Samarth Enterprises",
+            "name": "Manisha",
+            "email": "samrthsales@gmail.com",
+            "phone": "9175341970",
+            "domain": "",
+            "intent": "procurement",
+            "gcs_path": "",
+        },
+        {
+            "id": 3,
+            "company": "NoDomain Co",
+            "name": "",
+            "email": "unknown-x@placeholder.local",
+            "phone": "",
+            "domain": "",
+            "intent": "general",
+            "gcs_path": "",
+        },
     ]
     chats = [
-        {"chat": "+91 98220 00000", "file": "WhatsApp Chat with +91 98220 00000.zip",
-         "message_count": 42, "attachments": [{"name": "a.jpg"}]},
-        {"chat": "Kalika Order's", "file": "WhatsApp Chat with Kalika Order's .zip",
-         "message_count": 429, "attachments": []},
+        {
+            "chat": "+91 98220 00000",
+            "file": "WhatsApp Chat with +91 98220 00000.zip",
+            "message_count": 42,
+            "attachments": [{"name": "a.jpg"}],
+        },
+        {
+            "chat": "Kalika Order's",
+            "file": "WhatsApp Chat with Kalika Order's .zip",
+            "message_count": 429,
+            "attachments": [],
+        },
     ]
     orders = [{"customer": "Acme Plast Industries", "gross": 125000.0}]
     return build_graph(contacts, chats, orders)

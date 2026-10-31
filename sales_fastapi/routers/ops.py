@@ -1,4 +1,5 @@
 """Ops endpoints: preflight guardrails, UAT status, model catalog, prompt samples, logs."""
+
 from __future__ import annotations
 
 import json
@@ -27,6 +28,7 @@ def _load_prompts() -> dict:
     try:  # realtime fallback: read the published copy from GCS
         import google.auth
         from google.cloud import storage
+
         creds, _ = google.auth.default()
         blob = storage.Client(credentials=creds).bucket("kalika_enterprises").blob(PROMPTS_GCS)
         return json.loads(blob.download_as_bytes().decode("utf-8"))
@@ -44,8 +46,14 @@ def preflight(admin: User = Depends(require_admin), db: Session = Depends(get_db
 def run_checks_now(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     """Execute checks, persist the result to sync_runs (visible in logs), return it."""
     report = run_checks(db)
-    db.add(SyncRun(job="daily_guardrail_checks", status="ok" if report["summary"]["ready"] else "warn",
-                   detail=json.dumps(report["summary"]), finished_at=datetime.now(timezone.utc)))
+    db.add(
+        SyncRun(
+            job="daily_guardrail_checks",
+            status="ok" if report["summary"]["ready"] else "warn",
+            detail=json.dumps(report["summary"]),
+            finished_at=datetime.now(timezone.utc),
+        )
+    )
     db.commit()
     return report
 
@@ -81,8 +89,11 @@ def uat_status(user: User = Depends(get_current_user), db: Session = Depends(get
 
 @router.get("/models")
 def models(user: User = Depends(get_current_user)):
-    return {"default": default_model(), "human_review_required": settings.HUMAN_REVIEW_REQUIRED,
-            "models": catalog()}
+    return {
+        "default": default_model(),
+        "human_review_required": settings.HUMAN_REVIEW_REQUIRED,
+        "models": catalog(),
+    }
 
 
 @router.get("/prompt-samples")
@@ -91,26 +102,66 @@ def prompt_samples(task: str | None = Query(default=None), user: User = Depends(
     prompts = data.get("prompts", [])
     if task:
         prompts = [p for p in prompts if p.get("task") == task]
-    return {"version": data.get("version"), "schedule": data.get("schedule"),
-            "models": data.get("models"), "human_review_required": data.get("human_review_required"),
-            "prompts": prompts}
+    return {
+        "version": data.get("version"),
+        "schedule": data.get("schedule"),
+        "models": data.get("models"),
+        "human_review_required": data.get("human_review_required"),
+        "prompts": prompts,
+    }
 
 
 @router.get("/logs")
-def logs(limit: int = Query(default=30, ge=1, le=200),
-         user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def logs(
+    limit: int = Query(default=30, ge=1, le=200),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Recent model usage, audit and sync runs — user-checkable logs."""
-    usage = (db.query(ModelUsage).order_by(ModelUsage.id.desc()).limit(limit).all())
-    audits = (db.query(AuditLog).order_by(AuditLog.id.desc()).limit(limit).all())
-    runs = (db.query(SyncRun).order_by(SyncRun.id.desc()).limit(limit).all())
+    usage = db.query(ModelUsage).order_by(ModelUsage.id.desc()).limit(limit).all()
+    audits = db.query(AuditLog).order_by(AuditLog.id.desc()).limit(limit).all()
+    runs = db.query(SyncRun).order_by(SyncRun.id.desc()).limit(limit).all()
 
     def _r(o, fields):
-        return {f: str(getattr(o, f, "")) if getattr(o, f, None) is not None else None for f in fields}
+        return {
+            f: str(getattr(o, f, "")) if getattr(o, f, None) is not None else None for f in fields
+        }
 
     return {
-        "model_usage": [_r(u, ["id", "provider", "model", "task", "input_tokens", "output_tokens",
-                               "cost_micros", "latency_ms", "fallback_used", "created_at"]) for u in usage],
-        "audit": [_r(a, ["id", "action", "actor_user_id", "resource_type", "status", "detail", "created_at"])
-                  for a in audits],
-        "sync_runs": [_r(s, ["id", "job", "status", "detail", "started_at", "finished_at"]) for s in runs],
+        "model_usage": [
+            _r(
+                u,
+                [
+                    "id",
+                    "provider",
+                    "model",
+                    "task",
+                    "input_tokens",
+                    "output_tokens",
+                    "cost_micros",
+                    "latency_ms",
+                    "fallback_used",
+                    "created_at",
+                ],
+            )
+            for u in usage
+        ],
+        "audit": [
+            _r(
+                a,
+                [
+                    "id",
+                    "action",
+                    "actor_user_id",
+                    "resource_type",
+                    "status",
+                    "detail",
+                    "created_at",
+                ],
+            )
+            for a in audits
+        ],
+        "sync_runs": [
+            _r(s, ["id", "job", "status", "detail", "started_at", "finished_at"]) for s in runs
+        ],
     }

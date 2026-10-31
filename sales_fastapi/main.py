@@ -11,8 +11,10 @@ from .config import settings
 from .database import init_db
 from .guardrails import RequestGuardrailsMiddleware
 from .routers import (
+    ai_router,
     auth_router,
     campaigns_router,
+    catalog_router,
     contacts_router,
     dashboard_router,
     email_router,
@@ -25,11 +27,14 @@ from .routers import (
     journey_router,
     llm_router,
     ops_router,
+    sales_router,
     scheduler_router,
     social_router,
     system_router,
     team_router,
     templates_router,
+    users_router,
+    visits_router,
     voice_router,
     whatsapp_router,
 )
@@ -69,10 +74,13 @@ app.add_middleware(
 
 api_prefix = "/api"
 app.include_router(system_router, prefix=api_prefix)
+app.include_router(ai_router, prefix=api_prefix)
 app.include_router(auth_router, prefix=api_prefix)
 app.include_router(contacts_router, prefix=api_prefix)
 app.include_router(email_router, prefix=api_prefix)
 app.include_router(erp_router, prefix=api_prefix)
+app.include_router(sales_router, prefix=api_prefix)
+app.include_router(catalog_router, prefix=api_prefix)
 app.include_router(social_router, prefix=api_prefix)
 app.include_router(governance_router, prefix=api_prefix)
 app.include_router(llm_router, prefix=api_prefix)
@@ -89,6 +97,8 @@ app.include_router(ops_router, prefix=api_prefix)
 app.include_router(events_router, prefix=api_prefix)
 app.include_router(dashboard_router, prefix=api_prefix)
 app.include_router(team_router, prefix=api_prefix)
+app.include_router(visits_router, prefix=api_prefix)
+app.include_router(users_router, prefix=api_prefix)
 
 
 @app.get("/", include_in_schema=False)

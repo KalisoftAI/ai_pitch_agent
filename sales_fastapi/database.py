@@ -79,4 +79,9 @@ def _ensure_columns() -> None:
         cols = {c["name"] for c in insp.get_columns("users")}
         if "password_hash" not in cols:
             with engine.begin() as conn:
-                conn.execute(text("ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) DEFAULT ''"))
+                conn.execute(
+                    text("ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) DEFAULT ''")
+                )
+        if "role" not in cols:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR(32) DEFAULT 'sales'"))

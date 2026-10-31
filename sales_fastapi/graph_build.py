@@ -22,6 +22,7 @@ Exports: nodes.json, edges.json, graph.gexf (Gephi/Neo4j-import friendly), stats
 networkx is required at runtime (project .venv). Imports are stdlib-only so the
 module itself imports anywhere.
 """
+
 from __future__ import annotations
 
 import json
@@ -36,6 +37,7 @@ from .pipeline_templates import first_phone
 def _require_nx():
     try:
         import networkx as nx  # type: ignore
+
         return nx
     except ImportError as exc:  # pragma: no cover - depends on environment
         raise RuntimeError(
@@ -84,9 +86,14 @@ def build_graph(contacts: list[dict], chats: list[dict], orders: list[dict]):
 
     for c in contacts:
         cid = f"contact:{c['id']}"
-        G.add_node(cid, kind="contact", company=c.get("company") or "",
-                   name=c.get("name") or "", phone=first_phone(c.get("phone", "")),
-                   source=c.get("gcs_path") or "")
+        G.add_node(
+            cid,
+            kind="contact",
+            company=c.get("company") or "",
+            name=c.get("name") or "",
+            phone=first_phone(c.get("phone", "")),
+            source=c.get("gcs_path") or "",
+        )
         dom = _domain_of(c)
         if dom:
             did = f"domain:{dom}"
@@ -106,9 +113,13 @@ def build_graph(contacts: list[dict], chats: list[dict], orders: list[dict]):
 
     for chat in chats:
         tid = f"chat:{chat.get('chat', '')[:80]}"
-        G.add_node(tid, kind="chat_thread", file=chat.get("file", ""),
-                   messages=chat.get("message_count", 0),
-                   attachments=len(chat.get("attachments", [])))
+        G.add_node(
+            tid,
+            kind="chat_thread",
+            file=chat.get("file", ""),
+            messages=chat.get("message_count", 0),
+            attachments=len(chat.get("attachments", [])),
+        )
         # map thread to contact by phone inside the chat title
         for num in re.findall(r"\+?\d[\d ]{8,}\d", chat.get("chat", "")):
             p = first_phone(num)
@@ -117,8 +128,9 @@ def build_graph(contacts: list[dict], chats: list[dict], orders: list[dict]):
 
     for o in orders:
         oid = f"erp_customer:{o.get('customer', '')[:80]}"
-        G.add_node(oid, kind="erp_customer", customer=o.get("customer", ""),
-                   gross=o.get("gross", 0))
+        G.add_node(
+            oid, kind="erp_customer", customer=o.get("customer", ""), gross=o.get("gross", 0)
+        )
         cl = (o.get("customer") or "").lower()
         if cl:
             for c in contacts:
@@ -159,13 +171,25 @@ def export_graph(G, out_dir: str | Path) -> dict:
     out.mkdir(parents=True, exist_ok=True)
     nodes = [{"id": n, **d} for n, d in G.nodes(data=True)]
     edges = [{"source": u, "target": v, **d} for u, v, d in G.edges(data=True)]
-    (out / "nodes.json").write_text(json.dumps(nodes, indent=1, ensure_ascii=False), encoding="utf-8")
-    (out / "edges.json").write_text(json.dumps(edges, indent=1, ensure_ascii=False), encoding="utf-8")
+    (out / "nodes.json").write_text(
+        json.dumps(nodes, indent=1, ensure_ascii=False), encoding="utf-8"
+    )
+    (out / "edges.json").write_text(
+        json.dumps(edges, indent=1, ensure_ascii=False), encoding="utf-8"
+    )
     stats = graph_stats(G)
-    (out / "graph_stats.json").write_text(json.dumps(stats, indent=2, ensure_ascii=False), encoding="utf-8")
+    (out / "graph_stats.json").write_text(
+        json.dumps(stats, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
     try:
         nx.write_gexf(G, str(out / "graph.gexf"))  # Gephi / Neo4j-import friendly
         gexf = True
     except Exception:
         gexf = False
-    return {"out_dir": str(out), "nodes": len(nodes), "edges": len(edges), "gexf": gexf, "stats": stats}
+    return {
+        "out_dir": str(out),
+        "nodes": len(nodes),
+        "edges": len(edges),
+        "gexf": gexf,
+        "stats": stats,
+    }

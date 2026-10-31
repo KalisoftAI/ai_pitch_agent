@@ -1,4 +1,5 @@
 """Customer journey collection endpoints: events, behaviours, stories, patterns."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query
@@ -6,7 +7,12 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..customer_journey import (
-    PATTERNS, STAGES, behaviours, journey_summary, record_event, stories,
+    PATTERNS,
+    STAGES,
+    behaviours,
+    journey_summary,
+    record_event,
+    stories,
 )
 from ..database import get_db
 from ..models import User
@@ -31,24 +37,38 @@ def patterns(user: User = Depends(get_current_user)):
 
 
 @router.post("/event")
-def add_event(payload: JourneyEventIn, user: User = Depends(get_current_user),
-              db: Session = Depends(get_db)):
-    row = record_event(db, user_id=user.id, contact_id=payload.contact_id,
-                       customer_type=payload.customer_type, stage=payload.stage,
-                       event=payload.event, channel=payload.channel, detail=payload.detail,
-                       meta=payload.meta)
+def add_event(
+    payload: JourneyEventIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    row = record_event(
+        db,
+        user_id=user.id,
+        contact_id=payload.contact_id,
+        customer_type=payload.customer_type,
+        stage=payload.stage,
+        event=payload.event,
+        channel=payload.channel,
+        detail=payload.detail,
+        meta=payload.meta,
+    )
     return {"id": row.id, "stage": row.stage, "event": row.event, "created_at": str(row.created_at)}
 
 
 @router.get("/behaviours")
-def get_behaviours(days: int = Query(default=30, ge=1, le=365),
-                   user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_behaviours(
+    days: int = Query(default=30, ge=1, le=365),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     return behaviours(db, user.id, days=days)
 
 
 @router.get("/stories")
-def get_stories(limit: int = Query(default=20, ge=1, le=100),
-                user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_stories(
+    limit: int = Query(default=20, ge=1, le=100),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     return stories(db, user.id, limit=limit)
 
 

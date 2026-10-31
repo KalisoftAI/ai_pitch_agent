@@ -5,6 +5,7 @@ report workbook to GCS. This module mirrors the relevant sheets into the sales
 app database so the sales dashboard/forecast/rate calculator can use them
 without touching the ERP system itself (ERP stays read-only for us).
 """
+
 from __future__ import annotations
 
 import io
@@ -37,10 +38,15 @@ def _gcs_latest() -> tuple[bytes, str]:
     creds, _ = google.auth.default()
     client = storage.Client(credentials=creds)
     bucket = client.bucket("kalika_enterprises")
-    blobs = [b for b in client.list_blobs(bucket, prefix=settings.ERP_REPORT_PREFIX)
-             if b.name.lower().endswith((".xlsx", ".xls"))]
+    blobs = [
+        b
+        for b in client.list_blobs(bucket, prefix=settings.ERP_REPORT_PREFIX)
+        if b.name.lower().endswith((".xlsx", ".xls"))
+    ]
     if not blobs:
-        raise FileNotFoundError(f"no report workbooks under gs://kalika_enterprises/{settings.ERP_REPORT_PREFIX}")
+        raise FileNotFoundError(
+            f"no report workbooks under gs://kalika_enterprises/{settings.ERP_REPORT_PREFIX}"
+        )
     latest = sorted(blobs, key=lambda b: b.updated or datetime.min.replace(tzinfo=timezone.utc))[-1]
     return latest.download_as_bytes(), latest.name
 
@@ -71,7 +77,6 @@ def _num(v) -> float:
 
 def sync_erp_report(db: Session) -> dict:
     """Upsert Dispatch + Orders rows for the latest report date."""
-    started = datetime.now(timezone.utc)
     run = SyncRun(job="erp_dispatch_sync", status="running", detail="")
     db.add(run)
     db.commit()
@@ -87,12 +92,15 @@ def sync_erp_report(db: Session) -> dict:
             no = str(r.get("Dispatch No", "")).strip()
             if not no:
                 continue
-            row = (db.query(ErpDispatch)
-                   .filter(ErpDispatch.report_date == report_date, ErpDispatch.dispatch_no == no)
-                   .first())
+            row = (
+                db.query(ErpDispatch)
+                .filter(ErpDispatch.report_date == report_date, ErpDispatch.dispatch_no == no)
+                .first()
+            )
             if row is None:
                 row = ErpDispatch(report_date=report_date, dispatch_no=no)
-                db.add(row); created_d += 1
+                db.add(row)
+                created_d += 1
             else:
                 updated_d += 1
             row.customer = str(r.get("Customer", "")).strip()
@@ -109,12 +117,15 @@ def sync_erp_report(db: Session) -> dict:
             no = str(r.get("Order No", "")).strip()
             if not no:
                 continue
-            row = (db.query(ErpOrder)
-                   .filter(ErpOrder.report_date == report_date, ErpOrder.order_no == no)
-                   .first())
+            row = (
+                db.query(ErpOrder)
+                .filter(ErpOrder.report_date == report_date, ErpOrder.order_no == no)
+                .first()
+            )
             if row is None:
                 row = ErpOrder(report_date=report_date, order_no=no)
-                db.add(row); created_o += 1
+                db.add(row)
+                created_o += 1
             else:
                 updated_o += 1
             row.customer = str(r.get("Customer", "")).strip()
@@ -124,20 +135,29 @@ def sync_erp_report(db: Session) -> dict:
             row.total_value = _num(r.get("Total Value"))
 
         run.status = "ok"
-        run.detail = json.dumps({
-            "report_date": report_date, "dispatch_created": created_d, "dispatch_updated": updated_d,
-            "orders_created": created_o, "orders_updated": updated_o,
-        })
+        run.detail = json.dumps(
+            {
+                "report_date": report_date,
+                "dispatch_created": created_d,
+                "dispatch_updated": updated_d,
+                "orders_created": created_o,
+                "orders_updated": updated_o,
+            }
+        )
         run.finished_at = datetime.now(timezone.utc)
         db.commit()
-        return {"ok": True, "report_date": report_date,
-                "dispatch": {"created": created_d, "updated": updated_d},
-                "orders": {"created": created_o, "updated": updated_o}}
+        return {
+            "ok": True,
+            "report_date": report_date,
+            "dispatch": {"created": created_d, "updated": updated_d},
+            "orders": {"created": created_o, "updated": updated_o},
+        }
     except Exception as exc:
         db.rollback()
         run = db.get(SyncRun, run.id)
         if run:
-            run.status = "error"; run.detail = str(exc)[:900]
+            run.status = "error"
+            run.detail = str(exc)[:900]
             run.finished_at = datetime.now(timezone.utc)
             db.commit()
         raise
@@ -151,36 +171,78 @@ def latest_report_date(db: Session) -> str:
 
 def dispatch_stats(db: Session, report_date: str | None = None) -> dict:
     from sqlalchemy import func
+
     day = report_date or latest_report_date(db)
     if not day:
-        return {"report_date": "", "records": 0}
+        return {
+            "report_date": "",
+            "records": 0,
+            "scheduled_qty": 0.0,
+            "dispatched_qty": 0.0,
+            "completion_pct": 0,
+            "by_status": {},
+            "customers": 0,
+        }
     q = db.query(ErpDispatch).filter(ErpDispatch.report_date == day)
     total = q.count()
-    scheduled = db.query(func.coalesce(func.sum(ErpDispatch.schedule_qty), 0)).filter(ErpDispatch.report_date == day).scalar()
-    dispatched = db.query(func.coalesce(func.sum(ErpDispatch.dispatched_qty), 0)).filter(ErpDispatch.report_date == day).scalar()
-    by_status = {s: c for s, c in
-                 db.query(ErpDispatch.status, func.count()).filter(ErpDispatch.report_date == day)
-                 .group_by(ErpDispatch.status).all()}
+    scheduled = (
+        db.query(func.coalesce(func.sum(ErpDispatch.schedule_qty), 0))
+        .filter(ErpDispatch.report_date == day)
+        .scalar()
+    )
+    dispatched = (
+        db.query(func.coalesce(func.sum(ErpDispatch.dispatched_qty), 0))
+        .filter(ErpDispatch.report_date == day)
+        .scalar()
+    )
+    by_status = {
+        s: c
+        for s, c in db.query(ErpDispatch.status, func.count())
+        .filter(ErpDispatch.report_date == day)
+        .group_by(ErpDispatch.status)
+        .all()
+    }
     return {
-        "report_date": day, "records": total,
-        "scheduled_qty": float(scheduled or 0), "dispatched_qty": float(dispatched or 0),
-        "completion_pct": round((float(dispatched or 0) / float(scheduled) * 100), 1) if scheduled else 0,
+        "report_date": day,
+        "records": total,
+        "scheduled_qty": float(scheduled or 0),
+        "dispatched_qty": float(dispatched or 0),
+        "completion_pct": round((float(dispatched or 0) / float(scheduled) * 100), 1)
+        if scheduled
+        else 0,
         "by_status": by_status,
-        "customers": db.query(ErpDispatch.customer).filter(ErpDispatch.report_date == day).distinct().count(),
+        "customers": db.query(ErpDispatch.customer)
+        .filter(ErpDispatch.report_date == day)
+        .distinct()
+        .count(),
     }
 
 
 def orders_stats(db: Session, report_date: str | None = None) -> dict:
     from sqlalchemy import func
+
     day = report_date or latest_report_date(db)
     if not day:
-        return {"report_date": "", "records": 0}
+        return {"report_date": "", "records": 0, "total_value": 0.0, "by_status": {}}
     total = db.query(ErpOrder).filter(ErpOrder.report_date == day).count()
-    value = db.query(func.coalesce(func.sum(ErpOrder.total_value), 0)).filter(ErpOrder.report_date == day).scalar()
-    by_status = {s: c for s, c in
-                 db.query(ErpOrder.status, func.count()).filter(ErpOrder.report_date == day)
-                 .group_by(ErpOrder.status).all()}
-    return {"report_date": day, "records": total, "total_value": float(value or 0), "by_status": by_status}
+    value = (
+        db.query(func.coalesce(func.sum(ErpOrder.total_value), 0))
+        .filter(ErpOrder.report_date == day)
+        .scalar()
+    )
+    by_status = {
+        s: c
+        for s, c in db.query(ErpOrder.status, func.count())
+        .filter(ErpOrder.report_date == day)
+        .group_by(ErpOrder.status)
+        .all()
+    }
+    return {
+        "report_date": day,
+        "records": total,
+        "total_value": float(value or 0),
+        "by_status": by_status,
+    }
 
 
 def forecast(db: Session, months: int = 6) -> dict:
@@ -200,14 +262,25 @@ def forecast(db: Session, months: int = 6) -> dict:
         projected = round((values[-1] * 0.6) + (avg * 0.4), 2)
     else:
         projected = 0.0
-    return {"series": series, "projected_next_month": projected,
-            "method": "60% last month + 40% trailing average (policy-free baseline)"}
+    return {
+        "series": series,
+        "projected_next_month": projected,
+        "method": "60% last month + 40% trailing average (policy-free baseline)",
+    }
 
 
 # ------------------------------------------------------------------ rate calculator
-def rate_calculator(*, polymer_rate: float, micron: float, width_mm: float, length_m: float,
-                    density: float = 0.92, waste_pct: float = 2.0, conversion_cost_per_kg: float = 18.0,
-                    margin_pct: float = 8.0) -> dict:
+def rate_calculator(
+    *,
+    polymer_rate: float,
+    micron: float,
+    width_mm: float,
+    length_m: float,
+    density: float = 0.92,
+    waste_pct: float = 2.0,
+    conversion_cost_per_kg: float = 18.0,
+    margin_pct: float = 8.0,
+) -> dict:
     """Film/blown-film style costing.
 
     weight_kg = width_m x length_m x micron/1000 x density  (density g/cm3 ~ 0.92 LDPE)
@@ -220,11 +293,21 @@ def rate_calculator(*, polymer_rate: float, micron: float, width_mm: float, leng
     cost = material + conversion
     price = cost * (1 + margin_pct / 100.0)
     return {
-        "inputs": {"polymer_rate_per_kg": polymer_rate, "micron": micron, "width_mm": width_mm,
-                   "length_m": length_m, "density": density, "waste_pct": waste_pct,
-                   "conversion_cost_per_kg": conversion_cost_per_kg, "margin_pct": margin_pct},
-        "weight_kg": round(weight_kg, 3), "gross_weight_kg": round(gross_kg, 3),
-        "material_cost": round(material, 2), "conversion_cost": round(conversion, 2),
-        "total_cost": round(cost, 2), "price": round(price, 2),
+        "inputs": {
+            "polymer_rate_per_kg": polymer_rate,
+            "micron": micron,
+            "width_mm": width_mm,
+            "length_m": length_m,
+            "density": density,
+            "waste_pct": waste_pct,
+            "conversion_cost_per_kg": conversion_cost_per_kg,
+            "margin_pct": margin_pct,
+        },
+        "weight_kg": round(weight_kg, 3),
+        "gross_weight_kg": round(gross_kg, 3),
+        "material_cost": round(material, 2),
+        "conversion_cost": round(conversion, 2),
+        "total_cost": round(cost, 2),
+        "price": round(price, 2),
         "price_per_kg": round(price / gross_kg, 2) if gross_kg else 0,
     }

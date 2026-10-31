@@ -5,6 +5,7 @@ Access model:
 - read endpoints: any authenticated Kalika user (field executive, sales, admin)
 - sync + settings + youtube sync: admin only (ADMIN_EMAILS, default ai.solutions@kalisoftai.in)
 """
+
 from __future__ import annotations
 
 import json
@@ -18,7 +19,12 @@ from sqlalchemy.orm import Session
 from ..config import settings
 from ..database import get_db
 from ..erp_sync import (
-    dispatch_stats, forecast, latest_report_date, orders_stats, rate_calculator, sync_erp_report,
+    dispatch_stats,
+    forecast,
+    latest_report_date,
+    orders_stats,
+    rate_calculator,
+    sync_erp_report,
 )
 from ..models import ErpDispatch, ErpOrder, IntegrationSetting, SyncRun, User
 from ..security import get_current_user, require_admin
@@ -74,7 +80,12 @@ def _youtube_channel(db: Session) -> str:
 # ---------------------------------------------------------------- status
 @router.get("/status")
 def erp_status(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    last_run = db.query(SyncRun).filter(SyncRun.job == "erp_dispatch_sync").order_by(SyncRun.id.desc()).first()
+    last_run = (
+        db.query(SyncRun)
+        .filter(SyncRun.job == "erp_dispatch_sync")
+        .order_by(SyncRun.id.desc())
+        .first()
+    )
     return {
         "report_date": latest_report_date(db),
         "dispatch": dispatch_stats(db),
@@ -84,7 +95,9 @@ def erp_status(user: User = Depends(get_current_user), db: Session = Depends(get
             "started_at": str(last_run.started_at) if last_run else None,
             "finished_at": str(last_run.finished_at) if last_run else None,
             "detail": last_run.detail if last_run else "",
-        } if last_run else None,
+        }
+        if last_run
+        else None,
         "is_admin": (user.email or "").lower() in settings.admin_emails,
         "youtube": {
             "data_api_configured": bool(_youtube_key(db)),
@@ -107,37 +120,63 @@ def run_sync(admin: User = Depends(require_admin), db: Session = Depends(get_db)
 
 # ---------------------------------------------------------------- read data
 @router.get("/dispatch")
-def get_dispatch(status: str | None = None, limit: int = Query(default=200, ge=1, le=2000),
-                 user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_dispatch(
+    status: str | None = None,
+    limit: int = Query(default=200, ge=1, le=2000),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     day = latest_report_date(db)
     q = db.query(ErpDispatch).filter(ErpDispatch.report_date == day)
     if status:
         q = q.filter(ErpDispatch.status == status)
     rows = q.order_by(ErpDispatch.pct_complete.asc()).limit(limit).all()
-    return [{
-        "dispatch_no": r.dispatch_no, "customer": r.customer, "plant": r.plant,
-        "schedule_qty": r.schedule_qty, "dispatched_qty": r.dispatched_qty,
-        "balance_qty": r.balance_qty, "pct_complete": r.pct_complete, "status": r.status,
-    } for r in rows]
+    return [
+        {
+            "dispatch_no": r.dispatch_no,
+            "customer": r.customer,
+            "plant": r.plant,
+            "schedule_qty": r.schedule_qty,
+            "dispatched_qty": r.dispatched_qty,
+            "balance_qty": r.balance_qty,
+            "pct_complete": r.pct_complete,
+            "status": r.status,
+        }
+        for r in rows
+    ]
 
 
 @router.get("/orders")
-def get_orders(status: str | None = None, limit: int = Query(default=200, ge=1, le=2000),
-               user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_orders(
+    status: str | None = None,
+    limit: int = Query(default=200, ge=1, le=2000),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     day = latest_report_date(db)
     q = db.query(ErpOrder).filter(ErpOrder.report_date == day)
     if status:
         q = q.filter(ErpOrder.status == status)
     rows = q.order_by(ErpOrder.total_value.desc()).limit(limit).all()
-    return [{
-        "order_no": r.order_no, "customer": r.customer, "order_date": r.order_date,
-        "required_date": r.required_date, "status": r.status, "total_value": r.total_value,
-    } for r in rows]
+    return [
+        {
+            "order_no": r.order_no,
+            "customer": r.customer,
+            "order_date": r.order_date,
+            "required_date": r.required_date,
+            "status": r.status,
+            "total_value": r.total_value,
+        }
+        for r in rows
+    ]
 
 
 @router.get("/forecast")
-def get_forecast(months: int = Query(default=6, ge=1, le=24),
-                 user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_forecast(
+    months: int = Query(default=6, ge=1, le=24),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     return forecast(db, months=months)
 
 
@@ -147,25 +186,37 @@ def get_analytics(user: User = Depends(get_current_user), db: Session = Depends(
     day = latest_report_date(db)
     d = dispatch_stats(db)
     o = orders_stats(db)
-    top_customers = (db.query(ErpDispatch.customer, func.sum(ErpDispatch.dispatched_qty))
-                     .filter(ErpDispatch.report_date == day)
-                     .group_by(ErpDispatch.customer)
-                     .order_by(func.sum(ErpDispatch.dispatched_qty).desc()).limit(8).all())
-    plants = (db.query(ErpDispatch.plant, func.count())
-              .filter(ErpDispatch.report_date == day).group_by(ErpDispatch.plant).all())
+    top_customers = (
+        db.query(ErpDispatch.customer, func.sum(ErpDispatch.dispatched_qty))
+        .filter(ErpDispatch.report_date == day)
+        .group_by(ErpDispatch.customer)
+        .order_by(func.sum(ErpDispatch.dispatched_qty).desc())
+        .limit(8)
+        .all()
+    )
+    plants = (
+        db.query(ErpDispatch.plant, func.count())
+        .filter(ErpDispatch.report_date == day)
+        .group_by(ErpDispatch.plant)
+        .all()
+    )
     return {
         "report_date": day,
         "funnel": {
-            "orders": o["records"], "orders_value": o["total_value"],
-            "scheduled_qty": d["scheduled_qty"], "dispatched_qty": d["dispatched_qty"],
-            "completion_pct": d["completion_pct"],
+            "orders": o.get("records", 0),
+            "orders_value": o.get("total_value", 0),
+            "scheduled_qty": d.get("scheduled_qty", 0),
+            "dispatched_qty": d.get("dispatched_qty", 0),
+            "completion_pct": d.get("completion_pct", 0),
         },
-        "top_customers": [{"customer": c, "dispatched_qty": float(q or 0)} for c, q in top_customers],
+        "top_customers": [
+            {"customer": c, "dispatched_qty": float(q or 0)} for c, q in top_customers
+        ],
         "plants": [{"plant": p, "records": n} for p, n in plants],
         "status_breakdown": d["by_status"],
-        "pending_followup": db.query(ErpDispatch).filter(
-            ErpDispatch.report_date == day,
-            ErpDispatch.status != "Completed").count(),
+        "pending_followup": db.query(ErpDispatch)
+        .filter(ErpDispatch.report_date == day, ErpDispatch.status != "Completed")
+        .count(),
     }
 
 
@@ -180,23 +231,32 @@ def get_settings(admin: User = Depends(require_admin), db: Session = Depends(get
     key = _youtube_key(db)
     return {
         "youtube_api_key_set": bool(key),
-        "youtube_api_key_preview": (key[:6] + "..." + key[-4:]) if len(key) > 12 else ("set" if key else ""),
+        "youtube_api_key_preview": (key[:6] + "..." + key[-4:])
+        if len(key) > 12
+        else ("set" if key else ""),
         "youtube_channel_id": _youtube_channel(db),
-        "source": "database" if _setting(db, "youtube_api_key") else ("env" if settings.YOUTUBE_API_KEY else "none"),
+        "source": "database"
+        if _setting(db, "youtube_api_key")
+        else ("env" if settings.YOUTUBE_API_KEY else "none"),
         "admin_emails": sorted(settings.admin_emails),
         "erp_report_prefix": settings.ERP_REPORT_PREFIX,
     }
 
 
 @router.put("/settings")
-def put_settings(payload: SettingsIn, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def put_settings(
+    payload: SettingsIn, admin: User = Depends(require_admin), db: Session = Depends(get_db)
+):
     if payload.youtube_api_key is not None:
         _put_setting(db, "youtube_api_key", payload.youtube_api_key.strip())
     if payload.youtube_channel_id is not None:
         _put_setting(db, "youtube_channel_id", payload.youtube_channel_id.strip())
     db.commit()
-    return {"ok": True, "youtube_api_key_set": bool(_youtube_key(db)),
-            "youtube_channel_id": _youtube_channel(db)}
+    return {
+        "ok": True,
+        "youtube_api_key_set": bool(_youtube_key(db)),
+        "youtube_channel_id": _youtube_channel(db),
+    }
 
 
 # ---------------------------------------------------------------- YouTube
@@ -212,16 +272,21 @@ def youtube_status(user: User = Depends(get_current_user), db: Session = Depends
 
 
 @router.post("/youtube/sync")
-def youtube_sync(payload: YoutubeSyncIn | None = None,
-                 admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def youtube_sync(
+    payload: YoutubeSyncIn | None = None,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
     """Fetch channel statistics via YouTube Data API v3 (API key).
 
     Analytics API (views/watch-time over time) needs OAuth and is next scope.
     """
     key = _youtube_key(db)
-    channel = (payload.channel_id if payload and payload.channel_id else _youtube_channel(db))
+    channel = payload.channel_id if payload and payload.channel_id else _youtube_channel(db)
     if not key:
-        raise HTTPException(status_code=400, detail="YouTube API key not configured. Add it in ERP settings.")
+        raise HTTPException(
+            status_code=400, detail="YouTube API key not configured. Add it in ERP settings."
+        )
     if not channel:
         raise HTTPException(status_code=400, detail="YouTube channel id not configured.")
     import requests  # local import keeps module import light
@@ -236,7 +301,10 @@ def youtube_sync(payload: YoutubeSyncIn | None = None,
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"YouTube API request failed: {exc}") from exc
     if resp.status_code != 200:
-        raise HTTPException(status_code=502, detail=f"YouTube API error: {data.get('error', {}).get('message', resp.text[:200])}")
+        raise HTTPException(
+            status_code=502,
+            detail=f"YouTube API error: {data.get('error', {}).get('message', resp.text[:200])}",
+        )
     items = data.get("items") or []
     if not items:
         raise HTTPException(status_code=404, detail="Channel not found for the given id")
@@ -250,7 +318,13 @@ def youtube_sync(payload: YoutubeSyncIn | None = None,
         "synced_at": datetime.now(timezone.utc).isoformat(),
     }
     _put_setting(db, "youtube_channel_stats", json.dumps(stats))
-    db.add(SyncRun(job="youtube_channel_sync", status="ok", detail=json.dumps(stats),
-                   finished_at=datetime.now(timezone.utc)))
+    db.add(
+        SyncRun(
+            job="youtube_channel_sync",
+            status="ok",
+            detail=json.dumps(stats),
+            finished_at=datetime.now(timezone.utc),
+        )
+    )
     db.commit()
     return stats

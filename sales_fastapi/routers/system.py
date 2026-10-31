@@ -74,5 +74,8 @@ def run_cron(user=Depends(get_current_user)):
     """Trigger the scheduled pipeline tasks."""
     tasks = [t["name"] for t in scheduler_service.registered_tasks()]
     queued = scheduler_service.enqueue_standard_tasks(user_id=getattr(user, "id", None))
-    return {"tasks": tasks, "queued_count": len(queued),
-            "backend": scheduler_service.backend_status()}
+    return {
+        "tasks": tasks,
+        "queued_count": len(queued),
+        "backend": scheduler_service.backend_status(),
+    }

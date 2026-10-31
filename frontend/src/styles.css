@@ -317,3 +317,15 @@ h3 { letter-spacing: -0.015em; }
   .voice-recorder { align-items: flex-start; }
 }
 @media (max-width: 420px) { .dash-grid { grid-template-columns: 1fr; } }
+
+/* --- Google Sign-In: custom branded design with the official GIS button
+       rendered invisibly on top, so the real click still goes to Google --- */
+.gsi-wrap { position: relative; width: 100%; max-width: 340px; height: 48px; margin: 31px 0 20px; }
+.gsi-custom { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 11px; background: #ffffff; border: 1px solid var(--line); border-radius: 999px; color: var(--ink); font-size: 14px; font-weight: 600; letter-spacing: .01em; box-shadow: 0 1px 2px rgba(16, 37, 31, .07); transition: box-shadow .18s ease, transform .18s ease, border-color .18s ease; pointer-events: none; }
+.gsi-wrap:hover .gsi-custom { border-color: #cfd8cf; box-shadow: 0 6px 18px rgba(16, 37, 31, .14); transform: translateY(-1px); }
+.gsi-wrap:active .gsi-custom { transform: translateY(0); box-shadow: 0 2px 6px rgba(16, 37, 31, .10); }
+.gsi-wrap.busy { pointer-events: none; }
+.gsi-wrap.busy .gsi-custom { color: var(--muted); }
+.gsi-logo { width: 18px; height: 18px; flex-shrink: 0; }
+.gsi-native { position: absolute; inset: 0; opacity: .01; overflow: hidden; border-radius: 999px; cursor: pointer; }
+.gsi-native iframe { width: 100% !important; height: 48px !important; }
