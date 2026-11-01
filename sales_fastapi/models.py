@@ -267,6 +267,26 @@ class Feedback(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
+class PromptReview(Base):
+    """A human comment or refinement proposal for a weekly prompt sample."""
+
+    __tablename__ = "prompt_reviews"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    prompt_id: Mapped[str] = mapped_column(String(16), index=True, default="")
+    prompt_version: Mapped[str] = mapped_column(String(32), default="")
+    task: Mapped[str] = mapped_column(String(64), default="")
+    comment: Mapped[str] = mapped_column(Text, default="")
+    proposed_change: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(16), index=True, default="pending")
+    submitted_by: Mapped[str] = mapped_column(String(255), default="")
+    submitted_by_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    reviewed_by: Mapped[str] = mapped_column(String(255), default="")
+    review_note: Mapped[str] = mapped_column(Text, default="")
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
 class MessageTemplate(Base):
     """Reusable outreach template for a channel and sales-funnel strategy."""
 
@@ -365,6 +385,34 @@ class ErpOrder(Base):
     required_date: Mapped[str] = mapped_column(String(10), default="")
     status: Mapped[str] = mapped_column(String(32), index=True, default="")
     total_value: Mapped[float] = mapped_column(Integer, default=0)
+    synced_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class TallySale(Base):
+    """One Tally Sales Register line synced from gs://kalika_enterprises/kalika_sales2026/."""
+
+    __tablename__ = "tally_sales"
+    __table_args__ = (
+        UniqueConstraint("source_file", "source_row", name="uq_tally_sale_source_row"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_file: Mapped[str] = mapped_column(String(255), index=True, default="")
+    source_row: Mapped[int] = mapped_column(Integer, default=0)
+    sale_date: Mapped[str] = mapped_column(String(10), index=True, default="")
+    period: Mapped[str] = mapped_column(String(7), index=True, default="")
+    buyer: Mapped[str] = mapped_column(String(255), index=True, default="")
+    buyer_address: Mapped[str] = mapped_column(Text, default="")
+    consignee: Mapped[str] = mapped_column(String(255), default="")
+    gstin: Mapped[str] = mapped_column(String(32), index=True, default="")
+    voucher_type: Mapped[str] = mapped_column(String(64), default="")
+    voucher_no: Mapped[str] = mapped_column(String(64), index=True, default="")
+    item_name: Mapped[str] = mapped_column(String(512), default="")
+    quantity: Mapped[float] = mapped_column(Float, default=0)
+    rate: Mapped[float] = mapped_column(Float, default=0)
+    value: Mapped[float] = mapped_column(Float, default=0)
+    invoice_total: Mapped[float] = mapped_column(Float, default=0)
+    tax: Mapped[float] = mapped_column(Float, default=0)
     synced_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 

@@ -17,6 +17,7 @@ from .sales import router as sales_router
 from .scheduler import router as scheduler_router
 from .social import router as social_router
 from .system import router as system_router
+from .tally import router as tally_router
 from .team import router as team_router
 from .templates import router as templates_router
 from .users import router as users_router
@@ -45,6 +46,7 @@ __all__ = [
     "scheduler_router",
     "social_router",
     "system_router",
+    "tally_router",
     "team_router",
     "templates_router",
     "users_router",

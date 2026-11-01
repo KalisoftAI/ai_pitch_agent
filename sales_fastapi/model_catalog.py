@@ -10,7 +10,7 @@ from .config import settings
 
 
 def catalog() -> list[dict]:
-    return [
+    items = [
         {
             "id": "gemma-4-27b-it",
             "provider": "gemma",
@@ -71,6 +71,17 @@ def catalog() -> list[dict]:
             "human_review": settings.HUMAN_REVIEW_REQUIRED,
         },
         {
+            "id": settings.LLM_CHAT_LOCAL_MODEL,
+            "provider": "ollama",
+            "label": f"Local Gemma SLM ({settings.LLM_CHAT_LOCAL_MODEL})",
+            "tier": "small",
+            "context": "8k",
+            "cost_inr_per_1k": [0.0, 0.0],
+            "best_for": ["daily rate chat", "drafting (no data leaves device)"],
+            "pii_allowed": True,
+            "human_review": False,
+        },
+        {
             "id": settings.LLM_LOCAL_MODEL,
             "provider": "ollama",
             "label": f"Local SLM ({settings.LLM_LOCAL_MODEL})",
@@ -82,6 +93,13 @@ def catalog() -> list[dict]:
             "human_review": False,
         },
     ]
+    seen: set[str] = set()
+    unique: list[dict] = []
+    for item in items:
+        if item["id"] not in seen:
+            seen.add(item["id"])
+            unique.append(item)
+    return unique
 
 
 def default_model() -> str:

@@ -78,6 +78,28 @@ def test_model_catalog_unit():
     assert any(m["provider"] == "gemma" for m in catalog())
 
 
+def test_chat_default_is_a_catalog_model(client, auth_headers):
+    data = client.get("/api/ops/models", headers=auth_headers).json()
+    assert data["chat_default"] in {m["id"] for m in data["models"]}
+    defaults = [m["id"] for m in data["models"] if m["is_default"]]
+    assert defaults == [data["chat_default"]]
+
+
+def test_daily_rate_chat_allows_non_admin(client):
+    login = client.post("/api/auth/google", json={"id_token": "dev:field@kalisoftai.com"})
+    assert login.status_code == 200, login.text
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    resp = client.post(
+        "/api/ops/chat",
+        headers=headers,
+        json={"message": "What is today rate?", "model": "echo", "history": []},
+    )
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert data["provider"] == "echo"
+    assert data["reply"]
+
+
 def test_prompt_samples(client, auth_headers):
     data = client.get("/api/ops/prompt-samples", headers=auth_headers).json()
     assert data["version"]

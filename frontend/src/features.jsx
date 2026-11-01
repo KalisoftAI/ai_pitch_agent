@@ -37,6 +37,158 @@ function Service({ status, icon: Icon, label, value }) {
   return <div className="connection-row"><span className="mail-icon"><Icon size={16} /></span><span><b>{label}</b><small>{value}</small></span><span className={`status ${status ? "ok" : "muted-status"}`}><i />{status ? "ready" : "setup"}</span></div>;
 }
 
+// ---------------------------------------------------------------- Tally sales
+export function TallySalesPanel({ onNotice, compact = false }) {
+  const [status, setStatus] = useState(null);
+  const [sales, setSales] = useState([]);
+  const [period, setPeriod] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const load = async (nextPeriod = period) => {
+    const query = nextPeriod ? `?period=${encodeURIComponent(nextPeriod)}` : "";
+    const salesQuery = `?limit=${compact ? 8 : 20}${nextPeriod ? `&period=${encodeURIComponent(nextPeriod)}` : ""}`;
+    const [nextStatus, nextSales] = await Promise.all([
+      request(`/tally/status${query}`), request(`/tally/sales${salesQuery}`),
+    ]);
+    setStatus(nextStatus);
+    setSales(nextSales);
+    setPeriod((current) => current || nextStatus.period || "");
+  };
+
+  useEffect(() => {
+    load().catch((error) => onNotice({ type: "error", text: error.message }));
+  }, []);
+
+  const changePeriod = async (value) => {
+    setPeriod(value);
+    try { await load(value); }
+    catch (error) { onNotice({ type: "error", text: error.message }); }
+  };
+
+  const sync = async () => {
+    setBusy(true);
+    try {
+      const result = await request("/tally/sync", { method: "POST" });
+      onNotice({
+        type: result.ok ? "success" : "error",
+        text: `Tally sync: ${result.created} new, ${result.updated} updated, ${result.deleted} removed${result.errors?.length ? `; ${result.errors.length} file error(s)` : ""}.`,
+      });
+      await load(period);
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+    finally { setBusy(false); }
+  };
+
+  const upload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const result = await request("/tally/upload", { method: "POST", body });
+      const nextPeriod = result.periods?.[result.periods.length - 1] || "";
+      onNotice({
+        type: result.ok ? "success" : "error",
+        text: `${result.uploaded} synced: ${result.created} new, ${result.updated} updated${result.gcs_uploaded ? " (GCS copy saved)" : " (local copy saved)"}.`,
+      });
+      if (nextPeriod) setPeriod(nextPeriod);
+      await load(nextPeriod);
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+    finally { setUploading(false); event.target.value = ""; }
+  };
+
+  const stats = status || {};
+  const buyers = (stats.top_buyers || []).slice(0, compact ? 4 : 8);
+  const maxValue = Math.max(...buyers.map((row) => row.value || 0), 1);
+  return (
+    <section className={`panel tally-panel ${compact ? "tally-compact" : ""}`}>
+      <div className="panel-heading">
+        <div>
+          <div className="section-kicker">TALLY SALES / KALIKA_SALES2026</div>
+          <h3>{compact ? "Latest buyer sales" : "Tally sales register"}</h3>
+          <p className="muted" style={{ margin: "4px 0 0" }}>
+            {stats.data_available ? `${stats.period || "latest"} / ${fmtNum(stats.invoices)} invoices / ${fmtNum(stats.customers)} buyers` : "No Sales Register synced yet."}
+          </p>
+        </div>
+        <div className="button-row">
+          {stats.periods?.length > 0 && (
+            <select value={period || stats.period || ""} onChange={(event) => changePeriod(event.target.value)}>
+              {stats.periods.map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
+          )}
+          {!compact && stats.is_admin && (
+            <>
+              <button className="secondary-button" onClick={sync} disabled={busy}>
+                <RefreshCw size={15} className={busy ? "spin" : ""} /> {busy ? "Syncing..." : "Sync GCS"}
+              </button>
+              <label className="secondary-button" style={{ cursor: "pointer" }}>
+                <UploadCloud size={15} /> {uploading ? "Uploading..." : "Upload XLS"}
+                <input type="file" accept=".xls,.xlsx" onChange={upload} disabled={uploading} style={{ display: "none" }} />
+              </label>
+            </>
+          )}
+        </div>
+      </div>
+      {!stats.data_available && (
+        <div className="empty-state">
+          <Database size={22} />
+          <p>No Tally sales data.</p>
+          <small>{stats.is_admin ? `Sync gs://${stats.bucket}/${stats.prefix} or upload a Sales Register.` : "Ask an admin to sync the Tally Sales Register."}</small>
+        </div>
+      )}
+      {stats.data_available && (
+        <>
+          <div className="mini-stats" style={{ marginBottom: 12 }}>
+            <span><b>{fmtMoney(stats.total_value)}</b> sales value</span>
+            <span><b>{fmtNum(stats.invoices)}</b> invoices</span>
+            <span><b>{fmtNum(stats.customers)}</b> buyers</span>
+            <span><b>{fmtNum(stats.total_quantity)}</b> quantity</span>
+            <span><b>{stats.last_sync?.status || "not synced"}</b> last sync</span>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Buyer</th><th>Invoices</th><th>Value</th><th>Share</th></tr></thead>
+              <tbody>
+                {buyers.map((row) => (
+                  <tr key={row.buyer}>
+                    <td className="table-person"><b>{row.buyer}</b><div className="bar-track"><div className="bar-fill" style={{ width: `${Math.min(100, (row.value / maxValue) * 100)}%` }} /></div></td>
+                    <td>{fmtNum(row.invoices)}</td>
+                    <td>{fmtMoney(row.value)}</td>
+                    <td>{Math.round((row.value / (stats.total_value || 1)) * 100)}%</td>
+                  </tr>
+                ))}
+                {!buyers.length && <tr><td colSpan={4}><small className="muted">No buyer rows for this period.</small></td></tr>}
+              </tbody>
+            </table>
+          </div>
+          {!compact && sales.length > 0 && (
+            <>
+              <div className="section-kicker" style={{ marginTop: 14 }}>LATEST INVOICE LINES</div>
+              <div className="table-wrap">
+                <table>
+                  <thead><tr><th>Date</th><th>Buyer</th><th>Item</th><th>Qty</th><th>Value</th></tr></thead>
+                  <tbody>
+                    {sales.map((row) => (
+                      <tr key={row.id}>
+                        <td><small>{row.sale_date}</small></td>
+                        <td className="table-person"><b>{row.buyer}</b><small>{row.voucher_no}</small></td>
+                        <td><small>{row.item_name || "Sales line"}</small></td>
+                        <td>{fmtNum(row.quantity)}</td>
+                        <td>{fmtMoney(row.value)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
 // ---------------------------------------------------------------- Sales BI
 export function SalesBi({ onNotice }) {
   const [data, setData] = useState(null);
@@ -103,6 +255,7 @@ export function SalesBi({ onNotice }) {
           {!(delivery.pending || []).length && <div className="empty-state"><Check size={22} /><p>No pending dispatch lines.</p></div>}
         </section>
       </div>
+      <TallySalesPanel onNotice={onNotice} />
     </div>
   );
 }

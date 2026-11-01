@@ -73,6 +73,11 @@ STANDARD_TASKS: List[Dict[str, Any]] = [
         "description": "Daily 06:00: pull latest ERP report (ERP-V1/Reports) and upsert Dispatch + Orders for the sales dashboard/forecast",
     },
     {
+        "name": "tally_sales_sync",
+        "cron": "15 6 * * *",
+        "description": "Daily 06:15: sync Tally Sales Registers from kalika_enterprises/kalika_sales2026 into dashboard/field sales",
+    },
+    {
         "name": "voice_transcription_sync",
         "cron": "30 3 * * *",
         "description": "09:00 IST: transcribe call recordings + layered tone/lead analysis (Gemma SLM first via Ollama, Gemini fallback)",

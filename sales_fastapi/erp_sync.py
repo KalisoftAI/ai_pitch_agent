@@ -281,17 +281,31 @@ def rate_calculator(
     conversion_cost_per_kg: float = 18.0,
     margin_pct: float = 8.0,
 ) -> dict:
-    """Film/blown-film style costing.
+    """Film/blown-film style costing with a full, auditable breakdown.
 
-    weight_kg = width_m x length_m x micron/1000 x density  (density g/cm3 ~ 0.92 LDPE)
+    net weight  = width(m) x length(m) x micron/1000 x density   (density g/cm3, LDPE ~ 0.92)
+    gross weight = net weight + waste %
+    material    = gross weight x polymer rate
+    conversion  = gross weight x conversion rate
+    price       = (material + conversion) x (1 + margin %)
+
+    Every intermediate value is returned so the UI can explain the quote
+    line by line instead of showing only four headline numbers.
     """
     width_m = width_mm / 1000.0
-    weight_kg = width_m * length_m * (micron / 1000.0) * density
-    gross_kg = weight_kg * (1 + waste_pct / 100.0)
+    thickness_mm = micron / 1000.0
+    area_m2 = width_m * length_m
+    volume_cm3 = area_m2 * thickness_mm * 1000.0
+    weight_kg = area_m2 * thickness_mm * density
+    waste_kg = weight_kg * (waste_pct / 100.0)
+    gross_kg = weight_kg + waste_kg
     material = gross_kg * polymer_rate
     conversion = gross_kg * conversion_cost_per_kg
     cost = material + conversion
-    price = cost * (1 + margin_pct / 100.0)
+    margin = cost * (margin_pct / 100.0)
+    price = cost + margin
+    price_per_kg = price / gross_kg if gross_kg else 0.0
+    cost_per_kg = cost / gross_kg if gross_kg else 0.0
     return {
         "inputs": {
             "polymer_rate_per_kg": polymer_rate,
@@ -303,11 +317,37 @@ def rate_calculator(
             "conversion_cost_per_kg": conversion_cost_per_kg,
             "margin_pct": margin_pct,
         },
+        "geometry": {
+            "width_m": round(width_m, 4),
+            "thickness_mm": round(thickness_mm, 4),
+            "area_m2": round(area_m2, 4),
+            "volume_cm3": round(volume_cm3, 2),
+        },
         "weight_kg": round(weight_kg, 3),
+        "waste_kg": round(waste_kg, 3),
         "gross_weight_kg": round(gross_kg, 3),
+        "net_material_cost": round(weight_kg * polymer_rate, 2),
         "material_cost": round(material, 2),
+        "waste_cost": round(waste_kg * polymer_rate, 2),
         "conversion_cost": round(conversion, 2),
+        "subtotal": round(cost, 2),
         "total_cost": round(cost, 2),
+        "margin_amount": round(margin, 2),
         "price": round(price, 2),
-        "price_per_kg": round(price / gross_kg, 2) if gross_kg else 0,
+        "price_per_kg": round(price_per_kg, 2),
+        "cost_per_kg": round(cost_per_kg, 2),
+        "price_per_meter": round(price / length_m, 2) if length_m else 0.0,
+        "price_per_sqm": round(price / area_m2, 2) if area_m2 else 0.0,
+        "cost_share": {
+            "material_pct": round(((weight_kg * polymer_rate) / cost) * 100.0, 1) if cost else 0.0,
+            "waste_pct": round(((waste_kg * polymer_rate) / cost) * 100.0, 1) if cost else 0.0,
+            "conversion_pct": round((conversion / cost) * 100.0, 1) if cost else 0.0,
+            "margin_pct": round((margin / cost) * 100.0, 1) if cost else 0.0,
+        },
+        "price_share": {
+            "material_pct": round(((weight_kg * polymer_rate) / price) * 100.0, 1) if price else 0.0,
+            "waste_pct": round(((waste_kg * polymer_rate) / price) * 100.0, 1) if price else 0.0,
+            "conversion_pct": round((conversion / price) * 100.0, 1) if price else 0.0,
+            "margin_pct": round((margin / price) * 100.0, 1) if price else 0.0,
+        },
     }

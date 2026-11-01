@@ -7,6 +7,7 @@ GET /api/dashboard/summary
   voice      -> transcription pipeline numbers + tone stats
   comms      -> email connections, campaigns, outreach numbers
   team       -> pending field updates / rate reviews awaiting approval
+  tally      -> Kalika sales-register value, invoices, buyers, monthly trend
   recommendations -> rule-based daily actions for the sales team
 """
 
@@ -38,6 +39,7 @@ from ..models import (
     WhatsAppMessage,
 )
 from ..security import get_current_user
+from ..tally_sync import tally_stats
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -70,8 +72,18 @@ def _gcp_services() -> list[dict]:
     return services
 
 
-def _recommendations(db: Session, erp: dict, social: dict, voice: dict) -> list[dict]:
+def _recommendations(
+    db: Session, erp: dict, social: dict, voice: dict, tally: dict | None = None
+) -> list[dict]:
     recs: list[dict] = []
+    if tally is not None and not tally.get("data_available"):
+        recs.append(
+            {
+                "priority": "medium",
+                "area": "Tally sales",
+                "text": "No Kalika Tally sales synced yet — ask an admin to sync kalika_sales2026/ or upload the latest Sales Register.",
+            }
+        )
     pending = erp.get("pending_followup", 0)
     if pending:
         recs.append(
@@ -236,6 +248,7 @@ def dashboard_summary(
         .order_by(SyncRun.id.desc())
         .first()
     )
+    tally_block = tally_stats(db)
 
     gcp = _gcp_services()
     return {
@@ -254,5 +267,8 @@ def dashboard_summary(
         "voice": voice_block,
         "comms": comms_block,
         "team": team_block,
-        "recommendations": _recommendations(db, erp_block, social_block, voice_block),
+        "tally": tally_block,
+        "recommendations": _recommendations(
+            db, erp_block, social_block, voice_block, tally_block
+        ),
     }

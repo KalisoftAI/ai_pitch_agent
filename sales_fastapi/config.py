@@ -99,6 +99,14 @@ class Settings(BaseSettings):
     # --- ERP report sync (ERP-V1/Reports -> Dispatch/Orders) ---
     ERP_REPORT_PREFIX: str = Field(default="ERP-V1/Reports/", alias="ERP_REPORT_PREFIX")
     ERP_CACHE_PATH: str = Field(default="gcs_data", alias="ERP_CACHE_PATH")
+
+    # --- Tally Sales Register sync (kalika_sales2026/ -> dashboard/field views) ---
+    TALLY_BUCKET: str = Field(default="kalika_enterprises", alias="TALLY_BUCKET")
+    TALLY_SALES_PREFIX: str = Field(default="kalika_sales2026/", alias="TALLY_SALES_PREFIX")
+    TALLY_CACHE_PATH: str = Field(default="gcs_data", alias="TALLY_CACHE_PATH")
+    TALLY_UPLOAD_DIR: str = Field(default="gcs_data/tally_uploads", alias="TALLY_UPLOAD_DIR")
+    TALLY_MAX_UPLOAD_BYTES: int = Field(default=5_000_000, alias="TALLY_MAX_UPLOAD_BYTES")
+
     ADMIN_EMAILS: str = Field(default="ai.solutions@kalisoftai.in", alias="ADMIN_EMAILS")
 
     # --- Deployment phases: preprod / stage / uat / prod ---
@@ -170,6 +178,7 @@ class Settings(BaseSettings):
     LLM_LOCAL_BASE_URL: str = Field(default="http://localhost:11434", alias="LLM_LOCAL_BASE_URL")
     LLM_LOCAL_NANO_MODEL: str = Field(default="qwen2.5:0.5b", alias="LLM_LOCAL_NANO_MODEL")
     LLM_LOCAL_MODEL: str = Field(default="qwen2.5:3b", alias="LLM_LOCAL_MODEL")
+    LLM_CHAT_LOCAL_MODEL: str = Field(default="gemma3:4b", alias="LLM_CHAT_LOCAL_MODEL")
     LLM_LOCAL_MEDIUM_MODEL: str = Field(default="llama3.1:8b", alias="LLM_LOCAL_MEDIUM_MODEL")
     LLM_CLOUD_FLASH_MODEL: str = Field(default="gemini-2.0-flash", alias="LLM_CLOUD_FLASH_MODEL")
     LLM_CLOUD_MODEL: str = Field(default="gemini-2.5-pro", alias="LLM_CLOUD_MODEL")
