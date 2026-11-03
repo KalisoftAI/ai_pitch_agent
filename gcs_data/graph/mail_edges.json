@@ -1,0 +1,407 @@
+[
+  {
+    "source": "mail:interaction_dump:9",
+    "target": "sender:919260760760",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:9",
+    "target": "intent:order",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:9",
+    "target": "contact:3469",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:8",
+    "target": "sender:918800742406",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:8",
+    "target": "intent:order",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:8",
+    "target": "contact:65",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:7",
+    "target": "sender:918550900028",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:7",
+    "target": "intent:order",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:7",
+    "target": "contact:4245",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:6",
+    "target": "sender:919960078343",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:6",
+    "target": "intent:order",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:6",
+    "target": "contact:6167",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:27",
+    "target": "sender:919260760760",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:27",
+    "target": "intent:order",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:27",
+    "target": "contact:3469",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:26",
+    "target": "sender:919860433996",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:26",
+    "target": "intent:order",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:26",
+    "target": "contact:5334",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:25",
+    "target": "sender:918600805201",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:25",
+    "target": "intent:order",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:25",
+    "target": "contact:8569",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:24",
+    "target": "sender:919960078343",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:24",
+    "target": "intent:order",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:24",
+    "target": "contact:6167",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:23",
+    "target": "sender:919960078343",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:23",
+    "target": "intent:order",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:23",
+    "target": "contact:6167",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:22",
+    "target": "sender:919960078343",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:22",
+    "target": "intent:order",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:22",
+    "target": "contact:6167",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:21",
+    "target": "sender:919960078343",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:21",
+    "target": "intent:order",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:21",
+    "target": "contact:6167",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:20",
+    "target": "sender:919552533137",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:20",
+    "target": "intent:order",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:20",
+    "target": "contact:1161",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:19",
+    "target": "sender:919823125529",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:19",
+    "target": "intent:order",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:19",
+    "target": "contact:233",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:18",
+    "target": "sender:919960078343",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:18",
+    "target": "intent:order",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:18",
+    "target": "contact:6167",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:17",
+    "target": "sender:919860433996",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:17",
+    "target": "intent:order",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:17",
+    "target": "contact:5334",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:16",
+    "target": "sender:919552533137",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:16",
+    "target": "intent:order",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:16",
+    "target": "contact:1161",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:15",
+    "target": "sender:919960078343",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:15",
+    "target": "intent:order",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:15",
+    "target": "contact:6167",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:14",
+    "target": "sender:919960078343",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:14",
+    "target": "intent:order",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:14",
+    "target": "contact:6167",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:13",
+    "target": "sender:918800742406",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:13",
+    "target": "intent:order",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:13",
+    "target": "contact:65",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:12",
+    "target": "sender:918800742406",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:12",
+    "target": "intent:order",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:12",
+    "target": "contact:65",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:11",
+    "target": "sender:919833221233",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:11",
+    "target": "intent:order",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:11",
+    "target": "contact:7907",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:10",
+    "target": "sender:918800742406",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:10",
+    "target": "intent:order",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:10",
+    "target": "contact:65",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:5",
+    "target": "sender:914024340143",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:5",
+    "target": "intent:general",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:5",
+    "target": "contact:8759",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:4",
+    "target": "sender:914023456173",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:4",
+    "target": "intent:general",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:4",
+    "target": "contact:8757",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:3",
+    "target": "sender:914023456138",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:3",
+    "target": "intent:general",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:3",
+    "target": "contact:8756",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:2",
+    "target": "sender:918067859929",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:2",
+    "target": "intent:general",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:2",
+    "target": "contact:8752",
+    "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:1",
+    "target": "sender:918067859929",
+    "type": "SENT_BY"
+  },
+  {
+    "source": "mail:interaction_dump:1",
+    "target": "intent:general",
+    "type": "HAS_INTENT"
+  },
+  {
+    "source": "mail:interaction_dump:1",
+    "target": "contact:8752",
+    "type": "LINKED_TO_CONTACT"
+  }
+]

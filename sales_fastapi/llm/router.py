@@ -39,6 +39,7 @@ COST_MICROS_PER_1K: dict[str, tuple[int, int]] = {
     "echo": (0, 0),
     "gemma-4-27b-it": (100, 400),
     "gemini-2.0-flash": (100, 400),
+    "gemini-2.5-flash": (100, 400),
     "gemini-2.0-flash-lite": (50, 200),
     "gemini-2.5-pro": (1250, 5000),
 }

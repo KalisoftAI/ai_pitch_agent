@@ -11,6 +11,7 @@ from .feedback import router as feedback_router
 from .feedback_pipeline import router as feedback_pipeline_router
 from .google_email import router as google_email_router
 from .governance import governance_router, llm_router
+from .instore import router as instore_router
 from .journey import router as journey_router
 from .ops import router as ops_router
 from .sales import router as sales_router
@@ -41,6 +42,7 @@ __all__ = [
     "journey_router",
     "ops_router",
     "governance_router",
+    "instore_router",
     "llm_router",
     "sales_router",
     "scheduler_router",

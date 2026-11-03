@@ -68,6 +68,11 @@ STANDARD_TASKS: List[Dict[str, Any]] = [
         "description": "Nightly: parse WhatsApp chat exports (kalika backup/) + app outbox into interaction_dump.json with attachment details",
     },
     {
+        "name": "instore_mail_sync",
+        "cron": "45 6 * * *",
+        "description": "Daily 06:45: extract in-store/mailbox mails, link senders to contacts, publish insights JSON to GCS for the dashboard and field desk",
+    },
+    {
         "name": "erp_dispatch_sync",
         "cron": "0 6 * * *",
         "description": "Daily 06:00: pull latest ERP report (ERP-V1/Reports) and upsert Dispatch + Orders for the sales dashboard/forecast",

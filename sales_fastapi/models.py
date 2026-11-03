@@ -571,6 +571,13 @@ class CompanyVisit(Base):
     sales_person: Mapped[str] = mapped_column(String(255), index=True, default="")
     purpose: Mapped[str] = mapped_column(String(512), default="")
     notes: Mapped[str] = mapped_column(Text, default="")
+    # Field-executive sample: who/where we met, what was discussed earlier,
+    # the mail/chat trail, and a map pin for route planning.
+    meet_person: Mapped[str] = mapped_column(String(255), default="")
+    meet_home_location: Mapped[str] = mapped_column(String(255), default="")
+    previous_discussion: Mapped[str] = mapped_column(Text, default="")
+    mail_chat_details: Mapped[str] = mapped_column(Text, default="")
+    map_location: Mapped[str] = mapped_column(String(512), default="")
     outcome: Mapped[str] = mapped_column(String(64), default="")
     next_action: Mapped[str] = mapped_column(Text, default="")
     follow_up_date: Mapped[str] = mapped_column(String(10), default="")

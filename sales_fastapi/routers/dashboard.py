@@ -23,9 +23,11 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..erp_sync import dispatch_stats, forecast, latest_report_date, orders_stats
 from ..governance.gcp_verify import verify_environment
+from ..instore_mail import load_insights
 from ..models import (
     Campaign,
     CampaignMessage,
+    CompanyVisit,
     Contact,
     EmailConnection,
     ErpDispatch,
@@ -73,9 +75,39 @@ def _gcp_services() -> list[dict]:
 
 
 def _recommendations(
-    db: Session, erp: dict, social: dict, voice: dict, tally: dict | None = None
+    db: Session,
+    erp: dict,
+    social: dict,
+    voice: dict,
+    tally: dict | None = None,
+    instore: dict | None = None,
+    field: dict | None = None,
 ) -> list[dict]:
     recs: list[dict] = []
+    if instore is not None and not instore.get("data_available"):
+        recs.append(
+            {
+                "priority": "medium",
+                "area": "Instore mails",
+                "text": "No mail insights yet ? run Instore mails ? Sync to extract mailbox mail and link senders to contacts.",
+            }
+        )
+    if instore is not None and instore.get("missing_links", 0):
+        recs.append(
+            {
+                "priority": "high",
+                "area": "Instore mails",
+                "text": f"{instore['missing_links']} mail sender(s) are not in contacts ? complete the contact links before the next follow-up.",
+            }
+        )
+    if field is not None and field.get("pending_followups", 0):
+        recs.append(
+            {
+                "priority": "medium",
+                "area": "Field desk",
+                "text": f"{field['pending_followups']} company visit follow-up(s) are due ? review location, previous discussion and next action.",
+            }
+        )
     if tally is not None and not tally.get("data_available"):
         recs.append(
             {
@@ -250,6 +282,65 @@ def dashboard_summary(
     )
     tally_block = tally_stats(db)
 
+    instore_raw = load_insights()
+    instore_insights = instore_raw.get("insights", {})
+    instore_block = {
+        "data_available": bool(instore_raw.get("data_available")),
+        "generated_at": instore_raw.get("generated_at"),
+        "source": instore_raw.get("source", {}),
+        "total": instore_insights.get("total", 0),
+        "linked": instore_insights.get("linked", 0),
+        "unlinked": instore_insights.get("unlinked", 0),
+        "by_intent": instore_insights.get("by_intent", {}),
+        "attachments": instore_insights.get("attachments", 0),
+        "attachment_purposes": instore_insights.get("attachment_purposes", {}),
+        "high_priority": instore_insights.get("high_priority", 0),
+        "accuracy_pct": instore_insights.get("accuracy_pct", 0),
+        "forecast_next_month_mails": instore_insights.get("forecast_next_month_mails", 0),
+        "missing_links": (instore_raw.get("missing_links") or {}).get("count", 0),
+        "missing_samples": (instore_raw.get("missing_links") or {}).get("samples", [])[:5],
+        "graph_stats": (instore_raw.get("graph") or {}).get("stats", {}),
+        "latest": (instore_raw.get("mails") or [])[:6],
+    }
+
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    month = today[:7]
+    visits = db.query(CompanyVisit).filter(CompanyVisit.user_id == user.id)
+    visit_rows = visits.order_by(CompanyVisit.visit_date.desc(), CompanyVisit.id.desc()).limit(6).all()
+    by_person = {
+        name or "unassigned": int(count)
+        for name, count in visits.with_entities(CompanyVisit.sales_person, func.count(CompanyVisit.id))
+        .group_by(CompanyVisit.sales_person)
+        .all()
+    }
+    field_block = {
+        "visits": visits.count(),
+        "companies": visits.with_entities(func.count(func.distinct(CompanyVisit.company))).scalar() or 0,
+        "this_month": visits.filter(CompanyVisit.visit_date.like(f"{month}%")).count(),
+        "pending_followups": visits.filter(
+            CompanyVisit.follow_up_date >= today, CompanyVisit.status != "closed"
+        ).count(),
+        "by_sales_person": dict(sorted(by_person.items(), key=lambda item: -item[1])[:8]),
+        "latest": [
+            {
+                "id": row.id,
+                "company": row.company,
+                "contact_name": row.contact_name,
+                "visit_date": row.visit_date,
+                "meet_person": row.meet_person,
+                "meet_home_location": row.meet_home_location,
+                "previous_discussion": row.previous_discussion,
+                "mail_chat_details": row.mail_chat_details,
+                "map_location": row.map_location,
+                "outcome": row.outcome,
+                "next_action": row.next_action,
+                "follow_up_date": row.follow_up_date,
+                "status": row.status,
+            }
+            for row in visit_rows
+        ],
+    }
+
     gcp = _gcp_services()
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -268,7 +359,9 @@ def dashboard_summary(
         "comms": comms_block,
         "team": team_block,
         "tally": tally_block,
+        "instore": instore_block,
+        "field": field_block,
         "recommendations": _recommendations(
-            db, erp_block, social_block, voice_block, tally_block
+            db, erp_block, social_block, voice_block, tally_block, instore_block, field_block
         ),
     }

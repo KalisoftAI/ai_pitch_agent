@@ -388,9 +388,12 @@ class GmailExtractor:
             subject = headers.get("subject", "")
             snippet = compact_text(str(metadata.get("snippet", "")), 1000)
             body = ""
+            attachments: list[dict[str, Any]] = []
             if include_body:
                 full_message = self._get(f"messages/{message_id}", {"format": "full"})
-                body = self._extract_body(full_message.get("payload", {}))
+                payload = full_message.get("payload", {})
+                body = self._extract_body(payload)
+                attachments = self._extract_attachments(payload)
             results.append(
                 {
                     "uid": message_id,
@@ -400,11 +403,30 @@ class GmailExtractor:
                     "intent": infer_intent(f"{subject} {snippet} {body}"),
                     "body": body[:50_000],
                     "snippet": snippet,
+                    "attachments": attachments,
                 }
             )
             if len(results) >= safe_limit:
                 break
         return len(items), results
+
+    @classmethod
+    def _extract_attachments(cls, part: dict[str, Any]) -> list[dict[str, Any]]:
+        found: list[dict[str, Any]] = []
+        filename = str(part.get("filename", "")).strip()
+        body = part.get("body", {}) or {}
+        if filename:
+            found.append(
+                {
+                    "name": filename,
+                    "size": int(body.get("size") or 0),
+                    "mime_type": str(part.get("mimeType", "")),
+                    "attachment_id": str(body.get("attachmentId", "")),
+                }
+            )
+        for child in part.get("parts", []) or []:
+            found.extend(cls._extract_attachments(child))
+        return found
 
     @classmethod
     def _extract_body(cls, part: dict[str, Any]) -> str:

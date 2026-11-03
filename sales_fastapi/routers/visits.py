@@ -32,6 +32,11 @@ class VisitIn(BaseModel):
     sales_person: str = Field(default="", max_length=255)
     purpose: str = Field(default="", max_length=512)
     notes: str = Field(default="", max_length=20_000)
+    meet_person: str = Field(default="", max_length=255)
+    meet_home_location: str = Field(default="", max_length=255)
+    previous_discussion: str = Field(default="", max_length=20_000)
+    mail_chat_details: str = Field(default="", max_length=20_000)
+    map_location: str = Field(default="", max_length=512)
     outcome: str = Field(default="", max_length=64)
     next_action: str = Field(default="", max_length=5_000)
     follow_up_date: str = Field(default="", max_length=10)
@@ -48,6 +53,11 @@ class VisitUpdate(BaseModel):
     sales_person: str | None = Field(default=None, max_length=255)
     purpose: str | None = Field(default=None, max_length=512)
     notes: str | None = Field(default=None, max_length=20_000)
+    meet_person: str | None = Field(default=None, max_length=255)
+    meet_home_location: str | None = Field(default=None, max_length=255)
+    previous_discussion: str | None = Field(default=None, max_length=20_000)
+    mail_chat_details: str | None = Field(default=None, max_length=20_000)
+    map_location: str | None = Field(default=None, max_length=512)
     outcome: str | None = Field(default=None, max_length=64)
     next_action: str | None = Field(default=None, max_length=5_000)
     follow_up_date: str | None = Field(default=None, max_length=10)
@@ -67,6 +77,11 @@ def _out(visit: CompanyVisit) -> dict:
         "sales_person": visit.sales_person,
         "purpose": visit.purpose,
         "notes": visit.notes,
+        "meet_person": visit.meet_person,
+        "meet_home_location": visit.meet_home_location,
+        "previous_discussion": visit.previous_discussion,
+        "mail_chat_details": visit.mail_chat_details,
+        "map_location": visit.map_location,
         "outcome": visit.outcome,
         "next_action": visit.next_action,
         "follow_up_date": visit.follow_up_date,

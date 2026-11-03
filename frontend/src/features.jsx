@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   Activity, BarChart3, Bot, BriefcaseBusiness, Building2, CalendarDays, Calculator, Check, Clock,
-  Database, FileDown, Link2, MapPin, Mic, Package, Plus, RefreshCw, Save, Search, Send, ShieldCheck,
+  Database, FileDown, Link2, Mail, MapPin, Mic, Package, Plus, RefreshCw, Save, Search, Send, ShieldCheck,
   Sparkles, TrendingUp, Truck, UploadCloud, Users, Video, X,
 } from "lucide-react";
 
@@ -377,7 +377,8 @@ export function CompanyVisits({ onNotice }) {
   const today = new Date().toISOString().slice(0, 10);
   const [visits, setVisits] = useState([]);
   const [stats, setStats] = useState(null);
-  const [form, setForm] = useState({ company: "", contact_name: "", contact_phone: "", visit_date: today, outcome: "", follow_up_date: "", notes: "", next_action: "" });
+  const emptyVisit = { company: "", contact_name: "", contact_phone: "", visit_date: today, outcome: "", follow_up_date: "", notes: "", next_action: "", meet_person: "", meet_home_location: "", previous_discussion: "", mail_chat_details: "", map_location: "" };
+  const [form, setForm] = useState(emptyVisit);
   const [uploading, setUploading] = useState(0);
   const load = async () => {
     try {
@@ -390,7 +391,7 @@ export function CompanyVisits({ onNotice }) {
     event.preventDefault();
     try {
       await request("/visits", { method: "POST", body: JSON.stringify(form) });
-      setForm({ company: "", contact_name: "", contact_phone: "", visit_date: today, outcome: "", follow_up_date: "", notes: "", next_action: "" });
+      setForm({ ...emptyVisit, visit_date: today });
       onNotice({ type: "success", text: "Visit saved." });
       await load();
     } catch (error) { onNotice({ type: "error", text: error.message }); }
@@ -431,17 +432,130 @@ export function CompanyVisits({ onNotice }) {
             <input type="date" value={form.visit_date} onChange={(event) => setForm({ ...form, visit_date: event.target.value })} />
             <input placeholder="Outcome (e.g. quote_requested)" value={form.outcome} onChange={(event) => setForm({ ...form, outcome: event.target.value })} />
             <input type="date" placeholder="Follow-up date" value={form.follow_up_date} onChange={(event) => setForm({ ...form, follow_up_date: event.target.value })} />
+            <input placeholder="Person met" value={form.meet_person} onChange={(event) => setForm({ ...form, meet_person: event.target.value })} />
+            <input placeholder="Meeting home location (plant/office)" value={form.meet_home_location} onChange={(event) => setForm({ ...form, meet_home_location: event.target.value })} />
+            <input placeholder="Map link (Google Maps URL)" value={form.map_location} onChange={(event) => setForm({ ...form, map_location: event.target.value })} />
           </div>
+          <textarea className="voice-text" rows={2} placeholder="Previous discussion point" value={form.previous_discussion} onChange={(event) => setForm({ ...form, previous_discussion: event.target.value })} />
+          <textarea className="voice-text" rows={2} placeholder="Mail / chat details (subject, date, sender)" value={form.mail_chat_details} onChange={(event) => setForm({ ...form, mail_chat_details: event.target.value })} />
           <textarea className="voice-text" rows={3} placeholder="Visit notes" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} />
           <input placeholder="Next action" value={form.next_action} onChange={(event) => setForm({ ...form, next_action: event.target.value })} />
           <button className="primary-button"><Plus size={15} /> Save visit</button></form>
         </section>
         <section className="panel">
           <div className="panel-heading"><div><div className="section-kicker">VISIT HISTORY</div><h3>Recent meetings</h3></div><Building2 size={19} className="muted" /></div>
-          <div className="table-wrap"><table><thead><tr><th>Company</th><th>Date</th><th>Outcome</th><th>Follow-up</th><th>Media</th></tr></thead><tbody>
-            {visits.map((visit) => <tr key={visit.id}><td className="table-person"><b>{visit.company}</b><small>{visit.contact_name || visit.notes?.slice(0, 50)}</small></td><td>{visit.visit_date}</td><td>{visit.outcome || visit.status}</td><td>{visit.follow_up_date || "-"}</td><td><label className="text-button">{uploading === visit.id ? "Uploading..." : `${(visit.media || []).length} file(s) +`}<input type="file" accept="image/*,video/*" hidden onChange={(event) => upload(visit, event.target.files?.[0])} /></label></td></tr>)}
-            {!visits.length && <tr><td colSpan={5}><div className="empty-state"><MapPin size={22} /><p>No visits yet.</p><small>Log the first field meeting.</small></div></td></tr>}
+          <div className="table-wrap"><table><thead><tr><th>Company / person</th><th>Date</th><th>Where &amp; previous point</th><th>Outcome</th><th>Follow-up</th><th>Media</th></tr></thead><tbody>
+            {visits.map((visit) => <tr key={visit.id}><td className="table-person"><b>{visit.company}</b><small>{visit.contact_name || visit.notes?.slice(0, 50)}</small></td><td>{visit.visit_date}</td><td><small><b>{visit.meet_person || visit.meet_home_location || "not captured"}</b>{visit.previous_discussion ? ` ? ${visit.previous_discussion.slice(0, 90)}` : ""}</small>{visit.map_location && <a className="text-button" href={visit.map_location} target="_blank" rel="noreferrer">Map</a>}</td><td>{visit.outcome || visit.status}</td><td>{visit.follow_up_date || "-"}</td><td><label className="text-button">{uploading === visit.id ? "Uploading..." : `${(visit.media || []).length} file(s) +`}<input type="file" accept="image/*,video/*" hidden onChange={(event) => upload(visit, event.target.files?.[0])} /></label></td></tr>)}
+            {!visits.length && <tr><td colSpan={6}><div className="empty-state"><MapPin size={22} /><p>No visits yet.</p><small>Log the first field meeting.</small></div></td></tr>}
           </tbody></table></div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+
+// ---------------------------------------------------------------- Instore mails
+export function InstoreMails({ onNotice }) {
+  const [summary, setSummary] = useState(null);
+  const [mails, setMails] = useState([]);
+  const [promptInfo, setPromptInfo] = useState(null);
+  const [expertise, setExpertise] = useState("sales_strategist");
+  const [model, setModel] = useState("");
+  const [question, setQuestion] = useState("What should the field team do next based on the latest instore mails?");
+  const [reply, setReply] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => {
+    try {
+      const [nextSummary, nextMails, nextPrompts] = await Promise.all([
+        request("/instore/summary"), request("/instore/mails?limit=12"), request("/instore/prompts"),
+      ]);
+      setSummary(nextSummary); setMails(nextMails.mails || []); setPromptInfo(nextPrompts);
+      setModel((current) => current || nextPrompts.models?.default || "");
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+  };
+  useEffect(() => { load(); }, []);
+
+  const sync = async () => {
+    setBusy(true);
+    try {
+      const result = await request("/instore/sync", { method: "POST", body: JSON.stringify({ source: "auto", include_body: true, include_dump: true }) });
+      onNotice({ type: result.ok ? "success" : "error", text: `Instore sync: ${result.insights?.total || 0} mails, ${result.missing_links?.count || 0} missing links, ${result.stored?.gcs_uploaded ? "GCS copy saved" : "local copy saved"}.` });
+      await load();
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+    finally { setBusy(false); }
+  };
+
+  const ask = async (event) => {
+    event.preventDefault();
+    if (!question.trim()) return;
+    setBusy(true); setReply(null);
+    try {
+      const result = await request("/instore/ask", { method: "POST", body: JSON.stringify({ question: question.trim(), expertise, model }) });
+      setReply(result);
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+    finally { setBusy(false); }
+  };
+
+  const insights = summary?.insights || {};
+  const missing = summary?.missing_links || {};
+  const models = promptInfo?.models || {};
+  return (
+    <div className="content dash">
+      <div className="page-heading">
+        <div><div className="section-kicker">INSTORE MAILS / GCS SNAPSHOT</div><h2>Instore mail desk</h2>
+          <p className="muted">Extract mailbox mail, link every sender to a contact, flag missing links, and ask Gemma/flash for the next field action.</p></div>
+        <div className="button-row">
+          <button className="secondary-button" onClick={load} disabled={busy}><RefreshCw size={15} /> Refresh</button>
+          <button className="primary-button" onClick={sync} disabled={busy}><Mail size={15} /> {busy ? "Working..." : "Sync mails"}</button>
+        </div>
+      </div>
+      <div className="metric-grid">
+        <Metric icon={Mail} label="Mails" value={insights.total ?? "--"} detail={`${insights.linked || 0} linked / ${insights.unlinked || 0} missing`} accent />
+        <Metric icon={Link2} label="Missing links" value={missing.count ?? "--"} detail={Object.keys(missing.domains || {}).slice(0, 3).join(", ") || "no sender gaps"} />
+        <Metric icon={UploadCloud} label="Attachments" value={insights.attachments ?? "--"} detail={Object.entries(insights.attachment_purposes || {}).slice(0, 2).map(([k, v]) => `${v} ${k}`).join(" / ") || "none classified"} />
+        <Metric icon={Sparkles} label="Link accuracy" value={`${insights.accuracy_pct ?? "--"}%`} detail={`forecast ${insights.forecast_next_month_mails ?? 0} mails next month`} />
+      </div>
+      {!summary?.data_available && (
+        <div className="empty-state"><Mail size={22} /><p>No instore mail snapshot yet.</p><small>Sync a connected mailbox or the interaction dump to build the first snapshot.</small></div>
+      )}
+      <div className="two-column">
+        <section className="panel">
+          <div className="panel-heading"><div><div className="section-kicker">LATEST MAIL</div><h3>Sender ? contact links</h3></div><Mail size={19} className="muted" /></div>
+          <div className="mini-stats" style={{ marginBottom: 12 }}>
+            {Object.entries(insights.by_intent || {}).slice(0, 6).map(([intent, count]) => <span key={intent}><b>{count}</b> {intent}</span>)}
+          </div>
+          <div className="table-wrap"><table><thead><tr><th>Subject / sender</th><th>Date</th><th>Intent</th><th>Link</th></tr></thead><tbody>
+            {mails.map((mail) => <tr key={mail.id}><td className="table-person"><b>{mail.subject || "(no subject)"}</b><small>{mail.from_email || mail.to || "unknown sender"} {mail.company ? `? ${mail.company}` : ""}</small></td><td>{String(mail.date || "").slice(0, 16)}</td><td>{mail.intent}</td><td><span className={`status-pill ${mail.contact_id ? "approved" : "rejected"}`}>{mail.contact_id ? "linked" : "missing"}</span></td></tr>)}
+            {!mails.length && <tr><td colSpan={4}><small className="muted">No mails in the current snapshot.</small></td></tr>}
+          </tbody></table></div>
+          {(missing.samples || []).length > 0 && <div className="status-breakdown" style={{ marginTop: 12 }}>
+            {(missing.samples || []).slice(0, 6).map((item) => <span className="status-chip warn" key={`${item.from_email}-${item.subject}`}><b>{item.from_email || item.domain}</b> {item.subject?.slice(0, 40)}</span>)}
+          </div>}
+        </section>
+        <section className="panel">
+          <div className="panel-heading"><div><div className="section-kicker">DYNAMIC PROMPT / HUMAN EXPERTISE</div><h3>Ask the mail desk</h3></div><Bot size={19} className="muted" /></div>
+          <form onSubmit={ask}>
+            <div className="form-grid">
+              <select value={expertise} onChange={(event) => setExpertise(event.target.value)}>
+                {(promptInfo?.expertise || []).map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+              </select>
+              <select value={model} onChange={(event) => setModel(event.target.value)}>
+                <option value={models.default || ""}>{models.default || "Gemma"} (default)</option>
+                {models.flash && <option value={models.flash}>{models.flash} (flash fallback)</option>}
+                {models.local && <option value={models.local}>{models.local} (local SLM)</option>}
+              </select>
+            </div>
+            <textarea className="voice-text" rows={4} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Ask about priority accounts, missing links, or the next field action..." />
+            <div className="button-row"><button className="primary-button" disabled={busy}><Send size={15} /> {busy ? "Thinking..." : "Ask"}</button><span className="muted">Gemma 4 ? local SLM ? flash ? echo</span></div>
+          </form>
+          {reply && <div className="review-card"><div className="chat-head"><b>{reply.expertise}</b><small>{reply.model} ? {reply.provider}{reply.fallback_used ? " ? fallback" : ""}</small></div><p style={{ whiteSpace: "pre-wrap" }}>{reply.reply}</p>{reply.notice && <small className="muted">{reply.notice}</small>}</div>}
+          <div className="mini-stats" style={{ marginTop: 14 }}>
+            <span><b>{summary?.graph_stats?.nodes || 0}</b> graph nodes</span>
+            <span><b>{summary?.graph_stats?.edges || 0}</b> edges</span>
+            <span><b>{summary?.source?.kind || "none"}</b> source</span>
+          </div>
         </section>
       </div>
     </div>

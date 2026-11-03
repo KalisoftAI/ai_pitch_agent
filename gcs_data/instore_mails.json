@@ -1,0 +1,1366 @@
+{
+  "generated_at": "2026-11-03T13:44:51.460601+00:00",
+  "data_available": true,
+  "source": {
+    "kind": "interaction_dump",
+    "dump": "gcs_data/interaction_dump.json"
+  },
+  "insights": {
+    "total": 27,
+    "linked": 27,
+    "unlinked": 0,
+    "by_intent": {
+      "order": 22,
+      "general": 5
+    },
+    "by_domain": {
+      "unknown": 27
+    },
+    "attachments": 0,
+    "attachment_purposes": {},
+    "high_priority": 22,
+    "quotes": 0,
+    "orders": 22,
+    "complaints": 0,
+    "monthly_volume": {
+      "2026-10": 27
+    },
+    "forecast_next_month_mails": 27,
+    "accuracy_pct": 100,
+    "accuracy_reasons": {
+      "contact_link_pct": 100,
+      "date_coverage_pct": 100,
+      "intent_coverage_pct": 100
+    }
+  },
+  "mails": [
+    {
+      "id": "interaction_dump:9",
+      "uid": "9",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 13:34:36",
+      "intent": "order",
+      "snippet": "Namaste =50=C5=95=61=74=69=6B=20=42=61=C4=BA=C4=8F=6F=74=61=20=53=75=62=73=69= ji, your Kalika Enterprises order LOC-20261014-001 (Rs. 80,000) status: Completed. Reply here for any change in quantity",
+      "body": "Namaste =50=C5=95=61=74=69=6B=20=42=61=C4=BA=C4=8F=6F=74=61=20=53=75=62=73=69= ji, your Kalika Enterprises order LOC-20261014-001 (Rs. 80,000) status: Completed. Reply here for any change in quantity ",
+      "to": "919260760760",
+      "to_phone": "9260760760",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 3469,
+      "company": "Ca",
+      "priority": "high"
+    },
+    {
+      "id": "interaction_dump:8",
+      "uid": "8",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 13:34:36",
+      "intent": "order",
+      "snippet": "Namaste Kunal Industrial Buying ji, your Kalika Enterprises order LOC-20261001-025 (Rs. 137,600) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "body": "Namaste Kunal Industrial Buying ji, your Kalika Enterprises order LOC-20261001-025 (Rs. 137,600) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "to": "918800742406",
+      "to_phone": "8800742406",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 65,
+      "company": "no",
+      "priority": "high"
+    },
+    {
+      "id": "interaction_dump:7",
+      "uid": "7",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 13:34:36",
+      "intent": "order",
+      "snippet": "Namaste Lunar SPECIALITY ENTERPRISES PVT LTD ji, your Kalika Enterprises order LOC-012 (Rs. 157,000) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "body": "Namaste Lunar SPECIALITY ENTERPRISES PVT LTD ji, your Kalika Enterprises order LOC-012 (Rs. 157,000) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "to": "918550900028",
+      "to_phone": "8550900028",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 4245,
+      "company": "@mit",
+      "priority": "high"
+    },
+    {
+      "id": "interaction_dump:6",
+      "uid": "6",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 13:34:36",
+      "intent": "order",
+      "snippet": "Namaste Optimal Brand Infrared Thermometer ji, your Kalika Enterprises order LOC-20261004-013 (Rs. 166,000) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solution",
+      "body": "Namaste Optimal Brand Infrared Thermometer ji, your Kalika Enterprises order LOC-20261004-013 (Rs. 166,000) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solution",
+      "to": "919960078343",
+      "to_phone": "9960078343",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 6167,
+      "company": "Th",
+      "priority": "high"
+    },
+    {
+      "id": "interaction_dump:27",
+      "uid": "27",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 13:34:36",
+      "intent": "order",
+      "snippet": "Namaste =50=C5=95=61=74=69=6B=20=42=61=C4=BA=C4=8F=6F=74=61=20=53=75=62=73=69= ji, your Kalika Enterprises order LOC-011 (Rs. 0) status: Production In Process. Reply here for any change in quantity or",
+      "body": "Namaste =50=C5=95=61=74=69=6B=20=42=61=C4=BA=C4=8F=6F=74=61=20=53=75=62=73=69= ji, your Kalika Enterprises order LOC-011 (Rs. 0) status: Production In Process. Reply here for any change in quantity or",
+      "to": "919260760760",
+      "to_phone": "9260760760",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 3469,
+      "company": "Ca",
+      "priority": "high"
+    },
+    {
+      "id": "interaction_dump:26",
+      "uid": "26",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 13:34:36",
+      "intent": "order",
+      "snippet": "Namaste Chavan Saheb Mahalaxmi ji, your Kalika Enterprises order LOC-20261016-001 (Rs. 0) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "body": "Namaste Chavan Saheb Mahalaxmi ji, your Kalika Enterprises order LOC-20261016-001 (Rs. 0) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "to": "919860433996",
+      "to_phone": "9860433996",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 5334,
+      "company": "Nagar",
+      "priority": "high"
+    },
+    {
+      "id": "interaction_dump:25",
+      "uid": "25",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 13:34:36",
+      "intent": "order",
+      "snippet": "Namaste Manisha Bhusari ji, your Kalika Enterprises order LOC-017 (Rs. 511) status: New. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "body": "Namaste Manisha Bhusari ji, your Kalika Enterprises order LOC-017 (Rs. 511) status: New. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "to": "918600805201",
+      "to_phone": "8600805201",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 8569,
+      "company": "Rajlaxmi Gruha Udyog",
+      "priority": "high"
+    },
+    {
+      "id": "interaction_dump:24",
+      "uid": "24",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 13:34:36",
+      "intent": "order",
+      "snippet": "Namaste Optimal Brand Infrared Thermometer ji, your Kalika Enterprises order LOC-20261004-006 (Rs. 4,950) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "body": "Namaste Optimal Brand Infrared Thermometer ji, your Kalika Enterprises order LOC-20261004-006 (Rs. 4,950) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "to": "919960078343",
+      "to_phone": "9960078343",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 6167,
+      "company": "Th",
+      "priority": "high"
+    },
+    {
+      "id": "interaction_dump:23",
+      "uid": "23",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 13:34:36",
+      "intent": "order",
+      "snippet": "Namaste Optimal Brand Infrared Thermometer ji, your Kalika Enterprises order LOC-20261004-007 (Rs. 5,310) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "body": "Namaste Optimal Brand Infrared Thermometer ji, your Kalika Enterprises order LOC-20261004-007 (Rs. 5,310) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "to": "919960078343",
+      "to_phone": "9960078343",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 6167,
+      "company": "Th",
+      "priority": "high"
+    },
+    {
+      "id": "interaction_dump:22",
+      "uid": "22",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 13:34:36",
+      "intent": "order",
+      "snippet": "Namaste Optimal Brand Infrared Thermometer ji, your Kalika Enterprises order LOC-20261005-002 (Rs. 16,600) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "body": "Namaste Optimal Brand Infrared Thermometer ji, your Kalika Enterprises order LOC-20261005-002 (Rs. 16,600) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "to": "919960078343",
+      "to_phone": "9960078343",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 6167,
+      "company": "Th",
+      "priority": "high"
+    },
+    {
+      "id": "interaction_dump:21",
+      "uid": "21",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 13:34:36",
+      "intent": "order",
+      "snippet": "Namaste Optimal Brand Infrared Thermometer ji, your Kalika Enterprises order LOC-20261004-005 (Rs. 20,280) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "body": "Namaste Optimal Brand Infrared Thermometer ji, your Kalika Enterprises order LOC-20261004-005 (Rs. 20,280) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "to": "919960078343",
+      "to_phone": "9960078343",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 6167,
+      "company": "Th",
+      "priority": "high"
+    },
+    {
+      "id": "interaction_dump:20",
+      "uid": "20",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 13:34:36",
+      "intent": "order",
+      "snippet": "Namaste Chitamani M-70 ji, your Kalika Enterprises order LOC-20261001-013 (Rs. 22,050) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "body": "Namaste Chitamani M-70 ji, your Kalika Enterprises order LOC-20261001-013 (Rs. 22,050) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "to": "919552533137",
+      "to_phone": "9552533137",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 1161,
+      "company": "Electrical",
+      "priority": "high"
+    },
+    {
+      "id": "interaction_dump:19",
+      "uid": "19",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 13:34:36",
+      "intent": "order",
+      "snippet": "Namaste Parag Joshi Cotmac Industrial Trading ji, your Kalika Enterprises order LOC-20261014-002 (Rs. 27,540) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Soluti",
+      "body": "Namaste Parag Joshi Cotmac Industrial Trading ji, your Kalika Enterprises order LOC-20261014-002 (Rs. 27,540) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Soluti",
+      "to": "919823125529",
+      "to_phone": "9823125529",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 233,
+      "company": "Pune",
+      "priority": "high"
+    },
+    {
+      "id": "interaction_dump:18",
+      "uid": "18",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 13:34:36",
+      "intent": "order",
+      "snippet": "Namaste Optimal Brand Infrared Thermometer ji, your Kalika Enterprises order LOC-20261005-001 (Rs. 33,200) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "body": "Namaste Optimal Brand Infrared Thermometer ji, your Kalika Enterprises order LOC-20261005-001 (Rs. 33,200) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "to": "919960078343",
+      "to_phone": "9960078343",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 6167,
+      "company": "Th",
+      "priority": "high"
+    },
+    {
+      "id": "interaction_dump:17",
+      "uid": "17",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 13:34:36",
+      "intent": "order",
+      "snippet": "Namaste Chavan Saheb Mahalaxmi ji, your Kalika Enterprises order LOC-010 (Rs. 41,250) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "body": "Namaste Chavan Saheb Mahalaxmi ji, your Kalika Enterprises order LOC-010 (Rs. 41,250) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "to": "919860433996",
+      "to_phone": "9860433996",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 5334,
+      "company": "Nagar",
+      "priority": "high"
+    },
+    {
+      "id": "interaction_dump:16",
+      "uid": "16",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 13:34:36",
+      "intent": "order",
+      "snippet": "Namaste Chitamani M-70 ji, your Kalika Enterprises order LOC-20261018-001 (Rs. 44,100) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "body": "Namaste Chitamani M-70 ji, your Kalika Enterprises order LOC-20261018-001 (Rs. 44,100) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "to": "919552533137",
+      "to_phone": "9552533137",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 1161,
+      "company": "Electrical",
+      "priority": "high"
+    },
+    {
+      "id": "interaction_dump:15",
+      "uid": "15",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 13:34:36",
+      "intent": "order",
+      "snippet": "Namaste Optimal Brand Infrared Thermometer ji, your Kalika Enterprises order LOC-20261012-001 (Rs. 49,500) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "body": "Namaste Optimal Brand Infrared Thermometer ji, your Kalika Enterprises order LOC-20261012-001 (Rs. 49,500) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "to": "919960078343",
+      "to_phone": "9960078343",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 6167,
+      "company": "Th",
+      "priority": "high"
+    },
+    {
+      "id": "interaction_dump:14",
+      "uid": "14",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 13:34:36",
+      "intent": "order",
+      "snippet": "Namaste Optimal Brand Infrared Thermometer ji, your Kalika Enterprises order LOC-20261011-005 (Rs. 49,500) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "body": "Namaste Optimal Brand Infrared Thermometer ji, your Kalika Enterprises order LOC-20261011-005 (Rs. 49,500) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "to": "919960078343",
+      "to_phone": "9960078343",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 6167,
+      "company": "Th",
+      "priority": "high"
+    },
+    {
+      "id": "interaction_dump:13",
+      "uid": "13",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 13:34:36",
+      "intent": "order",
+      "snippet": "Namaste Kunal Industrial Buying ji, your Kalika Enterprises order LOC-015 (Rs. 76,000) status: Production In Process. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "body": "Namaste Kunal Industrial Buying ji, your Kalika Enterprises order LOC-015 (Rs. 76,000) status: Production In Process. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "to": "918800742406",
+      "to_phone": "8800742406",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 65,
+      "company": "no",
+      "priority": "high"
+    },
+    {
+      "id": "interaction_dump:12",
+      "uid": "12",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 13:34:36",
+      "intent": "order",
+      "snippet": "Namaste Kunal Industrial Buying ji, your Kalika Enterprises order LOC-20261001-006 (Rs. 76,000) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "body": "Namaste Kunal Industrial Buying ji, your Kalika Enterprises order LOC-20261001-006 (Rs. 76,000) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "to": "918800742406",
+      "to_phone": "8800742406",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 65,
+      "company": "no",
+      "priority": "high"
+    },
+    {
+      "id": "interaction_dump:11",
+      "uid": "11",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 13:34:36",
+      "intent": "order",
+      "snippet": "Namaste Jadhav N. K ji, your Kalika Enterprises order LOC-20261009-007 (Rs. 79,000) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "body": "Namaste Jadhav N. K ji, your Kalika Enterprises order LOC-20261009-007 (Rs. 79,000) status: Completed. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "to": "919833221233",
+      "to_phone": "9833221233",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 7907,
+      "company": "Refman Engineering Equipments Pvt. Ltd.",
+      "priority": "high"
+    },
+    {
+      "id": "interaction_dump:10",
+      "uid": "10",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 13:34:36",
+      "intent": "order",
+      "snippet": "Namaste Kunal Industrial Buying ji, your Kalika Enterprises order LOC-006 (Rs. 79,500) status: New. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "body": "Namaste Kunal Industrial Buying ji, your Kalika Enterprises order LOC-006 (Rs. 79,500) status: New. Reply here for any change in quantity or delivery schedule. - Ai.Solutions",
+      "to": "918800742406",
+      "to_phone": "8800742406",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 65,
+      "company": "no",
+      "priority": "high"
+    },
+    {
+      "id": "interaction_dump:5",
+      "uid": "5",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 12:48:00",
+      "intent": "general",
+      "snippet": "Namaste Sir/Madam ji, welcome to Kalika Enterprises! Our product catalogue: https://storage.googleapis.com/kalika_enterprises/ERP-V1/New_kalika_enterprises_catalog.pdf. Popular rates: Stretch film 23-",
+      "body": "Namaste Sir/Madam ji, welcome to Kalika Enterprises! Our product catalogue: https://storage.googleapis.com/kalika_enterprises/ERP-V1/New_kalika_enterprises_catalog.pdf. Popular rates: Stretch film 23-",
+      "to": "914024340143",
+      "to_phone": "4024340143",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 8759,
+      "company": "",
+      "priority": "normal"
+    },
+    {
+      "id": "interaction_dump:4",
+      "uid": "4",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 12:48:00",
+      "intent": "general",
+      "snippet": "Namaste Sir/Madam ji, welcome to Kalika Enterprises! Our product catalogue: https://storage.googleapis.com/kalika_enterprises/ERP-V1/New_kalika_enterprises_catalog.pdf. Popular rates: Stretch film 23-",
+      "body": "Namaste Sir/Madam ji, welcome to Kalika Enterprises! Our product catalogue: https://storage.googleapis.com/kalika_enterprises/ERP-V1/New_kalika_enterprises_catalog.pdf. Popular rates: Stretch film 23-",
+      "to": "914023456173",
+      "to_phone": "4023456173",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 8757,
+      "company": "",
+      "priority": "normal"
+    },
+    {
+      "id": "interaction_dump:3",
+      "uid": "3",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 12:48:00",
+      "intent": "general",
+      "snippet": "Namaste Sir/Madam ji, welcome to Kalika Enterprises! Our product catalogue: https://storage.googleapis.com/kalika_enterprises/ERP-V1/New_kalika_enterprises_catalog.pdf. Popular rates: Stretch film 23-",
+      "body": "Namaste Sir/Madam ji, welcome to Kalika Enterprises! Our product catalogue: https://storage.googleapis.com/kalika_enterprises/ERP-V1/New_kalika_enterprises_catalog.pdf. Popular rates: Stretch film 23-",
+      "to": "914023456138",
+      "to_phone": "4023456138",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 8756,
+      "company": "",
+      "priority": "normal"
+    },
+    {
+      "id": "interaction_dump:2",
+      "uid": "2",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 12:48:00",
+      "intent": "general",
+      "snippet": "Namaste Sir/Madam ji, welcome to Kalika Enterprises! Our product catalogue: https://storage.googleapis.com/kalika_enterprises/ERP-V1/New_kalika_enterprises_catalog.pdf. Popular rates: Stretch film 23-",
+      "body": "Namaste Sir/Madam ji, welcome to Kalika Enterprises! Our product catalogue: https://storage.googleapis.com/kalika_enterprises/ERP-V1/New_kalika_enterprises_catalog.pdf. Popular rates: Stretch film 23-",
+      "to": "918067859929",
+      "to_phone": "8067859929",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 8752,
+      "company": "Tata Advanced Systems (TASL)",
+      "priority": "normal"
+    },
+    {
+      "id": "interaction_dump:1",
+      "uid": "1",
+      "source": "interaction_dump",
+      "subject": "whatsapp_outbound",
+      "from": "",
+      "from_name": "unknown",
+      "from_email": "",
+      "domain": "",
+      "date": "2026-10-30 12:48:00",
+      "intent": "general",
+      "snippet": "Namaste Sir/Madam ji, welcome to Kalika Enterprises! Our product catalogue: https://storage.googleapis.com/kalika_enterprises/ERP-V1/New_kalika_enterprises_catalog.pdf. Popular rates: Stretch film 23-",
+      "body": "Namaste Sir/Madam ji, welcome to Kalika Enterprises! Our product catalogue: https://storage.googleapis.com/kalika_enterprises/ERP-V1/New_kalika_enterprises_catalog.pdf. Popular rates: Stretch film 23-",
+      "to": "918067859929",
+      "to_phone": "8067859929",
+      "direction": "outbound",
+      "attachments": [],
+      "link_status": "linked_phone",
+      "contact_id": 8752,
+      "company": "Tata Advanced Systems (TASL)",
+      "priority": "normal"
+    }
+  ],
+  "missing_links": {
+    "count": 0,
+    "domains": {},
+    "samples": []
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "mail:interaction_dump:9",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "order"
+      },
+      {
+        "id": "sender:919260760760",
+        "kind": "sender",
+        "label": "unknown"
+      },
+      {
+        "id": "intent:order",
+        "kind": "intent",
+        "label": "order"
+      },
+      {
+        "id": "contact:3469",
+        "kind": "contact",
+        "label": "Ca"
+      },
+      {
+        "id": "mail:interaction_dump:8",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "order"
+      },
+      {
+        "id": "sender:918800742406",
+        "kind": "sender",
+        "label": "unknown"
+      },
+      {
+        "id": "contact:65",
+        "kind": "contact",
+        "label": "no"
+      },
+      {
+        "id": "mail:interaction_dump:7",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "order"
+      },
+      {
+        "id": "sender:918550900028",
+        "kind": "sender",
+        "label": "unknown"
+      },
+      {
+        "id": "contact:4245",
+        "kind": "contact",
+        "label": "@mit"
+      },
+      {
+        "id": "mail:interaction_dump:6",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "order"
+      },
+      {
+        "id": "sender:919960078343",
+        "kind": "sender",
+        "label": "unknown"
+      },
+      {
+        "id": "contact:6167",
+        "kind": "contact",
+        "label": "Th"
+      },
+      {
+        "id": "mail:interaction_dump:27",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "order"
+      },
+      {
+        "id": "mail:interaction_dump:26",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "order"
+      },
+      {
+        "id": "sender:919860433996",
+        "kind": "sender",
+        "label": "unknown"
+      },
+      {
+        "id": "contact:5334",
+        "kind": "contact",
+        "label": "Nagar"
+      },
+      {
+        "id": "mail:interaction_dump:25",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "order"
+      },
+      {
+        "id": "sender:918600805201",
+        "kind": "sender",
+        "label": "unknown"
+      },
+      {
+        "id": "contact:8569",
+        "kind": "contact",
+        "label": "Rajlaxmi Gruha Udyog"
+      },
+      {
+        "id": "mail:interaction_dump:24",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "order"
+      },
+      {
+        "id": "mail:interaction_dump:23",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "order"
+      },
+      {
+        "id": "mail:interaction_dump:22",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "order"
+      },
+      {
+        "id": "mail:interaction_dump:21",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "order"
+      },
+      {
+        "id": "mail:interaction_dump:20",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "order"
+      },
+      {
+        "id": "sender:919552533137",
+        "kind": "sender",
+        "label": "unknown"
+      },
+      {
+        "id": "contact:1161",
+        "kind": "contact",
+        "label": "Electrical"
+      },
+      {
+        "id": "mail:interaction_dump:19",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "order"
+      },
+      {
+        "id": "sender:919823125529",
+        "kind": "sender",
+        "label": "unknown"
+      },
+      {
+        "id": "contact:233",
+        "kind": "contact",
+        "label": "Pune"
+      },
+      {
+        "id": "mail:interaction_dump:18",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "order"
+      },
+      {
+        "id": "mail:interaction_dump:17",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "order"
+      },
+      {
+        "id": "mail:interaction_dump:16",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "order"
+      },
+      {
+        "id": "mail:interaction_dump:15",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "order"
+      },
+      {
+        "id": "mail:interaction_dump:14",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "order"
+      },
+      {
+        "id": "mail:interaction_dump:13",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "order"
+      },
+      {
+        "id": "mail:interaction_dump:12",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "order"
+      },
+      {
+        "id": "mail:interaction_dump:11",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "order"
+      },
+      {
+        "id": "sender:919833221233",
+        "kind": "sender",
+        "label": "unknown"
+      },
+      {
+        "id": "contact:7907",
+        "kind": "contact",
+        "label": "Refman Engineering Equipments Pvt. Ltd."
+      },
+      {
+        "id": "mail:interaction_dump:10",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "order"
+      },
+      {
+        "id": "mail:interaction_dump:5",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "general"
+      },
+      {
+        "id": "sender:914024340143",
+        "kind": "sender",
+        "label": "unknown"
+      },
+      {
+        "id": "intent:general",
+        "kind": "intent",
+        "label": "general"
+      },
+      {
+        "id": "contact:8759",
+        "kind": "contact",
+        "label": "8759"
+      },
+      {
+        "id": "mail:interaction_dump:4",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "general"
+      },
+      {
+        "id": "sender:914023456173",
+        "kind": "sender",
+        "label": "unknown"
+      },
+      {
+        "id": "contact:8757",
+        "kind": "contact",
+        "label": "8757"
+      },
+      {
+        "id": "mail:interaction_dump:3",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "general"
+      },
+      {
+        "id": "sender:914023456138",
+        "kind": "sender",
+        "label": "unknown"
+      },
+      {
+        "id": "contact:8756",
+        "kind": "contact",
+        "label": "8756"
+      },
+      {
+        "id": "mail:interaction_dump:2",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "general"
+      },
+      {
+        "id": "sender:918067859929",
+        "kind": "sender",
+        "label": "unknown"
+      },
+      {
+        "id": "contact:8752",
+        "kind": "contact",
+        "label": "Tata Advanced Systems (TASL)"
+      },
+      {
+        "id": "mail:interaction_dump:1",
+        "kind": "mail",
+        "label": "whatsapp_outbound",
+        "intent": "general"
+      }
+    ],
+    "edges": [
+      {
+        "source": "mail:interaction_dump:9",
+        "target": "sender:919260760760",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:9",
+        "target": "intent:order",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:9",
+        "target": "contact:3469",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:8",
+        "target": "sender:918800742406",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:8",
+        "target": "intent:order",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:8",
+        "target": "contact:65",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:7",
+        "target": "sender:918550900028",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:7",
+        "target": "intent:order",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:7",
+        "target": "contact:4245",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:6",
+        "target": "sender:919960078343",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:6",
+        "target": "intent:order",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:6",
+        "target": "contact:6167",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:27",
+        "target": "sender:919260760760",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:27",
+        "target": "intent:order",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:27",
+        "target": "contact:3469",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:26",
+        "target": "sender:919860433996",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:26",
+        "target": "intent:order",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:26",
+        "target": "contact:5334",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:25",
+        "target": "sender:918600805201",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:25",
+        "target": "intent:order",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:25",
+        "target": "contact:8569",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:24",
+        "target": "sender:919960078343",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:24",
+        "target": "intent:order",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:24",
+        "target": "contact:6167",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:23",
+        "target": "sender:919960078343",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:23",
+        "target": "intent:order",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:23",
+        "target": "contact:6167",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:22",
+        "target": "sender:919960078343",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:22",
+        "target": "intent:order",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:22",
+        "target": "contact:6167",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:21",
+        "target": "sender:919960078343",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:21",
+        "target": "intent:order",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:21",
+        "target": "contact:6167",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:20",
+        "target": "sender:919552533137",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:20",
+        "target": "intent:order",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:20",
+        "target": "contact:1161",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:19",
+        "target": "sender:919823125529",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:19",
+        "target": "intent:order",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:19",
+        "target": "contact:233",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:18",
+        "target": "sender:919960078343",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:18",
+        "target": "intent:order",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:18",
+        "target": "contact:6167",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:17",
+        "target": "sender:919860433996",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:17",
+        "target": "intent:order",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:17",
+        "target": "contact:5334",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:16",
+        "target": "sender:919552533137",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:16",
+        "target": "intent:order",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:16",
+        "target": "contact:1161",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:15",
+        "target": "sender:919960078343",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:15",
+        "target": "intent:order",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:15",
+        "target": "contact:6167",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:14",
+        "target": "sender:919960078343",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:14",
+        "target": "intent:order",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:14",
+        "target": "contact:6167",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:13",
+        "target": "sender:918800742406",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:13",
+        "target": "intent:order",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:13",
+        "target": "contact:65",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:12",
+        "target": "sender:918800742406",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:12",
+        "target": "intent:order",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:12",
+        "target": "contact:65",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:11",
+        "target": "sender:919833221233",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:11",
+        "target": "intent:order",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:11",
+        "target": "contact:7907",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:10",
+        "target": "sender:918800742406",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:10",
+        "target": "intent:order",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:10",
+        "target": "contact:65",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:5",
+        "target": "sender:914024340143",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:5",
+        "target": "intent:general",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:5",
+        "target": "contact:8759",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:4",
+        "target": "sender:914023456173",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:4",
+        "target": "intent:general",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:4",
+        "target": "contact:8757",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:3",
+        "target": "sender:914023456138",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:3",
+        "target": "intent:general",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:3",
+        "target": "contact:8756",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:2",
+        "target": "sender:918067859929",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:2",
+        "target": "intent:general",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:2",
+        "target": "contact:8752",
+        "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:1",
+        "target": "sender:918067859929",
+        "type": "SENT_BY"
+      },
+      {
+        "source": "mail:interaction_dump:1",
+        "target": "intent:general",
+        "type": "HAS_INTENT"
+      },
+      {
+        "source": "mail:interaction_dump:1",
+        "target": "contact:8752",
+        "type": "LINKED_TO_CONTACT"
+      }
+    ],
+    "stats": {
+      "nodes": 55,
+      "edges": 81,
+      "nodes_by_kind": {
+        "mail": 27,
+        "sender": 13,
+        "contact": 13,
+        "intent": 2
+      },
+      "edges_by_type": {
+        "SENT_BY": 27,
+        "HAS_INTENT": 27,
+        "LINKED_TO_CONTACT": 27
+      },
+      "density": 0.02727273
+    }
+  }
+}

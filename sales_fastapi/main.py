@@ -24,6 +24,7 @@ from .routers import (
     feedback_router,
     google_email_router,
     governance_router,
+    instore_router,
     journey_router,
     llm_router,
     ops_router,
@@ -98,6 +99,7 @@ app.include_router(ops_router, prefix=api_prefix)
 app.include_router(events_router, prefix=api_prefix)
 app.include_router(dashboard_router, prefix=api_prefix)
 app.include_router(tally_router, prefix=api_prefix)
+app.include_router(instore_router, prefix=api_prefix)
 app.include_router(team_router, prefix=api_prefix)
 app.include_router(visits_router, prefix=api_prefix)
 app.include_router(users_router, prefix=api_prefix)

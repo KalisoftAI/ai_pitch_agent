@@ -7,7 +7,7 @@ import {
   Truck, TrendingUp, Calculator, Save, Package, FileDown, Bot, Paperclip,
 } from "lucide-react";
 import "./styles.css";
-import { SalesBi, Catalogue, CompanyVisits, SocialAi, Access, TallySalesPanel } from "./features";
+import { SalesBi, Catalogue, CompanyVisits, InstoreMails, SocialAi, Access, TallySalesPanel } from "./features";
 import { KALISOFT_LOGO, KALIKA_LOGO } from "./branding";
 
 const API = "/api";
@@ -32,7 +32,7 @@ async function request(path, options = {}) {
 }
 
 const TAB_TITLES = {
-  dash: "Kalika command center", field: "Field desk", overview: "Good work starts with a clear signal.",
+  dash: "Kalika command center", field: "Field desk", instore: "Instore mail desk", overview: "Good work starts with a clear signal.",
   contacts: "Contacts", email: "Email connections", events: "Events", signals: "Signal desk",
   scheduler: "Scheduler", kpis: "Business KPIs", feedback: "Feedback", pipeline: "Feedback pipeline",
   erp: "ERP & sales forecast", salesbi: "Sales analytics & BI", catalog: "Catalogue & rates",
@@ -45,6 +45,7 @@ const NAV_GROUPS = [
     label: "KALIKA DAILY",
     items: [
       { tab: "dash", label: "Dashboard", icon: Gauge },
+      { tab: "instore", label: "Instore mails", icon: Mail },
       { tab: "visits", label: "Company history", icon: MapPin },
       { tab: "catalog", label: "Catalogue & rates", icon: Package },
       { tab: "field", label: "Field desk", icon: Mic },
@@ -146,6 +147,7 @@ function App() {
       <main className="main">
         <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open menu"><Menu size={20} /></button><div><div className="eyebrow">KALISOFT AI / SALES PIPELINE</div><h1>{TAB_TITLES[tab] || "Outreach"}</h1></div><div className="topbar-actions"><button className="assistant-launch" onClick={() => setAssistantOpen(true)}><img src={KALIKA_LOGO} alt="" /><Bot size={16} /><span>Kalika AI</span></button><EnvBadge env={health?.env} /><button className="text-button" onClick={() => setTour(true)}><Sparkles size={15} /> Take the tour</button><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Settings"><Settings2 size={18} /></button></div></header>
         {tab === "dash" && <KalikaDash onNavigate={setTab} onNotice={setNotice} />}
+        {tab === "instore" && <InstoreMails onNotice={setNotice} />}
         {tab === "field" && <FieldDesk onNotice={setNotice} user={user} />}
         {tab === "overview" && <Overview onNavigate={setTab} onNotice={setNotice} health={health} setHealth={setHealth} />}
         {tab === "contacts" && <Contacts onNotice={setNotice} />}
@@ -2505,6 +2507,8 @@ function KalikaDash({ onNavigate, onNotice }) {
   if (!dash) return <div className="content"><div className="loading-inline"><RefreshCw size={18} className="spin" /> Loading command center...</div></div>;
 
   const p = dash.platform, erp = dash.erp, social = dash.social, voice = dash.voice, comms = dash.comms;
+  const instore = dash.instore || { insights: {}, missing_links: 0 };
+  const field = dash.field || { visits: 0, pending_followups: 0, latest: [] };
   const erpLastSync = p.erp_last_sync ? `${p.erp_last_sync.status} · ${String(p.erp_last_sync.finished_at).slice(0, 16)}` : "never";
   return (
     <div className="content dash">

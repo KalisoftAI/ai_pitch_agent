@@ -22,6 +22,15 @@ class Settings(BaseSettings):
     GCS_PATH_CONTACTS: str = Field(default="all-sales-contacts-data", alias="GCS_PATH_CONTACTS")
     GCS_BUCKET_MEDIA: str = Field(default="kalika_enterprises", alias="GCS_BUCKET_MEDIA")
     GCS_PATH_VISITS: str = Field(default="sales-app/visits/", alias="GCS_PATH_VISITS")
+    # Instore mail extraction: mailbox -> insights JSON -> GCS snapshot.
+    GCS_BUCKET_MAIL: str = Field(default="kalika_enterprises", alias="GCS_BUCKET_MAIL")
+    GCS_PATH_INSTORE_MAILS: str = Field(
+        default="sales-app/instore_mails/", alias="GCS_PATH_INSTORE_MAILS"
+    )
+    INSTORE_MAIL_CACHE_PATH: str = Field(
+        default="gcs_data/instore_mails.json", alias="INSTORE_MAIL_CACHE_PATH"
+    )
+    INSTORE_MAIL_SYNC_LIMIT: int = Field(default=50, alias="INSTORE_MAIL_SYNC_LIMIT")
 
     # --- Database ---
     # If DATABASE_URL is set it wins. Otherwise the app builds a Postgres URL
