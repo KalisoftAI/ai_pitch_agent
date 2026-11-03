@@ -70,9 +70,22 @@ _GENERIC_SUBJECTS = {"", "whatsapp_outbound", "whatsapp_inbound", "mail", "messa
 _WA_NAME_RE = re.compile(r"namaste\s+(.+?)\s+ji", re.IGNORECASE)
 _WA_ORDER_RE = re.compile(r"order\s+(\S+)\s*\(([^)]*)\)\s*status:\s*([^.]+)", re.IGNORECASE)
 _ENTITY_KEYWORDS = (
-    "cummins", "dg", "stretch film", "kflex", "jabil", "instor", "jsw",
-    "ldpe", "lldpe", "hdpe", "poly bag", "polybag", "thermometer",
-    "rate sheet", "price list", "vendor code",
+    "cummins",
+    "dg",
+    "stretch film",
+    "kflex",
+    "jabil",
+    "instor",
+    "jsw",
+    "ldpe",
+    "lldpe",
+    "hdpe",
+    "poly bag",
+    "polybag",
+    "thermometer",
+    "rate sheet",
+    "price list",
+    "vendor code",
 )
 
 
@@ -152,8 +165,7 @@ def _infer_attachments(mail: dict[str, Any]) -> list[dict[str, Any]]:
                 "name": name,
                 "mime_type": str(item.get("mime_type", "")),
                 "size_bytes": int(item.get("size") or item.get("size_bytes") or 0),
-                "purpose": item.get("purpose")
-                or _attachment_purpose(name, subject, body),
+                "purpose": item.get("purpose") or _attachment_purpose(name, subject, body),
             }
         )
     if found:
@@ -163,7 +175,12 @@ def _infer_attachments(mail: dict[str, Any]) -> list[dict[str, Any]]:
         return []
     names = list(dict.fromkeys(match.strip() for match in _FILE_RE.findall(text)))
     return [
-        {"name": name, "mime_type": "", "size_bytes": 0, "purpose": _attachment_purpose(name, subject, body)}
+        {
+            "name": name,
+            "mime_type": "",
+            "size_bytes": 0,
+            "purpose": _attachment_purpose(name, subject, body),
+        }
         for name in names[:6]
     ]
 
@@ -309,7 +326,11 @@ def normalize_mail(raw: dict[str, Any], source: str = "mailbox") -> dict[str, An
         str(raw.get("intent") or "").strip() or infer_intent(f"{subject} {snippet} {body}"),
     )
     uid = str(raw.get("uid") or raw.get("id") or "")
-    mail_id = f"{source}:{uid}" if uid else f"{source}:{hashlib.sha1((subject + email).encode()).hexdigest()[:16]}"
+    mail_id = (
+        f"{source}:{uid}"
+        if uid
+        else f"{source}:{hashlib.sha1((subject + email).encode()).hexdigest()[:16]}"
+    )
     wa = _whatsapp_fields(body or snippet)
     directory = _client_context(email, recipient)
     working_title = _working_title(subject, wa, directory["client"])
@@ -353,7 +374,9 @@ def _graph(mails: list[dict[str, Any]], missing: list[dict[str, Any]]) -> dict[s
         return key
 
     for mail in mails[:500]:
-        mail_node = node(mail["id"], "mail", mail["subject"] or "(no subject)", intent=mail["intent"])
+        mail_node = node(
+            mail["id"], "mail", mail["subject"] or "(no subject)", intent=mail["intent"]
+        )
         sender_value = mail["from_email"] or mail.get("to") or ""
         if sender_value:
             sender_node = node(sender_value, "sender", mail["from_name"] or sender_value)
@@ -367,14 +390,12 @@ def _graph(mails: list[dict[str, Any]], missing: list[dict[str, Any]]) -> dict[s
             attachment_node = node(
                 f"{mail['id']}:{attachment['name']}", "attachment", attachment["name"]
             )
-            edges.append(
-                {"source": mail_node, "target": attachment_node, "type": "HAS_ATTACHMENT"}
-            )
+            edges.append({"source": mail_node, "target": attachment_node, "type": "HAS_ATTACHMENT"})
         if mail.get("contact_id"):
-            contact_node = node(str(mail["contact_id"]), "contact", mail.get("company") or str(mail["contact_id"]))
-            edges.append(
-                {"source": mail_node, "target": contact_node, "type": "LINKED_TO_CONTACT"}
+            contact_node = node(
+                str(mail["contact_id"]), "contact", mail.get("company") or str(mail["contact_id"])
             )
+            edges.append({"source": mail_node, "target": contact_node, "type": "LINKED_TO_CONTACT"})
         for entity in mail.get("entities") or []:
             entity_node = node(entity, "entity", entity)
             edges.append({"source": mail_node, "target": entity_node, "type": "MENTIONS"})
@@ -384,7 +405,13 @@ def _graph(mails: list[dict[str, Any]], missing: list[dict[str, Any]]) -> dict[s
             continue
         missing_node = node(item["from_email"], "missing_link", item["from_email"])
         edges.append(
-            {"source": missing_node, "target": node(item.get("domain") or "unknown", "domain", item.get("domain") or "unknown"), "type": "MISSING_IN_CONTACTS"}
+            {
+                "source": missing_node,
+                "target": node(
+                    item.get("domain") or "unknown", "domain", item.get("domain") or "unknown"
+                ),
+                "type": "MISSING_IN_CONTACTS",
+            }
         )
 
     total = len(nodes)
@@ -431,7 +458,12 @@ def build_insights(
     normalized: list[dict[str, Any]] = []
     missing: list[dict[str, Any]] = []
     for mail in mails:
-        item = normalize_mail(mail, source=(source or {}).get("kind", "mailbox") if source else mail.get("source", "mailbox"))
+        item = normalize_mail(
+            mail,
+            source=(source or {}).get("kind", "mailbox")
+            if source
+            else mail.get("source", "mailbox"),
+        )
         contact, status = _match_contact(
             item["subject"],
             item["snippet"],
@@ -549,7 +581,9 @@ def load_insights(path: str | Path | None = None, *, try_gcs: bool = True) -> di
     return build_insights([], [], source={"kind": "none"})
 
 
-def save_insights(payload: dict[str, Any], path: str | Path | None = None, *, upload: bool = True) -> dict[str, Any]:
+def save_insights(
+    payload: dict[str, Any], path: str | Path | None = None, *, upload: bool = True
+) -> dict[str, Any]:
     target = snapshot_path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     text = json.dumps(payload, indent=2, default=str)
@@ -572,4 +606,4 @@ def load_dump_mails(path: str | Path = "gcs_data/interaction_dump.json") -> list
         payload = json.loads(target.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return []
-    return [ dict(item, direction="outbound") for item in payload.get("mails", []) ]
+    return [dict(item, direction="outbound") for item in payload.get("mails", [])]

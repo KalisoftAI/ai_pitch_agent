@@ -111,7 +111,9 @@ def _mailbox_access(db: Session, user: User, mailbox_id: int) -> tuple[GoogleMai
         try:
             token_data = GoogleOAuthClient().refresh_access_token(refresh)
         except RuntimeError as exc:
-            raise HTTPException(status_code=502, detail="Google OAuth token refresh failed") from exc
+            raise HTTPException(
+                status_code=502, detail="Google OAuth token refresh failed"
+            ) from exc
         token = str(token_data.get("access_token", ""))
         if not token:
             raise HTTPException(status_code=502, detail="Google OAuth token refresh failed")
@@ -270,7 +272,10 @@ def sync(
         resource_type="instore_mails",
         resource_id=str(insights["insights"]["total"]),
         status="ok",
-        detail={"source": source, "elapsed_ms": int((datetime.utcnow() - started).total_seconds() * 1000)},
+        detail={
+            "source": source,
+            "elapsed_ms": int((datetime.utcnow() - started).total_seconds() * 1000),
+        },
         commit=False,
     )
     db.commit()

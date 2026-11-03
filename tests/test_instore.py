@@ -3,8 +3,14 @@ from sales_fastapi.instore_mail import build_insights
 
 def test_build_insights_links_senders_and_attachments():
     contacts = [
-        {"id": 7, "name": "Ravi", "email": "ravi@acme.com", "phone": "9820011122",
-         "domain": "acme.com", "company": "Acme Packaging"},
+        {
+            "id": 7,
+            "name": "Ravi",
+            "email": "ravi@acme.com",
+            "phone": "9820011122",
+            "domain": "acme.com",
+            "company": "Acme Packaging",
+        },
     ]
     mails = [
         {
@@ -65,7 +71,9 @@ def test_instore_summary_and_prompts(client, auth_headers, monkeypatch):
 
 def test_instore_ask_falls_back_to_echo(client, auth_headers, monkeypatch):
     monkeypatch.setattr("sales_fastapi.routers.instore.load_insights", _empty_snapshot)
-    monkeypatch.setattr("sales_fastapi.routers.instore._model_available", lambda provider: provider == "echo")
+    monkeypatch.setattr(
+        "sales_fastapi.routers.instore._model_available", lambda provider: provider == "echo"
+    )
     response = client.post(
         "/api/instore/ask",
         headers=auth_headers,
@@ -199,3 +207,71 @@ def test_visit_samples_sync_is_idempotent(client, auth_headers):
     assert jabil["sales_person"] == "Chandrakant G"
     assert jabil["follow_up_date"] == "2026-11-04"
     assert "IndoSpace" in jabil["meet_home_location"]
+
+
+def test_instore_mails_and_graph_endpoints(client, auth_headers, monkeypatch):
+    snapshot = build_insights(
+        [
+            {"uid": "m1", "from": "Dhiraj Zatale <dhiraj.zatale@jsw.in>",
+             "subject": "Request for Price List_ Cummins DG", "date": "2026-10-29",
+             "snippet": "Please share the updated Cummins DG price list."},
+            {"uid": "m2", "from": "unknown@buyer.in", "subject": "Rate enquiry",
+             "date": "2026-10-30", "snippet": "Please quote."},
+        ],
+        [],
+        source={"kind": "test"},
+    )
+    monkeypatch.setattr("sales_fastapi.routers.instore.load_insights", lambda: snapshot)
+
+    mails = client.get("/api/instore/mails?limit=5", headers=auth_headers)
+    assert mails.status_code == 200, mails.text
+    rows = mails.json()["mails"]
+    jsw = next(row for row in rows if row["from_email"] == "dhiraj.zatale@jsw.in")
+    assert jsw["client_name"] == "JSW (Dhiraj Zatale)"
+    assert jsw["owner_email"] == "neoinsights@neosapien.ai"
+
+    missing = client.get("/api/instore/mails?only_missing=true", headers=auth_headers)
+    assert all(row["contact_id"] == 0 for row in missing.json()["mails"])
+
+    graph = client.get("/api/instore/graph", headers=auth_headers)
+    assert graph.status_code == 200
+    assert graph.json()["stats"]["nodes"] > 0
+
+
+def test_instore_sync_gmail_without_mailbox_returns_400(client, auth_headers):
+    response = client.post("/api/instore/sync", headers=auth_headers, json={"source": "gmail"})
+    assert response.status_code == 400
+
+
+def test_visits_stats_activity_update_delete(client, auth_headers):
+    created = client.post(
+        "/api/visits",
+        headers=auth_headers,
+        json={"company": "Kflex", "visit_date": "2026-11-03", "sales_person": "Vishal K",
+              "outcome": "Lead generated", "follow_up_date": "2026-11-06"},
+    )
+    assert created.status_code == 201, created.text
+    visit_id = created.json()["id"]
+
+    stats = client.get("/api/visits/stats", headers=auth_headers)
+    assert stats.status_code == 200
+    assert stats.json()["visits"] == 1
+
+    activity = client.get("/api/visits/activity", headers=auth_headers)
+    assert activity.status_code == 200
+    assert activity.json()["visits"] == 1
+
+    updated = client.patch(
+        f"/api/visits/{visit_id}", headers=auth_headers,
+        json={"outcome": "Rate finalized", "status": "closed"},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["outcome"] == "Rate finalized"
+
+    single = client.get(f"/api/visits/{visit_id}", headers=auth_headers)
+    assert single.status_code == 200
+
+    deleted = client.delete(f"/api/visits/{visit_id}", headers=auth_headers)
+    assert deleted.status_code == 204
+    gone = client.get(f"/api/visits/{visit_id}", headers=auth_headers)
+    assert gone.status_code == 404

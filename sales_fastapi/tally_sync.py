@@ -100,8 +100,7 @@ def _gcs_sources() -> list[tuple[str, bytes]]:
     ]
     if not blobs:
         raise FileNotFoundError(
-            f"no Tally workbooks under gs://{settings.TALLY_BUCKET}/"
-            f"{settings.TALLY_SALES_PREFIX}"
+            f"no Tally workbooks under gs://{settings.TALLY_BUCKET}/{settings.TALLY_SALES_PREFIX}"
         )
     return [(Path(blob.name).name, blob.download_as_bytes()) for blob in blobs]
 
@@ -169,7 +168,9 @@ def _date(value) -> str:
 
 
 def _period_from_name(name: str) -> str:
-    match = re.search(r"(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z]*[-_ ]?(\d{2,4})", name.upper())
+    match = re.search(
+        r"(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z]*[-_ ]?(\d{2,4})", name.upper()
+    )
     if not match:
         return ""
     month = _MONTHS[match.group(1)]
@@ -440,10 +441,10 @@ def tally_stats(db: Session, period: str | None = None) -> dict:
         base = base.filter(TallySale.period == selected)
     records = base.count()
     total_value = base.with_entities(func.coalesce(func.sum(TallySale.value), 0)).scalar() or 0
-    total_quantity = base.with_entities(func.coalesce(func.sum(TallySale.quantity), 0)).scalar() or 0
-    invoices = (
-        base.with_entities(TallySale.source_file, TallySale.voucher_no).distinct().count()
+    total_quantity = (
+        base.with_entities(func.coalesce(func.sum(TallySale.quantity), 0)).scalar() or 0
     )
+    invoices = base.with_entities(TallySale.source_file, TallySale.voucher_no).distinct().count()
     customers = base.with_entities(func.count(func.distinct(TallySale.buyer))).scalar() or 0
     latest_sale_date = base.with_entities(func.max(TallySale.sale_date)).scalar() or ""
     top_buyers = [
@@ -519,9 +520,7 @@ def list_tally_sales(
         query = query.filter(TallySale.period == selected)
     if buyer:
         query = query.filter(TallySale.buyer.ilike(f"%{buyer}%"))
-    rows = (
-        query.order_by(TallySale.sale_date.desc(), TallySale.value.desc()).limit(limit).all()
-    )
+    rows = query.order_by(TallySale.sale_date.desc(), TallySale.value.desc()).limit(limit).all()
     return [
         {
             "id": row.id,

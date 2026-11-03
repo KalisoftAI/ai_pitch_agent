@@ -96,6 +96,4 @@ def _ensure_columns() -> None:
         ):
             if column not in cols:
                 with engine.begin() as conn:
-                    conn.execute(
-                        text(f"ALTER TABLE company_visits ADD COLUMN {column} {ddl}")
-                    )
+                    conn.execute(text(f"ALTER TABLE company_visits ADD COLUMN {column} {ddl}"))

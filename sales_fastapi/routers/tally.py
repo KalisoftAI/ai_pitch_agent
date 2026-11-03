@@ -91,7 +91,9 @@ async def tally_upload(
         raise HTTPException(status_code=400, detail="A Tally .xls or .xlsx file is required")
     suffix = Path(file.filename).suffix.lower()
     if suffix not in (".xls", ".xlsx"):
-        raise HTTPException(status_code=400, detail="Only .xls and .xlsx Tally exports are supported")
+        raise HTTPException(
+            status_code=400, detail="Only .xls and .xlsx Tally exports are supported"
+        )
     data = await file.read()
     if not data:
         raise HTTPException(status_code=400, detail="Uploaded Tally file is empty")

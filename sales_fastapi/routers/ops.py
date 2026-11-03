@@ -172,7 +172,9 @@ def _rate_context(db: Session, user: User) -> str:
         f"INR {rate.rate:g}/{rate.unit}, effective {rate.effective_date or 'not set'}"
         for rate, product in rows
     ]
-    return "Current approved catalogue rates from the app (do not invent others):\n" + "\n".join(lines)
+    return "Current approved catalogue rates from the app (do not invent others):\n" + "\n".join(
+        lines
+    )
 
 
 def _load_prompts() -> dict:
@@ -243,9 +245,7 @@ def uat_status(user: User = Depends(get_current_user), db: Session = Depends(get
 @router.get("/models")
 def models(user: User = Depends(get_current_user)):
     chat_default = (
-        settings.LLM_GEMMA_MODEL
-        if settings.GEMINI_API_KEY
-        else settings.LLM_CHAT_LOCAL_MODEL
+        settings.LLM_GEMMA_MODEL if settings.GEMINI_API_KEY else settings.LLM_CHAT_LOCAL_MODEL
     )
     items = catalog()
     for item in items:
@@ -431,7 +431,9 @@ def prompt_reviews(
     query = db.query(PromptReview)
     if status:
         if status not in {"pending", "approved", "rejected"}:
-            raise HTTPException(status_code=400, detail="status must be pending, approved or rejected")
+            raise HTTPException(
+                status_code=400, detail="status must be pending, approved or rejected"
+            )
         query = query.filter(PromptReview.status == status)
     rows = query.order_by(PromptReview.id.desc()).limit(limit).all()
     return {

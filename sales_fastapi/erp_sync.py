@@ -345,7 +345,9 @@ def rate_calculator(
             "margin_pct": round((margin / cost) * 100.0, 1) if cost else 0.0,
         },
         "price_share": {
-            "material_pct": round(((weight_kg * polymer_rate) / price) * 100.0, 1) if price else 0.0,
+            "material_pct": round(((weight_kg * polymer_rate) / price) * 100.0, 1)
+            if price
+            else 0.0,
             "waste_pct": round(((waste_kg * polymer_rate) / price) * 100.0, 1) if price else 0.0,
             "conversion_pct": round((conversion / price) * 100.0, 1) if price else 0.0,
             "margin_pct": round((margin / price) * 100.0, 1) if price else 0.0,

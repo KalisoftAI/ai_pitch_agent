@@ -306,16 +306,21 @@ def dashboard_summary(
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     month = today[:7]
     visits = db.query(CompanyVisit).filter(CompanyVisit.user_id == user.id)
-    visit_rows = visits.order_by(CompanyVisit.visit_date.desc(), CompanyVisit.id.desc()).limit(6).all()
+    visit_rows = (
+        visits.order_by(CompanyVisit.visit_date.desc(), CompanyVisit.id.desc()).limit(6).all()
+    )
     by_person = {
         name or "unassigned": int(count)
-        for name, count in visits.with_entities(CompanyVisit.sales_person, func.count(CompanyVisit.id))
+        for name, count in visits.with_entities(
+            CompanyVisit.sales_person, func.count(CompanyVisit.id)
+        )
         .group_by(CompanyVisit.sales_person)
         .all()
     }
     field_block = {
         "visits": visits.count(),
-        "companies": visits.with_entities(func.count(func.distinct(CompanyVisit.company))).scalar() or 0,
+        "companies": visits.with_entities(func.count(func.distinct(CompanyVisit.company))).scalar()
+        or 0,
         "this_month": visits.filter(CompanyVisit.visit_date.like(f"{month}%")).count(),
         "pending_followups": visits.filter(
             CompanyVisit.follow_up_date >= today, CompanyVisit.status != "closed"
