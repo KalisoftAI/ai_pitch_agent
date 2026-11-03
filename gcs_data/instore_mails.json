@@ -1,9 +1,14 @@
 {
-  "generated_at": "2026-11-03T13:44:51.460601+00:00",
+  "generated_at": "2026-11-03T14:31:22.276520+00:00",
   "data_available": true,
   "source": {
-    "kind": "interaction_dump",
-    "dump": "gcs_data/interaction_dump.json"
+    "kind": "auto",
+    "mails": [],
+    "dump_mails": 27,
+    "errors": [
+      "Connect a Google mailbox first",
+      "Connect an IMAP mailbox first"
+    ]
   },
   "insights": {
     "total": 27,
@@ -35,9 +40,9 @@
   },
   "mails": [
     {
-      "id": "interaction_dump:9",
+      "id": "auto:9",
       "uid": "9",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -57,9 +62,9 @@
       "priority": "high"
     },
     {
-      "id": "interaction_dump:8",
+      "id": "auto:8",
       "uid": "8",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -79,9 +84,9 @@
       "priority": "high"
     },
     {
-      "id": "interaction_dump:7",
+      "id": "auto:7",
       "uid": "7",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -101,9 +106,9 @@
       "priority": "high"
     },
     {
-      "id": "interaction_dump:6",
+      "id": "auto:6",
       "uid": "6",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -123,9 +128,9 @@
       "priority": "high"
     },
     {
-      "id": "interaction_dump:27",
+      "id": "auto:27",
       "uid": "27",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -145,9 +150,9 @@
       "priority": "high"
     },
     {
-      "id": "interaction_dump:26",
+      "id": "auto:26",
       "uid": "26",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -167,9 +172,9 @@
       "priority": "high"
     },
     {
-      "id": "interaction_dump:25",
+      "id": "auto:25",
       "uid": "25",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -189,9 +194,9 @@
       "priority": "high"
     },
     {
-      "id": "interaction_dump:24",
+      "id": "auto:24",
       "uid": "24",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -211,9 +216,9 @@
       "priority": "high"
     },
     {
-      "id": "interaction_dump:23",
+      "id": "auto:23",
       "uid": "23",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -233,9 +238,9 @@
       "priority": "high"
     },
     {
-      "id": "interaction_dump:22",
+      "id": "auto:22",
       "uid": "22",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -255,9 +260,9 @@
       "priority": "high"
     },
     {
-      "id": "interaction_dump:21",
+      "id": "auto:21",
       "uid": "21",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -277,9 +282,9 @@
       "priority": "high"
     },
     {
-      "id": "interaction_dump:20",
+      "id": "auto:20",
       "uid": "20",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -299,9 +304,9 @@
       "priority": "high"
     },
     {
-      "id": "interaction_dump:19",
+      "id": "auto:19",
       "uid": "19",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -321,9 +326,9 @@
       "priority": "high"
     },
     {
-      "id": "interaction_dump:18",
+      "id": "auto:18",
       "uid": "18",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -343,9 +348,9 @@
       "priority": "high"
     },
     {
-      "id": "interaction_dump:17",
+      "id": "auto:17",
       "uid": "17",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -365,9 +370,9 @@
       "priority": "high"
     },
     {
-      "id": "interaction_dump:16",
+      "id": "auto:16",
       "uid": "16",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -387,9 +392,9 @@
       "priority": "high"
     },
     {
-      "id": "interaction_dump:15",
+      "id": "auto:15",
       "uid": "15",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -409,9 +414,9 @@
       "priority": "high"
     },
     {
-      "id": "interaction_dump:14",
+      "id": "auto:14",
       "uid": "14",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -431,9 +436,9 @@
       "priority": "high"
     },
     {
-      "id": "interaction_dump:13",
+      "id": "auto:13",
       "uid": "13",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -453,9 +458,9 @@
       "priority": "high"
     },
     {
-      "id": "interaction_dump:12",
+      "id": "auto:12",
       "uid": "12",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -475,9 +480,9 @@
       "priority": "high"
     },
     {
-      "id": "interaction_dump:11",
+      "id": "auto:11",
       "uid": "11",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -497,9 +502,9 @@
       "priority": "high"
     },
     {
-      "id": "interaction_dump:10",
+      "id": "auto:10",
       "uid": "10",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -519,9 +524,9 @@
       "priority": "high"
     },
     {
-      "id": "interaction_dump:5",
+      "id": "auto:5",
       "uid": "5",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -541,9 +546,9 @@
       "priority": "normal"
     },
     {
-      "id": "interaction_dump:4",
+      "id": "auto:4",
       "uid": "4",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -563,9 +568,9 @@
       "priority": "normal"
     },
     {
-      "id": "interaction_dump:3",
+      "id": "auto:3",
       "uid": "3",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -585,9 +590,9 @@
       "priority": "normal"
     },
     {
-      "id": "interaction_dump:2",
+      "id": "auto:2",
       "uid": "2",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -607,9 +612,9 @@
       "priority": "normal"
     },
     {
-      "id": "interaction_dump:1",
+      "id": "auto:1",
       "uid": "1",
-      "source": "interaction_dump",
+      "source": "auto",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -637,7 +642,7 @@
   "graph": {
     "nodes": [
       {
-        "id": "mail:interaction_dump:9",
+        "id": "mail:auto:9",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
@@ -658,7 +663,7 @@
         "label": "Ca"
       },
       {
-        "id": "mail:interaction_dump:8",
+        "id": "mail:auto:8",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
@@ -674,7 +679,7 @@
         "label": "no"
       },
       {
-        "id": "mail:interaction_dump:7",
+        "id": "mail:auto:7",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
@@ -690,7 +695,7 @@
         "label": "@mit"
       },
       {
-        "id": "mail:interaction_dump:6",
+        "id": "mail:auto:6",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
@@ -706,13 +711,13 @@
         "label": "Th"
       },
       {
-        "id": "mail:interaction_dump:27",
+        "id": "mail:auto:27",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:interaction_dump:26",
+        "id": "mail:auto:26",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
@@ -728,7 +733,7 @@
         "label": "Nagar"
       },
       {
-        "id": "mail:interaction_dump:25",
+        "id": "mail:auto:25",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
@@ -744,31 +749,31 @@
         "label": "Rajlaxmi Gruha Udyog"
       },
       {
-        "id": "mail:interaction_dump:24",
+        "id": "mail:auto:24",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:interaction_dump:23",
+        "id": "mail:auto:23",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:interaction_dump:22",
+        "id": "mail:auto:22",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:interaction_dump:21",
+        "id": "mail:auto:21",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:interaction_dump:20",
+        "id": "mail:auto:20",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
@@ -784,7 +789,7 @@
         "label": "Electrical"
       },
       {
-        "id": "mail:interaction_dump:19",
+        "id": "mail:auto:19",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
@@ -800,49 +805,49 @@
         "label": "Pune"
       },
       {
-        "id": "mail:interaction_dump:18",
+        "id": "mail:auto:18",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:interaction_dump:17",
+        "id": "mail:auto:17",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:interaction_dump:16",
+        "id": "mail:auto:16",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:interaction_dump:15",
+        "id": "mail:auto:15",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:interaction_dump:14",
+        "id": "mail:auto:14",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:interaction_dump:13",
+        "id": "mail:auto:13",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:interaction_dump:12",
+        "id": "mail:auto:12",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:interaction_dump:11",
+        "id": "mail:auto:11",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
@@ -858,13 +863,13 @@
         "label": "Refman Engineering Equipments Pvt. Ltd."
       },
       {
-        "id": "mail:interaction_dump:10",
+        "id": "mail:auto:10",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:interaction_dump:5",
+        "id": "mail:auto:5",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "general"
@@ -885,7 +890,7 @@
         "label": "8759"
       },
       {
-        "id": "mail:interaction_dump:4",
+        "id": "mail:auto:4",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "general"
@@ -901,7 +906,7 @@
         "label": "8757"
       },
       {
-        "id": "mail:interaction_dump:3",
+        "id": "mail:auto:3",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "general"
@@ -917,7 +922,7 @@
         "label": "8756"
       },
       {
-        "id": "mail:interaction_dump:2",
+        "id": "mail:auto:2",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "general"
@@ -933,7 +938,7 @@
         "label": "Tata Advanced Systems (TASL)"
       },
       {
-        "id": "mail:interaction_dump:1",
+        "id": "mail:auto:1",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "general"
@@ -941,407 +946,407 @@
     ],
     "edges": [
       {
-        "source": "mail:interaction_dump:9",
+        "source": "mail:auto:9",
         "target": "sender:919260760760",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:9",
+        "source": "mail:auto:9",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:9",
+        "source": "mail:auto:9",
         "target": "contact:3469",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:8",
+        "source": "mail:auto:8",
         "target": "sender:918800742406",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:8",
+        "source": "mail:auto:8",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:8",
+        "source": "mail:auto:8",
         "target": "contact:65",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:7",
+        "source": "mail:auto:7",
         "target": "sender:918550900028",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:7",
+        "source": "mail:auto:7",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:7",
+        "source": "mail:auto:7",
         "target": "contact:4245",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:6",
+        "source": "mail:auto:6",
         "target": "sender:919960078343",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:6",
+        "source": "mail:auto:6",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:6",
+        "source": "mail:auto:6",
         "target": "contact:6167",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:27",
+        "source": "mail:auto:27",
         "target": "sender:919260760760",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:27",
+        "source": "mail:auto:27",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:27",
+        "source": "mail:auto:27",
         "target": "contact:3469",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:26",
+        "source": "mail:auto:26",
         "target": "sender:919860433996",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:26",
+        "source": "mail:auto:26",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:26",
+        "source": "mail:auto:26",
         "target": "contact:5334",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:25",
+        "source": "mail:auto:25",
         "target": "sender:918600805201",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:25",
+        "source": "mail:auto:25",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:25",
+        "source": "mail:auto:25",
         "target": "contact:8569",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:24",
+        "source": "mail:auto:24",
         "target": "sender:919960078343",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:24",
+        "source": "mail:auto:24",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:24",
+        "source": "mail:auto:24",
         "target": "contact:6167",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:23",
+        "source": "mail:auto:23",
         "target": "sender:919960078343",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:23",
+        "source": "mail:auto:23",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:23",
+        "source": "mail:auto:23",
         "target": "contact:6167",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:22",
+        "source": "mail:auto:22",
         "target": "sender:919960078343",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:22",
+        "source": "mail:auto:22",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:22",
+        "source": "mail:auto:22",
         "target": "contact:6167",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:21",
+        "source": "mail:auto:21",
         "target": "sender:919960078343",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:21",
+        "source": "mail:auto:21",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:21",
+        "source": "mail:auto:21",
         "target": "contact:6167",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:20",
+        "source": "mail:auto:20",
         "target": "sender:919552533137",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:20",
+        "source": "mail:auto:20",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:20",
+        "source": "mail:auto:20",
         "target": "contact:1161",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:19",
+        "source": "mail:auto:19",
         "target": "sender:919823125529",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:19",
+        "source": "mail:auto:19",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:19",
+        "source": "mail:auto:19",
         "target": "contact:233",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:18",
+        "source": "mail:auto:18",
         "target": "sender:919960078343",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:18",
+        "source": "mail:auto:18",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:18",
+        "source": "mail:auto:18",
         "target": "contact:6167",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:17",
+        "source": "mail:auto:17",
         "target": "sender:919860433996",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:17",
+        "source": "mail:auto:17",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:17",
+        "source": "mail:auto:17",
         "target": "contact:5334",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:16",
+        "source": "mail:auto:16",
         "target": "sender:919552533137",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:16",
+        "source": "mail:auto:16",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:16",
+        "source": "mail:auto:16",
         "target": "contact:1161",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:15",
+        "source": "mail:auto:15",
         "target": "sender:919960078343",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:15",
+        "source": "mail:auto:15",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:15",
+        "source": "mail:auto:15",
         "target": "contact:6167",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:14",
+        "source": "mail:auto:14",
         "target": "sender:919960078343",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:14",
+        "source": "mail:auto:14",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:14",
+        "source": "mail:auto:14",
         "target": "contact:6167",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:13",
+        "source": "mail:auto:13",
         "target": "sender:918800742406",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:13",
+        "source": "mail:auto:13",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:13",
+        "source": "mail:auto:13",
         "target": "contact:65",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:12",
+        "source": "mail:auto:12",
         "target": "sender:918800742406",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:12",
+        "source": "mail:auto:12",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:12",
+        "source": "mail:auto:12",
         "target": "contact:65",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:11",
+        "source": "mail:auto:11",
         "target": "sender:919833221233",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:11",
+        "source": "mail:auto:11",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:11",
+        "source": "mail:auto:11",
         "target": "contact:7907",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:10",
+        "source": "mail:auto:10",
         "target": "sender:918800742406",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:10",
+        "source": "mail:auto:10",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:10",
+        "source": "mail:auto:10",
         "target": "contact:65",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:5",
+        "source": "mail:auto:5",
         "target": "sender:914024340143",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:5",
+        "source": "mail:auto:5",
         "target": "intent:general",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:5",
+        "source": "mail:auto:5",
         "target": "contact:8759",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:4",
+        "source": "mail:auto:4",
         "target": "sender:914023456173",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:4",
+        "source": "mail:auto:4",
         "target": "intent:general",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:4",
+        "source": "mail:auto:4",
         "target": "contact:8757",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:3",
+        "source": "mail:auto:3",
         "target": "sender:914023456138",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:3",
+        "source": "mail:auto:3",
         "target": "intent:general",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:3",
+        "source": "mail:auto:3",
         "target": "contact:8756",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:2",
+        "source": "mail:auto:2",
         "target": "sender:918067859929",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:2",
+        "source": "mail:auto:2",
         "target": "intent:general",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:2",
+        "source": "mail:auto:2",
         "target": "contact:8752",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:interaction_dump:1",
+        "source": "mail:auto:1",
         "target": "sender:918067859929",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:interaction_dump:1",
+        "source": "mail:auto:1",
         "target": "intent:general",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:interaction_dump:1",
+        "source": "mail:auto:1",
         "target": "contact:8752",
         "type": "LINKED_TO_CONTACT"
       }
