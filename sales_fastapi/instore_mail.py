@@ -329,7 +329,7 @@ def normalize_mail(raw: dict[str, Any], source: str = "mailbox") -> dict[str, An
     mail_id = (
         f"{source}:{uid}"
         if uid
-        else f"{source}:{hashlib.sha1((subject + email).encode()).hexdigest()[:16]}"
+        else f"{source}:{hashlib.sha1((subject + email).encode(), usedforsecurity=False).hexdigest()[:16]}"
     )
     wa = _whatsapp_fields(body or snippet)
     directory = _client_context(email, recipient)
