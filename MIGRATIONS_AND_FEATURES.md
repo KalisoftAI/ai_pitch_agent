@@ -86,3 +86,54 @@ curl https://kalisoft-sales-19782268668.asia-south1.run.app/api/health
 
 Deployed by: ai.solutions@kalisoftai.in
 Image: asia-south1-docker.pkg.dev/gen-lang-client-0132243782/sales-pipeline/kalisoft-sales:a16507f
+
+
+---
+
+## Architecture - High Level
+
+`
+[Browser / Mobile]
+       |
+       v
+Cloud Run :8080 (FastAPI)
+       |
+       +--- Cloud SQL (Postgres)
+       +--- GCS (contacts, mails, tally, erp)
+       +--- Redis (queue, cache)
+`
+
+### Data Flow
+
+`
+WhatsApp/Gmail/IMAP
+       |
+       v
+instore_mail.normalize()
+       |
+       v
+insights.json  -->  GCS snapshot
+       |
+       v
+/api/instore/*  -->  Dashboard UI
+`
+
+### Current Implementation Status
+
+| Component | Status | Module |
+|---|---|---|
+| Mail desk (client mapping) | Live | instore_mail.py, routers/instore.py |
+| Field samples sync | Live | routers/visits.py |
+| Follow-up copy/send | Live | features.jsx |
+| LLM fallback (gemma -> flash -> echo) | Live | llm/providers.py |
+| Rate calculator collapse | Live | main.jsx |
+| Scheduler (cron) | Live | scheduler.py |
+
+### Future Scope
+
+- BigQuery KPI warehouse
+- Multi-tenant RLS
+- Account catalog + billing
+- Knowledge graph DB
+- Smart mail notifications
+- Mobile offline sync
