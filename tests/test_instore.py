@@ -212,11 +212,20 @@ def test_visit_samples_sync_is_idempotent(client, auth_headers):
 def test_instore_mails_and_graph_endpoints(client, auth_headers, monkeypatch):
     snapshot = build_insights(
         [
-            {"uid": "m1", "from": "Dhiraj Zatale <dhiraj.zatale@jsw.in>",
-             "subject": "Request for Price List_ Cummins DG", "date": "2026-10-29",
-             "snippet": "Please share the updated Cummins DG price list."},
-            {"uid": "m2", "from": "unknown@buyer.in", "subject": "Rate enquiry",
-             "date": "2026-10-30", "snippet": "Please quote."},
+            {
+                "uid": "m1",
+                "from": "Dhiraj Zatale <dhiraj.zatale@jsw.in>",
+                "subject": "Request for Price List_ Cummins DG",
+                "date": "2026-10-29",
+                "snippet": "Please share the updated Cummins DG price list.",
+            },
+            {
+                "uid": "m2",
+                "from": "unknown@buyer.in",
+                "subject": "Rate enquiry",
+                "date": "2026-10-30",
+                "snippet": "Please quote.",
+            },
         ],
         [],
         source={"kind": "test"},
@@ -247,8 +256,13 @@ def test_visits_stats_activity_update_delete(client, auth_headers):
     created = client.post(
         "/api/visits",
         headers=auth_headers,
-        json={"company": "Kflex", "visit_date": "2026-11-03", "sales_person": "Vishal K",
-              "outcome": "Lead generated", "follow_up_date": "2026-11-06"},
+        json={
+            "company": "Kflex",
+            "visit_date": "2026-11-03",
+            "sales_person": "Vishal K",
+            "outcome": "Lead generated",
+            "follow_up_date": "2026-11-06",
+        },
     )
     assert created.status_code == 201, created.text
     visit_id = created.json()["id"]
@@ -262,7 +276,8 @@ def test_visits_stats_activity_update_delete(client, auth_headers):
     assert activity.json()["visits"] == 1
 
     updated = client.patch(
-        f"/api/visits/{visit_id}", headers=auth_headers,
+        f"/api/visits/{visit_id}",
+        headers=auth_headers,
         json={"outcome": "Rate finalized", "status": "closed"},
     )
     assert updated.status_code == 200
