@@ -1,14 +1,9 @@
 {
-  "generated_at": "2026-11-03T14:31:22.276520+00:00",
+  "generated_at": "2026-11-03T16:32:17.042661+00:00",
   "data_available": true,
   "source": {
-    "kind": "auto",
-    "mails": [],
-    "dump_mails": 27,
-    "errors": [
-      "Connect a Google mailbox first",
-      "Connect an IMAP mailbox first"
-    ]
+    "kind": "interaction_dump",
+    "dump": "gcs_data/interaction_dump.json"
   },
   "insights": {
     "total": 27,
@@ -30,6 +25,50 @@
     "monthly_volume": {
       "2026-10": 27
     },
+    "by_outcome": {
+      "Completed": 18,
+      "Update": 5,
+      "Production In Process": 2,
+      "New": 2
+    },
+    "top_entities": {
+      "thermometer": 8,
+      "stretch film": 5,
+      "LOC-20261014-001": 1,
+      "LOC-20261001-025": 1,
+      "LOC-012": 1,
+      "LOC-20261004-013": 1,
+      "LOC-011": 1,
+      "LOC-20261016-001": 1,
+      "LOC-017": 1,
+      "LOC-20261004-006": 1,
+      "LOC-20261004-007": 1,
+      "LOC-20261005-002": 1,
+      "LOC-20261004-005": 1,
+      "LOC-20261001-013": 1,
+      "LOC-20261014-002": 1,
+      "LOC-20261005-001": 1,
+      "LOC-010": 1,
+      "LOC-20261018-001": 1,
+      "LOC-20261012-001": 1,
+      "LOC-20261011-005": 1,
+      "LOC-015": 1,
+      "LOC-20261001-006": 1,
+      "LOC-20261009-007": 1,
+      "LOC-006": 1
+    },
+    "clients": {
+      "Optimal Brand Infrared Thermometer": 8,
+      "Sir/Madam": 5,
+      "Kunal Industrial Buying": 4,
+      "Pratik Baldota Subsi": 2,
+      "Chavan Saheb Mahalaxmi": 2,
+      "Chitamani M-70": 2,
+      "Lunar SPECIALITY ENTERPRISES PVT LTD": 1,
+      "Manisha Bhusari": 1,
+      "Parag Joshi Cotmac Industrial Trading": 1,
+      "Jadhav N. K": 1
+    },
     "forecast_next_month_mails": 27,
     "accuracy_pct": 100,
     "accuracy_reasons": {
@@ -40,9 +79,9 @@
   },
   "mails": [
     {
-      "id": "auto:9",
+      "id": "interaction_dump:9",
       "uid": "9",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -50,21 +89,31 @@
       "domain": "",
       "date": "2026-10-30 13:34:36",
       "intent": "order",
-      "snippet": "Namaste =50=C5=95=61=74=69=6B=20=42=61=C4=BA=C4=8F=6F=74=61=20=53=75=62=73=69= ji, your Kalika Enterprises order LOC-20261014-001 (Rs. 80,000) status: Completed. Reply here for any change in quantity",
-      "body": "Namaste =50=C5=95=61=74=69=6B=20=42=61=C4=BA=C4=8F=6F=74=61=20=53=75=62=73=69= ji, your Kalika Enterprises order LOC-20261014-001 (Rs. 80,000) status: Completed. Reply here for any change in quantity ",
+      "snippet": "Namaste Pratik Baldota Subsi= ji, your Kalika Enterprises order LOC-20261014-001 (Rs. 80,000) status: Completed. Reply here for any change in quantity",
+      "body": "Namaste Pratik Baldota Subsi= ji, your Kalika Enterprises order LOC-20261014-001 (Rs. 80,000) status: Completed. Reply here for any change in quantity",
       "to": "919260760760",
       "to_phone": "9260760760",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "Order LOC-20261014-001 (Completed) - Pratik Baldota Subsi",
+      "client_name": "Pratik Baldota Subsi",
+      "owner_email": "",
+      "context": "",
+      "outcome": "Completed",
+      "wa_name": "Pratik Baldota Subsi",
+      "order_ref": "LOC-20261014-001",
+      "entities": [
+        "LOC-20261014-001"
+      ],
       "link_status": "linked_phone",
       "contact_id": 3469,
       "company": "Ca",
       "priority": "high"
     },
     {
-      "id": "auto:8",
+      "id": "interaction_dump:8",
       "uid": "8",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -78,15 +127,25 @@
       "to_phone": "8800742406",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "Order LOC-20261001-025 (Completed) - Kunal Industrial Buying",
+      "client_name": "Kunal Industrial Buying",
+      "owner_email": "",
+      "context": "",
+      "outcome": "Completed",
+      "wa_name": "Kunal Industrial Buying",
+      "order_ref": "LOC-20261001-025",
+      "entities": [
+        "LOC-20261001-025"
+      ],
       "link_status": "linked_phone",
       "contact_id": 65,
       "company": "no",
       "priority": "high"
     },
     {
-      "id": "auto:7",
+      "id": "interaction_dump:7",
       "uid": "7",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -100,15 +159,25 @@
       "to_phone": "8550900028",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "Order LOC-012 (Completed) - Lunar SPECIALITY ENTERPRISES PVT LTD",
+      "client_name": "Lunar SPECIALITY ENTERPRISES PVT LTD",
+      "owner_email": "",
+      "context": "",
+      "outcome": "Completed",
+      "wa_name": "Lunar SPECIALITY ENTERPRISES PVT LTD",
+      "order_ref": "LOC-012",
+      "entities": [
+        "LOC-012"
+      ],
       "link_status": "linked_phone",
       "contact_id": 4245,
       "company": "@mit",
       "priority": "high"
     },
     {
-      "id": "auto:6",
+      "id": "interaction_dump:6",
       "uid": "6",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -122,15 +191,26 @@
       "to_phone": "9960078343",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "Order LOC-20261004-013 (Completed) - Optimal Brand Infrared Thermometer",
+      "client_name": "Optimal Brand Infrared Thermometer",
+      "owner_email": "",
+      "context": "",
+      "outcome": "Completed",
+      "wa_name": "Optimal Brand Infrared Thermometer",
+      "order_ref": "LOC-20261004-013",
+      "entities": [
+        "thermometer",
+        "LOC-20261004-013"
+      ],
       "link_status": "linked_phone",
       "contact_id": 6167,
       "company": "Th",
       "priority": "high"
     },
     {
-      "id": "auto:27",
+      "id": "interaction_dump:27",
       "uid": "27",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -138,21 +218,31 @@
       "domain": "",
       "date": "2026-10-30 13:34:36",
       "intent": "order",
-      "snippet": "Namaste =50=C5=95=61=74=69=6B=20=42=61=C4=BA=C4=8F=6F=74=61=20=53=75=62=73=69= ji, your Kalika Enterprises order LOC-011 (Rs. 0) status: Production In Process. Reply here for any change in quantity or",
-      "body": "Namaste =50=C5=95=61=74=69=6B=20=42=61=C4=BA=C4=8F=6F=74=61=20=53=75=62=73=69= ji, your Kalika Enterprises order LOC-011 (Rs. 0) status: Production In Process. Reply here for any change in quantity or",
+      "snippet": "Namaste Pratik Baldota Subsi= ji, your Kalika Enterprises order LOC-011 (Rs. 0) status: Production In Process. Reply here for any change in quantity or",
+      "body": "Namaste Pratik Baldota Subsi= ji, your Kalika Enterprises order LOC-011 (Rs. 0) status: Production In Process. Reply here for any change in quantity or",
       "to": "919260760760",
       "to_phone": "9260760760",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "Order LOC-011 (Production In Process) - Pratik Baldota Subsi",
+      "client_name": "Pratik Baldota Subsi",
+      "owner_email": "",
+      "context": "",
+      "outcome": "Production In Process",
+      "wa_name": "Pratik Baldota Subsi",
+      "order_ref": "LOC-011",
+      "entities": [
+        "LOC-011"
+      ],
       "link_status": "linked_phone",
       "contact_id": 3469,
       "company": "Ca",
       "priority": "high"
     },
     {
-      "id": "auto:26",
+      "id": "interaction_dump:26",
       "uid": "26",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -166,15 +256,25 @@
       "to_phone": "9860433996",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "Order LOC-20261016-001 (Completed) - Chavan Saheb Mahalaxmi",
+      "client_name": "Chavan Saheb Mahalaxmi",
+      "owner_email": "",
+      "context": "",
+      "outcome": "Completed",
+      "wa_name": "Chavan Saheb Mahalaxmi",
+      "order_ref": "LOC-20261016-001",
+      "entities": [
+        "LOC-20261016-001"
+      ],
       "link_status": "linked_phone",
       "contact_id": 5334,
       "company": "Nagar",
       "priority": "high"
     },
     {
-      "id": "auto:25",
+      "id": "interaction_dump:25",
       "uid": "25",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -188,15 +288,25 @@
       "to_phone": "8600805201",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "Order LOC-017 (New) - Manisha Bhusari",
+      "client_name": "Manisha Bhusari",
+      "owner_email": "",
+      "context": "",
+      "outcome": "New",
+      "wa_name": "Manisha Bhusari",
+      "order_ref": "LOC-017",
+      "entities": [
+        "LOC-017"
+      ],
       "link_status": "linked_phone",
       "contact_id": 8569,
       "company": "Rajlaxmi Gruha Udyog",
       "priority": "high"
     },
     {
-      "id": "auto:24",
+      "id": "interaction_dump:24",
       "uid": "24",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -210,15 +320,26 @@
       "to_phone": "9960078343",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "Order LOC-20261004-006 (Completed) - Optimal Brand Infrared Thermometer",
+      "client_name": "Optimal Brand Infrared Thermometer",
+      "owner_email": "",
+      "context": "",
+      "outcome": "Completed",
+      "wa_name": "Optimal Brand Infrared Thermometer",
+      "order_ref": "LOC-20261004-006",
+      "entities": [
+        "thermometer",
+        "LOC-20261004-006"
+      ],
       "link_status": "linked_phone",
       "contact_id": 6167,
       "company": "Th",
       "priority": "high"
     },
     {
-      "id": "auto:23",
+      "id": "interaction_dump:23",
       "uid": "23",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -232,15 +353,26 @@
       "to_phone": "9960078343",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "Order LOC-20261004-007 (Completed) - Optimal Brand Infrared Thermometer",
+      "client_name": "Optimal Brand Infrared Thermometer",
+      "owner_email": "",
+      "context": "",
+      "outcome": "Completed",
+      "wa_name": "Optimal Brand Infrared Thermometer",
+      "order_ref": "LOC-20261004-007",
+      "entities": [
+        "thermometer",
+        "LOC-20261004-007"
+      ],
       "link_status": "linked_phone",
       "contact_id": 6167,
       "company": "Th",
       "priority": "high"
     },
     {
-      "id": "auto:22",
+      "id": "interaction_dump:22",
       "uid": "22",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -254,15 +386,26 @@
       "to_phone": "9960078343",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "Order LOC-20261005-002 (Completed) - Optimal Brand Infrared Thermometer",
+      "client_name": "Optimal Brand Infrared Thermometer",
+      "owner_email": "",
+      "context": "",
+      "outcome": "Completed",
+      "wa_name": "Optimal Brand Infrared Thermometer",
+      "order_ref": "LOC-20261005-002",
+      "entities": [
+        "thermometer",
+        "LOC-20261005-002"
+      ],
       "link_status": "linked_phone",
       "contact_id": 6167,
       "company": "Th",
       "priority": "high"
     },
     {
-      "id": "auto:21",
+      "id": "interaction_dump:21",
       "uid": "21",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -276,15 +419,26 @@
       "to_phone": "9960078343",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "Order LOC-20261004-005 (Completed) - Optimal Brand Infrared Thermometer",
+      "client_name": "Optimal Brand Infrared Thermometer",
+      "owner_email": "",
+      "context": "",
+      "outcome": "Completed",
+      "wa_name": "Optimal Brand Infrared Thermometer",
+      "order_ref": "LOC-20261004-005",
+      "entities": [
+        "thermometer",
+        "LOC-20261004-005"
+      ],
       "link_status": "linked_phone",
       "contact_id": 6167,
       "company": "Th",
       "priority": "high"
     },
     {
-      "id": "auto:20",
+      "id": "interaction_dump:20",
       "uid": "20",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -298,15 +452,25 @@
       "to_phone": "9552533137",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "Order LOC-20261001-013 (Completed) - Chitamani M-70",
+      "client_name": "Chitamani M-70",
+      "owner_email": "",
+      "context": "",
+      "outcome": "Completed",
+      "wa_name": "Chitamani M-70",
+      "order_ref": "LOC-20261001-013",
+      "entities": [
+        "LOC-20261001-013"
+      ],
       "link_status": "linked_phone",
       "contact_id": 1161,
       "company": "Electrical",
       "priority": "high"
     },
     {
-      "id": "auto:19",
+      "id": "interaction_dump:19",
       "uid": "19",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -320,15 +484,25 @@
       "to_phone": "9823125529",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "Order LOC-20261014-002 (Completed) - Parag Joshi Cotmac Industrial Trading",
+      "client_name": "Parag Joshi Cotmac Industrial Trading",
+      "owner_email": "",
+      "context": "",
+      "outcome": "Completed",
+      "wa_name": "Parag Joshi Cotmac Industrial Trading",
+      "order_ref": "LOC-20261014-002",
+      "entities": [
+        "LOC-20261014-002"
+      ],
       "link_status": "linked_phone",
       "contact_id": 233,
       "company": "Pune",
       "priority": "high"
     },
     {
-      "id": "auto:18",
+      "id": "interaction_dump:18",
       "uid": "18",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -342,15 +516,26 @@
       "to_phone": "9960078343",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "Order LOC-20261005-001 (Completed) - Optimal Brand Infrared Thermometer",
+      "client_name": "Optimal Brand Infrared Thermometer",
+      "owner_email": "",
+      "context": "",
+      "outcome": "Completed",
+      "wa_name": "Optimal Brand Infrared Thermometer",
+      "order_ref": "LOC-20261005-001",
+      "entities": [
+        "thermometer",
+        "LOC-20261005-001"
+      ],
       "link_status": "linked_phone",
       "contact_id": 6167,
       "company": "Th",
       "priority": "high"
     },
     {
-      "id": "auto:17",
+      "id": "interaction_dump:17",
       "uid": "17",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -364,15 +549,25 @@
       "to_phone": "9860433996",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "Order LOC-010 (Completed) - Chavan Saheb Mahalaxmi",
+      "client_name": "Chavan Saheb Mahalaxmi",
+      "owner_email": "",
+      "context": "",
+      "outcome": "Completed",
+      "wa_name": "Chavan Saheb Mahalaxmi",
+      "order_ref": "LOC-010",
+      "entities": [
+        "LOC-010"
+      ],
       "link_status": "linked_phone",
       "contact_id": 5334,
       "company": "Nagar",
       "priority": "high"
     },
     {
-      "id": "auto:16",
+      "id": "interaction_dump:16",
       "uid": "16",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -386,15 +581,25 @@
       "to_phone": "9552533137",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "Order LOC-20261018-001 (Completed) - Chitamani M-70",
+      "client_name": "Chitamani M-70",
+      "owner_email": "",
+      "context": "",
+      "outcome": "Completed",
+      "wa_name": "Chitamani M-70",
+      "order_ref": "LOC-20261018-001",
+      "entities": [
+        "LOC-20261018-001"
+      ],
       "link_status": "linked_phone",
       "contact_id": 1161,
       "company": "Electrical",
       "priority": "high"
     },
     {
-      "id": "auto:15",
+      "id": "interaction_dump:15",
       "uid": "15",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -408,15 +613,26 @@
       "to_phone": "9960078343",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "Order LOC-20261012-001 (Completed) - Optimal Brand Infrared Thermometer",
+      "client_name": "Optimal Brand Infrared Thermometer",
+      "owner_email": "",
+      "context": "",
+      "outcome": "Completed",
+      "wa_name": "Optimal Brand Infrared Thermometer",
+      "order_ref": "LOC-20261012-001",
+      "entities": [
+        "thermometer",
+        "LOC-20261012-001"
+      ],
       "link_status": "linked_phone",
       "contact_id": 6167,
       "company": "Th",
       "priority": "high"
     },
     {
-      "id": "auto:14",
+      "id": "interaction_dump:14",
       "uid": "14",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -430,15 +646,26 @@
       "to_phone": "9960078343",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "Order LOC-20261011-005 (Completed) - Optimal Brand Infrared Thermometer",
+      "client_name": "Optimal Brand Infrared Thermometer",
+      "owner_email": "",
+      "context": "",
+      "outcome": "Completed",
+      "wa_name": "Optimal Brand Infrared Thermometer",
+      "order_ref": "LOC-20261011-005",
+      "entities": [
+        "thermometer",
+        "LOC-20261011-005"
+      ],
       "link_status": "linked_phone",
       "contact_id": 6167,
       "company": "Th",
       "priority": "high"
     },
     {
-      "id": "auto:13",
+      "id": "interaction_dump:13",
       "uid": "13",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -452,15 +679,25 @@
       "to_phone": "8800742406",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "Order LOC-015 (Production In Process) - Kunal Industrial Buying",
+      "client_name": "Kunal Industrial Buying",
+      "owner_email": "",
+      "context": "",
+      "outcome": "Production In Process",
+      "wa_name": "Kunal Industrial Buying",
+      "order_ref": "LOC-015",
+      "entities": [
+        "LOC-015"
+      ],
       "link_status": "linked_phone",
       "contact_id": 65,
       "company": "no",
       "priority": "high"
     },
     {
-      "id": "auto:12",
+      "id": "interaction_dump:12",
       "uid": "12",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -474,15 +711,25 @@
       "to_phone": "8800742406",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "Order LOC-20261001-006 (Completed) - Kunal Industrial Buying",
+      "client_name": "Kunal Industrial Buying",
+      "owner_email": "",
+      "context": "",
+      "outcome": "Completed",
+      "wa_name": "Kunal Industrial Buying",
+      "order_ref": "LOC-20261001-006",
+      "entities": [
+        "LOC-20261001-006"
+      ],
       "link_status": "linked_phone",
       "contact_id": 65,
       "company": "no",
       "priority": "high"
     },
     {
-      "id": "auto:11",
+      "id": "interaction_dump:11",
       "uid": "11",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -496,15 +743,25 @@
       "to_phone": "9833221233",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "Order LOC-20261009-007 (Completed) - Jadhav N. K",
+      "client_name": "Jadhav N. K",
+      "owner_email": "",
+      "context": "",
+      "outcome": "Completed",
+      "wa_name": "Jadhav N. K",
+      "order_ref": "LOC-20261009-007",
+      "entities": [
+        "LOC-20261009-007"
+      ],
       "link_status": "linked_phone",
       "contact_id": 7907,
       "company": "Refman Engineering Equipments Pvt. Ltd.",
       "priority": "high"
     },
     {
-      "id": "auto:10",
+      "id": "interaction_dump:10",
       "uid": "10",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -518,15 +775,25 @@
       "to_phone": "8800742406",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "Order LOC-006 (New) - Kunal Industrial Buying",
+      "client_name": "Kunal Industrial Buying",
+      "owner_email": "",
+      "context": "",
+      "outcome": "New",
+      "wa_name": "Kunal Industrial Buying",
+      "order_ref": "LOC-006",
+      "entities": [
+        "LOC-006"
+      ],
       "link_status": "linked_phone",
       "contact_id": 65,
       "company": "no",
       "priority": "high"
     },
     {
-      "id": "auto:5",
+      "id": "interaction_dump:5",
       "uid": "5",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -540,15 +807,25 @@
       "to_phone": "4024340143",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "WhatsApp update - Sir/Madam",
+      "client_name": "Sir/Madam",
+      "owner_email": "",
+      "context": "",
+      "outcome": "Update",
+      "wa_name": "Sir/Madam",
+      "order_ref": "",
+      "entities": [
+        "stretch film"
+      ],
       "link_status": "linked_phone",
       "contact_id": 8759,
       "company": "",
       "priority": "normal"
     },
     {
-      "id": "auto:4",
+      "id": "interaction_dump:4",
       "uid": "4",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -562,15 +839,25 @@
       "to_phone": "4023456173",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "WhatsApp update - Sir/Madam",
+      "client_name": "Sir/Madam",
+      "owner_email": "",
+      "context": "",
+      "outcome": "Update",
+      "wa_name": "Sir/Madam",
+      "order_ref": "",
+      "entities": [
+        "stretch film"
+      ],
       "link_status": "linked_phone",
       "contact_id": 8757,
       "company": "",
       "priority": "normal"
     },
     {
-      "id": "auto:3",
+      "id": "interaction_dump:3",
       "uid": "3",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -584,15 +871,25 @@
       "to_phone": "4023456138",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "WhatsApp update - Sir/Madam",
+      "client_name": "Sir/Madam",
+      "owner_email": "",
+      "context": "",
+      "outcome": "Update",
+      "wa_name": "Sir/Madam",
+      "order_ref": "",
+      "entities": [
+        "stretch film"
+      ],
       "link_status": "linked_phone",
       "contact_id": 8756,
       "company": "",
       "priority": "normal"
     },
     {
-      "id": "auto:2",
+      "id": "interaction_dump:2",
       "uid": "2",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -606,15 +903,25 @@
       "to_phone": "8067859929",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "WhatsApp update - Sir/Madam",
+      "client_name": "Sir/Madam",
+      "owner_email": "",
+      "context": "",
+      "outcome": "Update",
+      "wa_name": "Sir/Madam",
+      "order_ref": "",
+      "entities": [
+        "stretch film"
+      ],
       "link_status": "linked_phone",
       "contact_id": 8752,
       "company": "Tata Advanced Systems (TASL)",
       "priority": "normal"
     },
     {
-      "id": "auto:1",
+      "id": "interaction_dump:1",
       "uid": "1",
-      "source": "auto",
+      "source": "interaction_dump",
       "subject": "whatsapp_outbound",
       "from": "",
       "from_name": "unknown",
@@ -628,6 +935,16 @@
       "to_phone": "8067859929",
       "direction": "outbound",
       "attachments": [],
+      "working_title": "WhatsApp update - Sir/Madam",
+      "client_name": "Sir/Madam",
+      "owner_email": "",
+      "context": "",
+      "outcome": "Update",
+      "wa_name": "Sir/Madam",
+      "order_ref": "",
+      "entities": [
+        "stretch film"
+      ],
       "link_status": "linked_phone",
       "contact_id": 8752,
       "company": "Tata Advanced Systems (TASL)",
@@ -642,7 +959,7 @@
   "graph": {
     "nodes": [
       {
-        "id": "mail:auto:9",
+        "id": "mail:interaction_dump:9",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
@@ -663,7 +980,12 @@
         "label": "Ca"
       },
       {
-        "id": "mail:auto:8",
+        "id": "entity:LOC-20261014-001",
+        "kind": "entity",
+        "label": "LOC-20261014-001"
+      },
+      {
+        "id": "mail:interaction_dump:8",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
@@ -679,7 +1001,12 @@
         "label": "no"
       },
       {
-        "id": "mail:auto:7",
+        "id": "entity:LOC-20261001-025",
+        "kind": "entity",
+        "label": "LOC-20261001-025"
+      },
+      {
+        "id": "mail:interaction_dump:7",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
@@ -695,7 +1022,12 @@
         "label": "@mit"
       },
       {
-        "id": "mail:auto:6",
+        "id": "entity:LOC-012",
+        "kind": "entity",
+        "label": "LOC-012"
+      },
+      {
+        "id": "mail:interaction_dump:6",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
@@ -711,13 +1043,28 @@
         "label": "Th"
       },
       {
-        "id": "mail:auto:27",
+        "id": "entity:thermometer",
+        "kind": "entity",
+        "label": "thermometer"
+      },
+      {
+        "id": "entity:LOC-20261004-013",
+        "kind": "entity",
+        "label": "LOC-20261004-013"
+      },
+      {
+        "id": "mail:interaction_dump:27",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:auto:26",
+        "id": "entity:LOC-011",
+        "kind": "entity",
+        "label": "LOC-011"
+      },
+      {
+        "id": "mail:interaction_dump:26",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
@@ -733,7 +1080,12 @@
         "label": "Nagar"
       },
       {
-        "id": "mail:auto:25",
+        "id": "entity:LOC-20261016-001",
+        "kind": "entity",
+        "label": "LOC-20261016-001"
+      },
+      {
+        "id": "mail:interaction_dump:25",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
@@ -749,31 +1101,56 @@
         "label": "Rajlaxmi Gruha Udyog"
       },
       {
-        "id": "mail:auto:24",
+        "id": "entity:LOC-017",
+        "kind": "entity",
+        "label": "LOC-017"
+      },
+      {
+        "id": "mail:interaction_dump:24",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:auto:23",
+        "id": "entity:LOC-20261004-006",
+        "kind": "entity",
+        "label": "LOC-20261004-006"
+      },
+      {
+        "id": "mail:interaction_dump:23",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:auto:22",
+        "id": "entity:LOC-20261004-007",
+        "kind": "entity",
+        "label": "LOC-20261004-007"
+      },
+      {
+        "id": "mail:interaction_dump:22",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:auto:21",
+        "id": "entity:LOC-20261005-002",
+        "kind": "entity",
+        "label": "LOC-20261005-002"
+      },
+      {
+        "id": "mail:interaction_dump:21",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:auto:20",
+        "id": "entity:LOC-20261004-005",
+        "kind": "entity",
+        "label": "LOC-20261004-005"
+      },
+      {
+        "id": "mail:interaction_dump:20",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
@@ -789,7 +1166,12 @@
         "label": "Electrical"
       },
       {
-        "id": "mail:auto:19",
+        "id": "entity:LOC-20261001-013",
+        "kind": "entity",
+        "label": "LOC-20261001-013"
+      },
+      {
+        "id": "mail:interaction_dump:19",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
@@ -805,49 +1187,89 @@
         "label": "Pune"
       },
       {
-        "id": "mail:auto:18",
+        "id": "entity:LOC-20261014-002",
+        "kind": "entity",
+        "label": "LOC-20261014-002"
+      },
+      {
+        "id": "mail:interaction_dump:18",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:auto:17",
+        "id": "entity:LOC-20261005-001",
+        "kind": "entity",
+        "label": "LOC-20261005-001"
+      },
+      {
+        "id": "mail:interaction_dump:17",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:auto:16",
+        "id": "entity:LOC-010",
+        "kind": "entity",
+        "label": "LOC-010"
+      },
+      {
+        "id": "mail:interaction_dump:16",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:auto:15",
+        "id": "entity:LOC-20261018-001",
+        "kind": "entity",
+        "label": "LOC-20261018-001"
+      },
+      {
+        "id": "mail:interaction_dump:15",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:auto:14",
+        "id": "entity:LOC-20261012-001",
+        "kind": "entity",
+        "label": "LOC-20261012-001"
+      },
+      {
+        "id": "mail:interaction_dump:14",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:auto:13",
+        "id": "entity:LOC-20261011-005",
+        "kind": "entity",
+        "label": "LOC-20261011-005"
+      },
+      {
+        "id": "mail:interaction_dump:13",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:auto:12",
+        "id": "entity:LOC-015",
+        "kind": "entity",
+        "label": "LOC-015"
+      },
+      {
+        "id": "mail:interaction_dump:12",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:auto:11",
+        "id": "entity:LOC-20261001-006",
+        "kind": "entity",
+        "label": "LOC-20261001-006"
+      },
+      {
+        "id": "mail:interaction_dump:11",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
@@ -863,13 +1285,23 @@
         "label": "Refman Engineering Equipments Pvt. Ltd."
       },
       {
-        "id": "mail:auto:10",
+        "id": "entity:LOC-20261009-007",
+        "kind": "entity",
+        "label": "LOC-20261009-007"
+      },
+      {
+        "id": "mail:interaction_dump:10",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "order"
       },
       {
-        "id": "mail:auto:5",
+        "id": "entity:LOC-006",
+        "kind": "entity",
+        "label": "LOC-006"
+      },
+      {
+        "id": "mail:interaction_dump:5",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "general"
@@ -890,7 +1322,12 @@
         "label": "8759"
       },
       {
-        "id": "mail:auto:4",
+        "id": "entity:stretch film",
+        "kind": "entity",
+        "label": "stretch film"
+      },
+      {
+        "id": "mail:interaction_dump:4",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "general"
@@ -906,7 +1343,7 @@
         "label": "8757"
       },
       {
-        "id": "mail:auto:3",
+        "id": "mail:interaction_dump:3",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "general"
@@ -922,7 +1359,7 @@
         "label": "8756"
       },
       {
-        "id": "mail:auto:2",
+        "id": "mail:interaction_dump:2",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "general"
@@ -938,7 +1375,7 @@
         "label": "Tata Advanced Systems (TASL)"
       },
       {
-        "id": "mail:auto:1",
+        "id": "mail:interaction_dump:1",
         "kind": "mail",
         "label": "whatsapp_outbound",
         "intent": "general"
@@ -946,426 +1383,603 @@
     ],
     "edges": [
       {
-        "source": "mail:auto:9",
+        "source": "mail:interaction_dump:9",
         "target": "sender:919260760760",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:9",
+        "source": "mail:interaction_dump:9",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:9",
+        "source": "mail:interaction_dump:9",
         "target": "contact:3469",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:8",
+        "source": "mail:interaction_dump:9",
+        "target": "entity:LOC-20261014-001",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:8",
         "target": "sender:918800742406",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:8",
+        "source": "mail:interaction_dump:8",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:8",
+        "source": "mail:interaction_dump:8",
         "target": "contact:65",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:7",
+        "source": "mail:interaction_dump:8",
+        "target": "entity:LOC-20261001-025",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:7",
         "target": "sender:918550900028",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:7",
+        "source": "mail:interaction_dump:7",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:7",
+        "source": "mail:interaction_dump:7",
         "target": "contact:4245",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:6",
+        "source": "mail:interaction_dump:7",
+        "target": "entity:LOC-012",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:6",
         "target": "sender:919960078343",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:6",
+        "source": "mail:interaction_dump:6",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:6",
+        "source": "mail:interaction_dump:6",
         "target": "contact:6167",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:27",
+        "source": "mail:interaction_dump:6",
+        "target": "entity:thermometer",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:6",
+        "target": "entity:LOC-20261004-013",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:27",
         "target": "sender:919260760760",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:27",
+        "source": "mail:interaction_dump:27",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:27",
+        "source": "mail:interaction_dump:27",
         "target": "contact:3469",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:26",
+        "source": "mail:interaction_dump:27",
+        "target": "entity:LOC-011",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:26",
         "target": "sender:919860433996",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:26",
+        "source": "mail:interaction_dump:26",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:26",
+        "source": "mail:interaction_dump:26",
         "target": "contact:5334",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:25",
+        "source": "mail:interaction_dump:26",
+        "target": "entity:LOC-20261016-001",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:25",
         "target": "sender:918600805201",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:25",
+        "source": "mail:interaction_dump:25",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:25",
+        "source": "mail:interaction_dump:25",
         "target": "contact:8569",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:24",
+        "source": "mail:interaction_dump:25",
+        "target": "entity:LOC-017",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:24",
         "target": "sender:919960078343",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:24",
+        "source": "mail:interaction_dump:24",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:24",
+        "source": "mail:interaction_dump:24",
         "target": "contact:6167",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:23",
+        "source": "mail:interaction_dump:24",
+        "target": "entity:thermometer",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:24",
+        "target": "entity:LOC-20261004-006",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:23",
         "target": "sender:919960078343",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:23",
+        "source": "mail:interaction_dump:23",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:23",
+        "source": "mail:interaction_dump:23",
         "target": "contact:6167",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:22",
+        "source": "mail:interaction_dump:23",
+        "target": "entity:thermometer",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:23",
+        "target": "entity:LOC-20261004-007",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:22",
         "target": "sender:919960078343",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:22",
+        "source": "mail:interaction_dump:22",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:22",
+        "source": "mail:interaction_dump:22",
         "target": "contact:6167",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:21",
+        "source": "mail:interaction_dump:22",
+        "target": "entity:thermometer",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:22",
+        "target": "entity:LOC-20261005-002",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:21",
         "target": "sender:919960078343",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:21",
+        "source": "mail:interaction_dump:21",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:21",
+        "source": "mail:interaction_dump:21",
         "target": "contact:6167",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:20",
+        "source": "mail:interaction_dump:21",
+        "target": "entity:thermometer",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:21",
+        "target": "entity:LOC-20261004-005",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:20",
         "target": "sender:919552533137",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:20",
+        "source": "mail:interaction_dump:20",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:20",
+        "source": "mail:interaction_dump:20",
         "target": "contact:1161",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:19",
+        "source": "mail:interaction_dump:20",
+        "target": "entity:LOC-20261001-013",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:19",
         "target": "sender:919823125529",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:19",
+        "source": "mail:interaction_dump:19",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:19",
+        "source": "mail:interaction_dump:19",
         "target": "contact:233",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:18",
+        "source": "mail:interaction_dump:19",
+        "target": "entity:LOC-20261014-002",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:18",
         "target": "sender:919960078343",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:18",
+        "source": "mail:interaction_dump:18",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:18",
+        "source": "mail:interaction_dump:18",
         "target": "contact:6167",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:17",
+        "source": "mail:interaction_dump:18",
+        "target": "entity:thermometer",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:18",
+        "target": "entity:LOC-20261005-001",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:17",
         "target": "sender:919860433996",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:17",
+        "source": "mail:interaction_dump:17",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:17",
+        "source": "mail:interaction_dump:17",
         "target": "contact:5334",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:16",
+        "source": "mail:interaction_dump:17",
+        "target": "entity:LOC-010",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:16",
         "target": "sender:919552533137",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:16",
+        "source": "mail:interaction_dump:16",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:16",
+        "source": "mail:interaction_dump:16",
         "target": "contact:1161",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:15",
+        "source": "mail:interaction_dump:16",
+        "target": "entity:LOC-20261018-001",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:15",
         "target": "sender:919960078343",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:15",
+        "source": "mail:interaction_dump:15",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:15",
+        "source": "mail:interaction_dump:15",
         "target": "contact:6167",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:14",
+        "source": "mail:interaction_dump:15",
+        "target": "entity:thermometer",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:15",
+        "target": "entity:LOC-20261012-001",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:14",
         "target": "sender:919960078343",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:14",
+        "source": "mail:interaction_dump:14",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:14",
+        "source": "mail:interaction_dump:14",
         "target": "contact:6167",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:13",
+        "source": "mail:interaction_dump:14",
+        "target": "entity:thermometer",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:14",
+        "target": "entity:LOC-20261011-005",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:13",
         "target": "sender:918800742406",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:13",
+        "source": "mail:interaction_dump:13",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:13",
+        "source": "mail:interaction_dump:13",
         "target": "contact:65",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:12",
+        "source": "mail:interaction_dump:13",
+        "target": "entity:LOC-015",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:12",
         "target": "sender:918800742406",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:12",
+        "source": "mail:interaction_dump:12",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:12",
+        "source": "mail:interaction_dump:12",
         "target": "contact:65",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:11",
+        "source": "mail:interaction_dump:12",
+        "target": "entity:LOC-20261001-006",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:11",
         "target": "sender:919833221233",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:11",
+        "source": "mail:interaction_dump:11",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:11",
+        "source": "mail:interaction_dump:11",
         "target": "contact:7907",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:10",
+        "source": "mail:interaction_dump:11",
+        "target": "entity:LOC-20261009-007",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:10",
         "target": "sender:918800742406",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:10",
+        "source": "mail:interaction_dump:10",
         "target": "intent:order",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:10",
+        "source": "mail:interaction_dump:10",
         "target": "contact:65",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:5",
+        "source": "mail:interaction_dump:10",
+        "target": "entity:LOC-006",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:5",
         "target": "sender:914024340143",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:5",
+        "source": "mail:interaction_dump:5",
         "target": "intent:general",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:5",
+        "source": "mail:interaction_dump:5",
         "target": "contact:8759",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:4",
+        "source": "mail:interaction_dump:5",
+        "target": "entity:stretch film",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:4",
         "target": "sender:914023456173",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:4",
+        "source": "mail:interaction_dump:4",
         "target": "intent:general",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:4",
+        "source": "mail:interaction_dump:4",
         "target": "contact:8757",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:3",
+        "source": "mail:interaction_dump:4",
+        "target": "entity:stretch film",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:3",
         "target": "sender:914023456138",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:3",
+        "source": "mail:interaction_dump:3",
         "target": "intent:general",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:3",
+        "source": "mail:interaction_dump:3",
         "target": "contact:8756",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:2",
+        "source": "mail:interaction_dump:3",
+        "target": "entity:stretch film",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:2",
         "target": "sender:918067859929",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:2",
+        "source": "mail:interaction_dump:2",
         "target": "intent:general",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:2",
+        "source": "mail:interaction_dump:2",
         "target": "contact:8752",
         "type": "LINKED_TO_CONTACT"
       },
       {
-        "source": "mail:auto:1",
+        "source": "mail:interaction_dump:2",
+        "target": "entity:stretch film",
+        "type": "MENTIONS"
+      },
+      {
+        "source": "mail:interaction_dump:1",
         "target": "sender:918067859929",
         "type": "SENT_BY"
       },
       {
-        "source": "mail:auto:1",
+        "source": "mail:interaction_dump:1",
         "target": "intent:general",
         "type": "HAS_INTENT"
       },
       {
-        "source": "mail:auto:1",
+        "source": "mail:interaction_dump:1",
         "target": "contact:8752",
         "type": "LINKED_TO_CONTACT"
+      },
+      {
+        "source": "mail:interaction_dump:1",
+        "target": "entity:stretch film",
+        "type": "MENTIONS"
       }
     ],
     "stats": {
-      "nodes": 55,
-      "edges": 81,
+      "nodes": 79,
+      "edges": 116,
       "nodes_by_kind": {
         "mail": 27,
+        "entity": 24,
         "sender": 13,
         "contact": 13,
         "intent": 2
       },
       "edges_by_type": {
+        "MENTIONS": 35,
         "SENT_BY": 27,
         "HAS_INTENT": 27,
         "LINKED_TO_CONTACT": 27
       },
-      "density": 0.02727273
+      "density": 0.01882506
     }
   }
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  Activity, ArrowUpRight, BarChart3, Bell, BriefcaseBusiness, CalendarDays, Check, ChevronDown,
+  Activity, ArrowUpRight, BarChart3, Bell, BriefcaseBusiness, CalendarDays, Check, ChevronDown, ChevronUp,
   CircleAlert, Clock, Database, Gauge, Link2, LogOut, Mail, MapPin, Menu, MessageSquarePlus, Mic, Plus, RefreshCw,
   Search, Send, Settings2, ShieldCheck, Sparkles, Square, Star, Trash2, UploadCloud, Users, Video, X, Zap,
   Truck, TrendingUp, Calculator, Save, Package, FileDown, Bot, Paperclip,
@@ -32,7 +32,7 @@ async function request(path, options = {}) {
 }
 
 const TAB_TITLES = {
-  dash: "Kalika command center", field: "Field desk", instore: "Instore mail desk", overview: "Good work starts with a clear signal.",
+  dash: "Kalika command center", field: "Field desk", instore: "Mail desk", overview: "Good work starts with a clear signal.",
   contacts: "Contacts", email: "Email connections", events: "Events", signals: "Signal desk",
   scheduler: "Scheduler", kpis: "Business KPIs", feedback: "Feedback", pipeline: "Feedback pipeline",
   erp: "ERP & sales forecast", salesbi: "Sales analytics & BI", catalog: "Catalogue & rates",
@@ -45,7 +45,7 @@ const NAV_GROUPS = [
     label: "KALIKA DAILY",
     items: [
       { tab: "dash", label: "Dashboard", icon: Gauge },
-      { tab: "instore", label: "Instore mails", icon: Mail },
+      { tab: "instore", label: "Mail desk", icon: Mail },
       { tab: "visits", label: "Company history", icon: MapPin },
       { tab: "catalog", label: "Catalogue & rates", icon: Package },
       { tab: "field", label: "Field desk", icon: Mic },
@@ -148,7 +148,7 @@ function App() {
         <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open menu"><Menu size={20} /></button><div><div className="eyebrow">KALISOFT AI / SALES PIPELINE</div><h1>{TAB_TITLES[tab] || "Outreach"}</h1></div><div className="topbar-actions"><button className="assistant-launch" onClick={() => setAssistantOpen(true)}><img src={KALIKA_LOGO} alt="" /><Bot size={16} /><span>Kalika AI</span></button><EnvBadge env={health?.env} /><button className="text-button" onClick={() => setTour(true)}><Sparkles size={15} /> Take the tour</button><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Settings"><Settings2 size={18} /></button></div></header>
         {tab === "dash" && <KalikaDash onNavigate={setTab} onNotice={setNotice} />}
         {tab === "instore" && <InstoreMails onNotice={setNotice} />}
-        {tab === "field" && <FieldDesk onNotice={setNotice} user={user} />}
+        {tab === "field" && <FieldDesk onNotice={setNotice} user={user} onNavigate={setTab} />}
         {tab === "overview" && <Overview onNavigate={setTab} onNotice={setNotice} health={health} setHealth={setHealth} />}
         {tab === "contacts" && <Contacts onNotice={setNotice} />}
         {tab === "email" && <EmailConnections onNotice={setNotice} config={config} />}
@@ -1783,7 +1783,9 @@ function ErpDashboard({ onNotice }) {
   const [calcOut, setCalcOut] = useState(null);
   const [calcBusy, setCalcBusy] = useState(false);
   const [calcError, setCalcError] = useState("");
+  const [calcOpen, setCalcOpen] = useState(() => localStorage.getItem("kalika_calc_open") !== "0");
   const liveCalc = useMemo(() => filmCosting(calc), [calc]);
+  const toggleCalc = () => setCalcOpen((open) => { localStorage.setItem("kalika_calc_open", open ? "0" : "1"); return !open; });
   const result = calcOut || liveCalc;
   const share = result?.price_share || result?.cost_share || {};
 
@@ -1959,12 +1961,14 @@ function ErpDashboard({ onNotice }) {
           </div>
           <div className="calc-panel-actions">
             <span className="calc-assumption">LDPE · density 0.92 g/cm³</span>
+            {result && <span className="calc-status ok"><Sparkles size={14} /> {money(result.price)} live quote</span>}
             <a className="secondary-button calc-doc-link" href="https://storage.googleapis.com/kalika_enterprises/docs/official-docs/POLY%20BAG%20CALACULATION%20SHEET.xlsx" target="_blank" rel="noreferrer"><FileDown size={15} /> Official sheet</a>
             <button type="button" className="secondary-button" onClick={resetCalc}><RefreshCw size={15} /> Reset</button>
+            <button type="button" className="secondary-button" onClick={toggleCalc}>{calcOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />} {calcOpen ? "Collapse" : "Expand"}</button>
           </div>
         </div>
 
-        <div className="calc-layout">
+        {calcOpen && <div className="calc-layout">
           <form className="calc-form" onSubmit={runCalc}>
             <fieldset className="calc-group">
               <legend><span className="calc-step">1</span><Package size={15} /> Film specification</legend>
@@ -2090,7 +2094,7 @@ function ErpDashboard({ onNotice }) {
               <div className="calc-empty"><Calculator size={24} /><p>Enter positive film values to see the quote.</p></div>
             )}
           </aside>
-        </div>
+        </div>}
       </section>
 
       <section className="panel table-panel" style={{ marginTop: 14 }}>
@@ -2645,7 +2649,7 @@ function KalikaDash({ onNavigate, onNotice }) {
 }
 
 // ---------------------------------------------------------------- Field desk (voice -> text -> approve)
-function FieldDesk({ onNotice, user }) {
+function FieldDesk({ onNotice, user, onNavigate }) {
   const [team, setTeam] = useState(null);
   const [note, setNote] = useState("");
   const [recording, setRecording] = useState(false);
@@ -2709,7 +2713,7 @@ function FieldDesk({ onNotice, user }) {
           <h2>Field desk</h2>
           <p className="muted">Record a voice update from the field — it converts to text, then a sales executive approves or rejects it before it reaches the team.</p>
         </div>
-        <button className="secondary-button" onClick={load}><RefreshCw size={15} /> Refresh</button>
+        <div className="button-row"><button className="secondary-button" onClick={() => onNavigate?.("visits")}><MapPin size={15} /> Company history</button><button className="secondary-button" onClick={() => onNavigate?.("erp")}><Calculator size={15} /> Rate calculator</button><button className="secondary-button" onClick={load}><RefreshCw size={15} /> Refresh</button></div>
       </div>
 
       <div className="two-column">

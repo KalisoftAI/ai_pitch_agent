@@ -140,3 +140,62 @@ def test_dashboard_has_instore_and_field_blocks(client, auth_headers):
     assert "field" in body
     assert "missing_links" in body["instore"]
     assert "latest" in body["field"]
+
+
+def test_whatsapp_dump_mail_gets_working_title_and_outcome():
+    payload = build_insights(
+        [
+            {
+                "type": "whatsapp_outbound",
+                "id": 27,
+                "to": "919260760760",
+                "date": "2026-10-30 13:34:36",
+                "body_preview": "Namaste Chavan Saheb Mahalaxmi ji, your Kalika Enterprises order LOC-001 (Rs. 0) status: Completed. Reply here for changes. - Ai.Solutions",
+            }
+        ],
+        [],
+        source={"kind": "interaction_dump"},
+    )
+    mail = payload["mails"][0]
+    assert mail["working_title"].startswith("Order LOC-001 (Completed)")
+    assert "Chavan Saheb Mahalaxmi" in mail["client_name"]
+    assert mail["outcome"] == "Completed"
+    assert payload["insights"]["by_outcome"]["Completed"] == 1
+
+
+def test_client_directory_adds_owner_and_context():
+    payload = build_insights(
+        [
+            {
+                "uid": "c1",
+                "from": "Dhiraj Zatale <dhiraj.zatale@jsw.in>",
+                "subject": "Request for Price List_ Cummins DG",
+                "date": "2026-10-29",
+                "snippet": "Please share the updated Cummins DG price list.",
+            }
+        ],
+        [],
+        source={"kind": "test"},
+    )
+    mail = payload["mails"][0]
+    assert mail["client_name"] == "JSW (Dhiraj Zatale)"
+    assert mail["owner_email"] == "neoinsights@neosapien.ai"
+    assert mail["working_title"] == "Request for Price List_ Cummins DG"
+    assert "cummins" in mail["entities"]
+
+
+def test_visit_samples_sync_is_idempotent(client, auth_headers):
+    first = client.post("/api/visits/samples", headers=auth_headers)
+    assert first.status_code == 200, first.text
+    assert first.json()["created"] == 3
+    second = client.post("/api/visits/samples", headers=auth_headers)
+    assert second.json()["created"] == 0
+    assert second.json()["existing"] == 3
+
+    visits = client.get("/api/visits", headers=auth_headers).json()
+    companies = {visit["company"] for visit in visits}
+    assert {"Kflex", "Jabil", "Ranjangaon MIDC"} <= companies
+    jabil = next(visit for visit in visits if visit["company"] == "Jabil")
+    assert jabil["sales_person"] == "Chandrakant G"
+    assert jabil["follow_up_date"] == "2026-11-04"
+    assert "IndoSpace" in jabil["meet_home_location"]

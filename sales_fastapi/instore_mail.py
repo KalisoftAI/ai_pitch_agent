@@ -15,7 +15,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import quopri
 import re
+import unicodedata
 from datetime import datetime, timezone
 from email.utils import parseaddr
 from pathlib import Path
@@ -48,6 +50,29 @@ _ATTACHMENT_HINTS = (
     "drawing",
     "specification",
     "purchase order",
+)
+
+# Known Kalika clients: give every mail/chat a working client name, the Kalika
+# owner (account manager mailbox) and the context we know from the tracker.
+_CLIENT_DIRECTORY: dict[str, dict[str, str]] = {
+    "rpatil@instorindia.com": {
+        "client": "Instor India (R. Patil)",
+        "owner": "neoinsights@neosapien.ai",
+        "context": "All details and previous chat",
+    },
+    "dhiraj.zatale@jsw.in": {
+        "client": "JSW (Dhiraj Zatale)",
+        "owner": "neoinsights@neosapien.ai",
+        "context": "Request for Price List - Cummins DG",
+    },
+}
+_GENERIC_SUBJECTS = {"", "whatsapp_outbound", "whatsapp_inbound", "mail", "message", "chat"}
+_WA_NAME_RE = re.compile(r"namaste\s+(.+?)\s+ji", re.IGNORECASE)
+_WA_ORDER_RE = re.compile(r"order\s+(\S+)\s*\(([^)]*)\)\s*status:\s*([^.]+)", re.IGNORECASE)
+_ENTITY_KEYWORDS = (
+    "cummins", "dg", "stretch film", "kflex", "jabil", "instor", "jsw",
+    "ldpe", "lldpe", "hdpe", "poly bag", "polybag", "thermometer",
+    "rate sheet", "price list", "vendor code",
 )
 
 
@@ -200,10 +225,82 @@ def _match_contact(
     return None, "unlinked"
 
 
+def _decode_text(text: str) -> str:
+    """Decode quoted-printable tracker/WhatsApp exports into readable text."""
+    if "=" not in text:
+        return text
+    try:
+        decoded = quopri.decodestring(text.encode("utf-8", "ignore")).decode("utf-8", "replace")
+    except Exception:  # noqa: BLE001 - fall back to the raw text
+        return text
+    # Exports mix in accented artifacts (e.g. "P\u0155atik" for "Pratik") and
+    # truncate mid-sequence ("...=") - normalise to clean, readable text.
+    cleaned = "".join(
+        ch for ch in unicodedata.normalize("NFKD", decoded) if not unicodedata.combining(ch)
+    )
+    cleaned = cleaned.rstrip("=").strip()
+    return cleaned if len(cleaned) >= 3 else text
+
+
+def _whatsapp_fields(body: str) -> dict[str, str]:
+    name = ""
+    match = _WA_NAME_RE.search(body or "")
+    if match:
+        name = match.group(1).strip().rstrip("=").strip()
+    order = _WA_ORDER_RE.search(body or "")
+    return {
+        "wa_name": name,
+        "order_ref": order.group(1) if order else "",
+        "order_value": order.group(2) if order else "",
+        "order_status": order.group(3).strip() if order else "",
+    }
+
+
+def _client_context(email: str, phone: str) -> dict[str, str]:
+    return (
+        _CLIENT_DIRECTORY.get(email)
+        or _CLIENT_DIRECTORY.get(_phone_key(phone))
+        or {"client": "", "owner": "", "context": ""}
+    )
+
+
+def _working_title(subject: str, wa: dict[str, str], client: str) -> str:
+    if subject.lower() not in _GENERIC_SUBJECTS:
+        return subject
+    parts = []
+    if wa.get("order_ref"):
+        parts.append(f"Order {wa['order_ref']}")
+    if wa.get("order_status"):
+        parts.append(f"({wa['order_status']})")
+    label = " ".join(parts) or "WhatsApp update"
+    who = client or wa.get("wa_name") or ""
+    return f"{label} - {who}" if who else label
+
+
+def _outcome(intent: str, wa: dict[str, str]) -> str:
+    if wa.get("order_status"):
+        return wa["order_status"]
+    return {
+        "order": "Order update",
+        "quote_request": "RFQ / quote",
+        "payment": "Payment",
+        "complaint": "Complaint",
+        "meeting_request": "Meeting",
+        "procurement": "Procurement",
+    }.get(intent, "Update")
+
+
+def _entities(*texts: str) -> list[str]:
+    text = " ".join(t.lower() for t in texts if t)
+    found = [kw for kw in _ENTITY_KEYWORDS if kw in text]
+    found += re.findall(r"\bLOC-[0-9-]+\b", " ".join(texts))
+    return list(dict.fromkeys(found))[:8]
+
+
 def normalize_mail(raw: dict[str, Any], source: str = "mailbox") -> dict[str, Any]:
     subject = str(raw.get("subject") or raw.get("type") or "").strip()
-    body = str(raw.get("body") or raw.get("body_preview") or "")
-    snippet = str(raw.get("snippet") or body[:400]).strip()
+    body = _decode_text(str(raw.get("body") or raw.get("body_preview") or ""))
+    snippet = _decode_text(str(raw.get("snippet") or body[:400])).strip()
     recipient = str(raw.get("to") or raw.get("recipient") or "")
     name, email, domain = _sender(str(raw.get("from") or raw.get("sender") or ""))
     intent = _intent(
@@ -213,6 +310,11 @@ def normalize_mail(raw: dict[str, Any], source: str = "mailbox") -> dict[str, An
     )
     uid = str(raw.get("uid") or raw.get("id") or "")
     mail_id = f"{source}:{uid}" if uid else f"{source}:{hashlib.sha1((subject + email).encode()).hexdigest()[:16]}"
+    wa = _whatsapp_fields(body or snippet)
+    directory = _client_context(email, recipient)
+    working_title = _working_title(subject, wa, directory["client"])
+    outcome = _outcome(intent, wa)
+    entities = _entities(subject, snippet, body, directory["client"], directory["context"])
     return {
         "id": mail_id,
         "uid": uid,
@@ -230,6 +332,14 @@ def normalize_mail(raw: dict[str, Any], source: str = "mailbox") -> dict[str, An
         "to_phone": _phone_key(recipient),
         "direction": str(raw.get("direction") or "inbound"),
         "attachments": _infer_attachments(raw),
+        "working_title": working_title,
+        "client_name": directory["client"] or wa.get("wa_name", ""),
+        "owner_email": directory["owner"],
+        "context": directory["context"],
+        "outcome": outcome,
+        "wa_name": wa.get("wa_name", ""),
+        "order_ref": wa.get("order_ref", ""),
+        "entities": entities,
     }
 
 
@@ -265,6 +375,9 @@ def _graph(mails: list[dict[str, Any]], missing: list[dict[str, Any]]) -> dict[s
             edges.append(
                 {"source": mail_node, "target": contact_node, "type": "LINKED_TO_CONTACT"}
             )
+        for entity in mail.get("entities") or []:
+            entity_node = node(entity, "entity", entity)
+            edges.append({"source": mail_node, "target": entity_node, "type": "MENTIONS"})
 
     for item in missing[:100]:
         if not (item.get("from_email") or item.get("domain")):
@@ -385,6 +498,11 @@ def build_insights(
             "orders": by_intent.get("order", 0),
             "complaints": by_intent.get("complaint", 0),
             "monthly_volume": dict(sorted(monthly.items())),
+            "by_outcome": _counts(mail["outcome"] for mail in normalized),
+            "top_entities": _counts(
+                entity for mail in normalized for entity in mail.get("entities", [])
+            ),
+            "clients": _counts(mail["client_name"] for mail in normalized if mail["client_name"]),
             "forecast_next_month_mails": next_month,
             "accuracy_pct": accuracy,
             "accuracy_reasons": {

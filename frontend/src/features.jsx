@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   Activity, BarChart3, Bot, BriefcaseBusiness, Building2, CalendarDays, Calculator, Check, Clock,
-  Database, FileDown, Link2, Mail, MapPin, Mic, Package, Plus, RefreshCw, Save, Search, Send, ShieldCheck,
+  Copy, Database, FileDown, Link2, Mail, MapPin, Mic, Package, Plus, RefreshCw, Save, Search, Send, ShieldCheck,
   Sparkles, TrendingUp, Truck, UploadCloud, Users, Video, X,
 } from "lucide-react";
 
@@ -396,6 +396,13 @@ export function CompanyVisits({ onNotice }) {
       await load();
     } catch (error) { onNotice({ type: "error", text: error.message }); }
   };
+  const syncSamples = async () => {
+    try {
+      const result = await request("/visits/samples", { method: "POST" });
+      onNotice({ type: "success", text: `Field samples synced: ${result.created} new, ${result.existing} already present.` });
+      await load();
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+  };
   const upload = async (visit, file) => {
     if (!file) return;
     setUploading(visit.id);
@@ -409,12 +416,31 @@ export function CompanyVisits({ onNotice }) {
     } catch (error) { onNotice({ type: "error", text: error.message }); }
     finally { setUploading(0); }
   };
+  const followUpText = (visit) => {
+    const action = visit.next_action || visit.purpose || "follow-up";
+    return `Follow-up: ${visit.company} (${visit.meet_person || visit.contact_name || "contact"}) on ${visit.follow_up_date || "next visit"} - ${action}. Notes: ${visit.notes || "-"}`.slice(0, 900);
+  };
+  const copyFollowUp = async (visit) => {
+    try {
+      await navigator.clipboard.writeText(followUpText(visit));
+      onNotice({ type: "success", text: `Follow-up for ${visit.company} copied.` });
+    } catch { onNotice({ type: "error", text: "Clipboard unavailable - select and copy manually." }); }
+  };
+  const whatsappLink = (visit) => {
+    const digits = String(visit.contact_phone || "").replace(/\D/g, "");
+    if (!digits) return "";
+    const phone = digits.length === 10 ? `91${digits}` : digits;
+    return `https://wa.me/${phone}?text=${encodeURIComponent(followUpText(visit))}`;
+  };
   return (
     <div className="content dash">
       <div className="page-heading">
         <div><div className="section-kicker">FIELD / COMPANY HISTORY</div><h2>Company visits</h2>
           <p className="muted">Log visits, outcomes, follow-ups and attach photo/video evidence in GCS.</p></div>
-        <button className="secondary-button" onClick={load}><RefreshCw size={15} /> Refresh</button>
+        <div className="button-row">
+          <button className="secondary-button" onClick={load}><RefreshCw size={15} /> Refresh</button>
+          <button className="secondary-button" onClick={syncSamples}><Users size={15} /> Sync samples</button>
+        </div>
       </div>
       <div className="metric-grid">
         <Metric icon={MapPin} label="Visits" value={stats?.visits ?? "--"} detail={`${stats?.companies ?? 0} companies`} accent />
@@ -445,7 +471,7 @@ export function CompanyVisits({ onNotice }) {
         <section className="panel">
           <div className="panel-heading"><div><div className="section-kicker">VISIT HISTORY</div><h3>Recent meetings</h3></div><Building2 size={19} className="muted" /></div>
           <div className="table-wrap"><table><thead><tr><th>Company / person</th><th>Date</th><th>Where &amp; previous point</th><th>Outcome</th><th>Follow-up</th><th>Media</th></tr></thead><tbody>
-            {visits.map((visit) => <tr key={visit.id}><td className="table-person"><b>{visit.company}</b><small>{visit.contact_name || visit.notes?.slice(0, 50)}</small></td><td>{visit.visit_date}</td><td><small><b>{visit.meet_person || visit.meet_home_location || "not captured"}</b>{visit.previous_discussion ? ` ? ${visit.previous_discussion.slice(0, 90)}` : ""}</small>{visit.map_location && <a className="text-button" href={visit.map_location} target="_blank" rel="noreferrer">Map</a>}</td><td>{visit.outcome || visit.status}</td><td>{visit.follow_up_date || "-"}</td><td><label className="text-button">{uploading === visit.id ? "Uploading..." : `${(visit.media || []).length} file(s) +`}<input type="file" accept="image/*,video/*" hidden onChange={(event) => upload(visit, event.target.files?.[0])} /></label></td></tr>)}
+            {visits.map((visit) => <tr key={visit.id}><td className="table-person"><b>{visit.company}</b><small>{visit.contact_name || visit.notes?.slice(0, 50)}</small></td><td>{visit.visit_date}</td><td><small><b>{visit.meet_person || visit.meet_home_location || "not captured"}</b>{visit.previous_discussion ? ` ? ${visit.previous_discussion.slice(0, 90)}` : ""}</small>{visit.map_location && <a className="text-button" href={visit.map_location} target="_blank" rel="noreferrer">Map</a>}</td><td>{visit.outcome || visit.status}</td><td><div className="followup-cell"><span>{visit.follow_up_date || "-"}</span><div className="button-row"><button type="button" className="text-button" onClick={() => copyFollowUp(visit)}><Copy size={12} /> Copy</button>{whatsappLink(visit) && <a className="text-button" href={whatsappLink(visit)} target="_blank" rel="noreferrer"><Send size={12} /> WhatsApp</a>}</div></div></td><td><label className="text-button">{uploading === visit.id ? "Uploading..." : `${(visit.media || []).length} file(s) +`}<input type="file" accept="image/*,video/*" hidden onChange={(event) => upload(visit, event.target.files?.[0])} /></label></td></tr>)}
             {!visits.length && <tr><td colSpan={6}><div className="empty-state"><MapPin size={22} /><p>No visits yet.</p><small>Log the first field meeting.</small></div></td></tr>}
           </tbody></table></div>
         </section>
@@ -504,8 +530,8 @@ export function InstoreMails({ onNotice }) {
   return (
     <div className="content dash">
       <div className="page-heading">
-        <div><div className="section-kicker">INSTORE MAILS / GCS SNAPSHOT</div><h2>Instore mail desk</h2>
-          <p className="muted">Extract mailbox mail, link every sender to a contact, flag missing links, and ask Gemma/flash for the next field action.</p></div>
+        <div><div className="section-kicker">MAIL DESK / GCS SNAPSHOT</div><h2>Mail desk</h2>
+          <p className="muted">Client mails and WhatsApp order updates with working names, outcomes and contact links - ask Gemma/flash for the next field action.</p></div>
         <div className="button-row">
           <button className="secondary-button" onClick={load} disabled={busy}><RefreshCw size={15} /> Refresh</button>
           <button className="primary-button" onClick={sync} disabled={busy}><Mail size={15} /> {busy ? "Working..." : "Sync mails"}</button>
@@ -518,7 +544,7 @@ export function InstoreMails({ onNotice }) {
         <Metric icon={Sparkles} label="Link accuracy" value={`${insights.accuracy_pct ?? "--"}%`} detail={`forecast ${insights.forecast_next_month_mails ?? 0} mails next month`} />
       </div>
       {!summary?.data_available && (
-        <div className="empty-state"><Mail size={22} /><p>No instore mail snapshot yet.</p><small>Sync a connected mailbox or the interaction dump to build the first snapshot.</small></div>
+        <div className="empty-state"><Mail size={22} /><p>No mail snapshot yet.</p><small>Sync a connected mailbox or the interaction dump to build the first snapshot.</small></div>
       )}
       <div className="two-column">
         <section className="panel">
@@ -526,9 +552,25 @@ export function InstoreMails({ onNotice }) {
           <div className="mini-stats" style={{ marginBottom: 12 }}>
             {Object.entries(insights.by_intent || {}).slice(0, 6).map(([intent, count]) => <span key={intent}><b>{count}</b> {intent}</span>)}
           </div>
-          <div className="table-wrap"><table><thead><tr><th>Subject / sender</th><th>Date</th><th>Intent</th><th>Link</th></tr></thead><tbody>
-            {mails.map((mail) => <tr key={mail.id}><td className="table-person"><b>{mail.subject || "(no subject)"}</b><small>{mail.from_email || mail.to || "unknown sender"} {mail.company ? `? ${mail.company}` : ""}</small></td><td>{String(mail.date || "").slice(0, 16)}</td><td>{mail.intent}</td><td><span className={`status-pill ${mail.contact_id ? "approved" : "rejected"}`}>{mail.contact_id ? "linked" : "missing"}</span></td></tr>)}
-            {!mails.length && <tr><td colSpan={4}><small className="muted">No mails in the current snapshot.</small></td></tr>}
+          <div className="table-wrap"><table><thead><tr><th>Mail / client</th><th>Date</th><th>Intent</th><th>Outcome</th><th>Link</th></tr></thead><tbody>
+            {mails.map((mail) => <tr key={mail.id}>
+              <td className="table-person mail-cell">
+                <details className="mail-expand">
+                  <summary><b>{mail.working_title || mail.subject || "(no subject)"}</b><small>{mail.client_name || mail.from_email || mail.to || "unknown sender"}{mail.owner_email ? ` ? owner ${mail.owner_email}` : ""}</small></summary>
+                  <div className="mail-detail">
+                    {mail.context && <small className="muted">Context: {mail.context}</small>}
+                    {mail.snippet && <p>{mail.snippet.slice(0, 220)}</p>}
+                    {(mail.entities || []).length > 0 && <div className="mini-stats">{(mail.entities || []).slice(0, 6).map((entity) => <span key={entity} className="status-chip">{entity}</span>)}</div>}
+                    {(mail.attachments || []).length > 0 && <small className="muted">Attachments: {mail.attachments.map((a) => a.name).join(", ")}</small>}
+                  </div>
+                </details>
+              </td>
+              <td>{String(mail.date || "").slice(0, 16)}</td>
+              <td>{mail.intent}</td>
+              <td><span className="status-chip">{mail.outcome || "update"}</span></td>
+              <td><span className={`status-pill ${mail.contact_id ? "approved" : "rejected"}`}>{mail.contact_id ? "linked" : "missing"}</span></td>
+            </tr>)}
+            {!mails.length && <tr><td colSpan={5}><small className="muted">No mails in the current snapshot.</small></td></tr>}
           </tbody></table></div>
           {(missing.samples || []).length > 0 && <div className="status-breakdown" style={{ marginTop: 12 }}>
             {(missing.samples || []).slice(0, 6).map((item) => <span className="status-chip warn" key={`${item.from_email}-${item.subject}`}><b>{item.from_email || item.domain}</b> {item.subject?.slice(0, 40)}</span>)}

@@ -196,6 +196,76 @@ def list_visits(
     return [_out(visit) for visit in rows]
 
 
+# Field-executive samples exported from the Kalika Sales Tracker app
+# (Vishal K / Chandrakant G). Synced on demand from the Company history tab.
+SAMPLE_VISITS: list[dict] = [
+    {
+        "company": "Kflex",
+        "sales_person": "Vishal K",
+        "meet_person": "Promod sir",
+        "visit_date": "2026-10-28",
+        "visit_type": "meeting",
+        "purpose": "Final rate of product",
+        "outcome": "Lead generated",
+        "contact_phone": "8390545023",
+        "follow_up_date": "2026-10-28",
+        "previous_discussion": "Rate finalization and vendor code process",
+        "notes": "Today the Kflex rates can be finalized and vendor code process can be initiated completed",
+        "mail_chat_details": "Kalika Sales Tracker export",
+    },
+    {
+        "company": "Jabil",
+        "sales_person": "Chandrakant G",
+        "meet_person": "Pravin Shinde (Purchase)",
+        "visit_date": "2026-10-29",
+        "visit_type": "meeting",
+        "purpose": "Stretch film regarding",
+        "outcome": "Positive response - RFQ to be sent",
+        "contact_phone": "9156031472",
+        "follow_up_date": "2026-11-04",
+        "meet_home_location": "IndoSpace Industrial Park Ranjangaon, Shirur, Pune, Maharashtra",
+        "map_location": "https://maps.google.com/?q=IndoSpace+Industrial+Park+Ranjangaon",
+        "previous_discussion": "Stretch film requirement; vendor code process info shared",
+        "notes": "New joining ahe, vendor code process mahiti krun next process kru mhntle ahe, next month la visit hoil..punha",
+        "mail_chat_details": "Kalika Sales Tracker export",
+    },
+    {
+        "company": "Ranjangaon MIDC",
+        "sales_person": "Chandrakant G",
+        "visit_date": "2026-10-27",
+        "visit_type": "activity",
+        "purpose": "1x Meetings",
+        "outcome": "1 meeting done",
+        "notes": "Ranjangaon MIDC 3 company visit, 1 meeting done",
+        "mail_chat_details": "Kalika Sales Tracker export",
+    },
+]
+
+
+@router.post("/samples")
+def sync_sample_visits(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    created = 0
+    existing = 0
+    for sample in SAMPLE_VISITS:
+        found = (
+            db.query(CompanyVisit)
+            .filter(
+                CompanyVisit.user_id == user.id,
+                CompanyVisit.company == sample["company"],
+                CompanyVisit.visit_date == sample["visit_date"],
+                CompanyVisit.sales_person == sample.get("sales_person", ""),
+            )
+            .first()
+        )
+        if found:
+            existing += 1
+            continue
+        db.add(CompanyVisit(user_id=user.id, **sample))
+        created += 1
+    db.commit()
+    return {"ok": True, "created": created, "existing": existing, "total": len(SAMPLE_VISITS)}
+
+
 @router.post("", status_code=201)
 def create_visit(
     payload: VisitIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)

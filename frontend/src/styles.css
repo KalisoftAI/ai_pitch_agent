@@ -733,3 +733,19 @@ nav { min-height: 0; overflow-y: auto; padding-right: 2px; scrollbar-width: thin
 .tally-compact .table-wrap { max-height: 250px; }
 .tally-compact .panel-heading p { font-size: 11px; }
 .tally-panel .review-card { margin-top: 8px; }
+
+/* ---- Mail desk: expandable rows + working names ---- */
+.mail-cell { white-space: normal; }
+.mail-expand summary { cursor: pointer; list-style: none; display: grid; gap: 2px; }
+.mail-expand summary::-webkit-details-marker { display: none; }
+.mail-expand summary b { font-weight: 600; }
+.mail-expand summary small { color: var(--muted); font-size: 11px; }
+.mail-expand[open] summary b { color: var(--orange); }
+.mail-detail { margin-top: 8px; display: grid; gap: 6px; }
+.mail-detail p { margin: 0; font-size: 12px; line-height: 1.55; color: var(--ink); white-space: normal; }
+.mail-detail .mini-stats { margin: 0; gap: 8px; flex-wrap: wrap; }
+
+/* ---- Field follow-up quick actions ---- */
+.followup-cell { display: grid; gap: 4px; }
+.followup-cell .button-row { gap: 6px; }
+.followup-cell .text-button { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; }

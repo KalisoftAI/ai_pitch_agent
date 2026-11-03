@@ -15,6 +15,11 @@
     "type": "LINKED_TO_CONTACT"
   },
   {
+    "source": "mail:interaction_dump:9",
+    "target": "entity:LOC-20261014-001",
+    "type": "MENTIONS"
+  },
+  {
     "source": "mail:interaction_dump:8",
     "target": "sender:918800742406",
     "type": "SENT_BY"
@@ -28,6 +33,11 @@
     "source": "mail:interaction_dump:8",
     "target": "contact:65",
     "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:8",
+    "target": "entity:LOC-20261001-025",
+    "type": "MENTIONS"
   },
   {
     "source": "mail:interaction_dump:7",
@@ -45,6 +55,11 @@
     "type": "LINKED_TO_CONTACT"
   },
   {
+    "source": "mail:interaction_dump:7",
+    "target": "entity:LOC-012",
+    "type": "MENTIONS"
+  },
+  {
     "source": "mail:interaction_dump:6",
     "target": "sender:919960078343",
     "type": "SENT_BY"
@@ -58,6 +73,16 @@
     "source": "mail:interaction_dump:6",
     "target": "contact:6167",
     "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:6",
+    "target": "entity:thermometer",
+    "type": "MENTIONS"
+  },
+  {
+    "source": "mail:interaction_dump:6",
+    "target": "entity:LOC-20261004-013",
+    "type": "MENTIONS"
   },
   {
     "source": "mail:interaction_dump:27",
@@ -75,6 +100,11 @@
     "type": "LINKED_TO_CONTACT"
   },
   {
+    "source": "mail:interaction_dump:27",
+    "target": "entity:LOC-011",
+    "type": "MENTIONS"
+  },
+  {
     "source": "mail:interaction_dump:26",
     "target": "sender:919860433996",
     "type": "SENT_BY"
@@ -88,6 +118,11 @@
     "source": "mail:interaction_dump:26",
     "target": "contact:5334",
     "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:26",
+    "target": "entity:LOC-20261016-001",
+    "type": "MENTIONS"
   },
   {
     "source": "mail:interaction_dump:25",
@@ -105,6 +140,11 @@
     "type": "LINKED_TO_CONTACT"
   },
   {
+    "source": "mail:interaction_dump:25",
+    "target": "entity:LOC-017",
+    "type": "MENTIONS"
+  },
+  {
     "source": "mail:interaction_dump:24",
     "target": "sender:919960078343",
     "type": "SENT_BY"
@@ -118,6 +158,16 @@
     "source": "mail:interaction_dump:24",
     "target": "contact:6167",
     "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:24",
+    "target": "entity:thermometer",
+    "type": "MENTIONS"
+  },
+  {
+    "source": "mail:interaction_dump:24",
+    "target": "entity:LOC-20261004-006",
+    "type": "MENTIONS"
   },
   {
     "source": "mail:interaction_dump:23",
@@ -135,6 +185,16 @@
     "type": "LINKED_TO_CONTACT"
   },
   {
+    "source": "mail:interaction_dump:23",
+    "target": "entity:thermometer",
+    "type": "MENTIONS"
+  },
+  {
+    "source": "mail:interaction_dump:23",
+    "target": "entity:LOC-20261004-007",
+    "type": "MENTIONS"
+  },
+  {
     "source": "mail:interaction_dump:22",
     "target": "sender:919960078343",
     "type": "SENT_BY"
@@ -150,6 +210,16 @@
     "type": "LINKED_TO_CONTACT"
   },
   {
+    "source": "mail:interaction_dump:22",
+    "target": "entity:thermometer",
+    "type": "MENTIONS"
+  },
+  {
+    "source": "mail:interaction_dump:22",
+    "target": "entity:LOC-20261005-002",
+    "type": "MENTIONS"
+  },
+  {
     "source": "mail:interaction_dump:21",
     "target": "sender:919960078343",
     "type": "SENT_BY"
@@ -163,6 +233,16 @@
     "source": "mail:interaction_dump:21",
     "target": "contact:6167",
     "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:21",
+    "target": "entity:thermometer",
+    "type": "MENTIONS"
+  },
+  {
+    "source": "mail:interaction_dump:21",
+    "target": "entity:LOC-20261004-005",
+    "type": "MENTIONS"
   },
   {
     "source": "mail:interaction_dump:20",
@@ -178,6 +258,11 @@
     "source": "mail:interaction_dump:20",
     "target": "contact:1161",
     "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:20",
+    "target": "entity:LOC-20261001-013",
+    "type": "MENTIONS"
   },
   {
     "source": "mail:interaction_dump:19",
@@ -195,6 +280,11 @@
     "type": "LINKED_TO_CONTACT"
   },
   {
+    "source": "mail:interaction_dump:19",
+    "target": "entity:LOC-20261014-002",
+    "type": "MENTIONS"
+  },
+  {
     "source": "mail:interaction_dump:18",
     "target": "sender:919960078343",
     "type": "SENT_BY"
@@ -208,6 +298,16 @@
     "source": "mail:interaction_dump:18",
     "target": "contact:6167",
     "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:18",
+    "target": "entity:thermometer",
+    "type": "MENTIONS"
+  },
+  {
+    "source": "mail:interaction_dump:18",
+    "target": "entity:LOC-20261005-001",
+    "type": "MENTIONS"
   },
   {
     "source": "mail:interaction_dump:17",
@@ -225,6 +325,11 @@
     "type": "LINKED_TO_CONTACT"
   },
   {
+    "source": "mail:interaction_dump:17",
+    "target": "entity:LOC-010",
+    "type": "MENTIONS"
+  },
+  {
     "source": "mail:interaction_dump:16",
     "target": "sender:919552533137",
     "type": "SENT_BY"
@@ -240,6 +345,11 @@
     "type": "LINKED_TO_CONTACT"
   },
   {
+    "source": "mail:interaction_dump:16",
+    "target": "entity:LOC-20261018-001",
+    "type": "MENTIONS"
+  },
+  {
     "source": "mail:interaction_dump:15",
     "target": "sender:919960078343",
     "type": "SENT_BY"
@@ -255,6 +365,16 @@
     "type": "LINKED_TO_CONTACT"
   },
   {
+    "source": "mail:interaction_dump:15",
+    "target": "entity:thermometer",
+    "type": "MENTIONS"
+  },
+  {
+    "source": "mail:interaction_dump:15",
+    "target": "entity:LOC-20261012-001",
+    "type": "MENTIONS"
+  },
+  {
     "source": "mail:interaction_dump:14",
     "target": "sender:919960078343",
     "type": "SENT_BY"
@@ -268,6 +388,16 @@
     "source": "mail:interaction_dump:14",
     "target": "contact:6167",
     "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:14",
+    "target": "entity:thermometer",
+    "type": "MENTIONS"
+  },
+  {
+    "source": "mail:interaction_dump:14",
+    "target": "entity:LOC-20261011-005",
+    "type": "MENTIONS"
   },
   {
     "source": "mail:interaction_dump:13",
@@ -285,6 +415,11 @@
     "type": "LINKED_TO_CONTACT"
   },
   {
+    "source": "mail:interaction_dump:13",
+    "target": "entity:LOC-015",
+    "type": "MENTIONS"
+  },
+  {
     "source": "mail:interaction_dump:12",
     "target": "sender:918800742406",
     "type": "SENT_BY"
@@ -298,6 +433,11 @@
     "source": "mail:interaction_dump:12",
     "target": "contact:65",
     "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:12",
+    "target": "entity:LOC-20261001-006",
+    "type": "MENTIONS"
   },
   {
     "source": "mail:interaction_dump:11",
@@ -315,6 +455,11 @@
     "type": "LINKED_TO_CONTACT"
   },
   {
+    "source": "mail:interaction_dump:11",
+    "target": "entity:LOC-20261009-007",
+    "type": "MENTIONS"
+  },
+  {
     "source": "mail:interaction_dump:10",
     "target": "sender:918800742406",
     "type": "SENT_BY"
@@ -328,6 +473,11 @@
     "source": "mail:interaction_dump:10",
     "target": "contact:65",
     "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:10",
+    "target": "entity:LOC-006",
+    "type": "MENTIONS"
   },
   {
     "source": "mail:interaction_dump:5",
@@ -345,6 +495,11 @@
     "type": "LINKED_TO_CONTACT"
   },
   {
+    "source": "mail:interaction_dump:5",
+    "target": "entity:stretch film",
+    "type": "MENTIONS"
+  },
+  {
     "source": "mail:interaction_dump:4",
     "target": "sender:914023456173",
     "type": "SENT_BY"
@@ -358,6 +513,11 @@
     "source": "mail:interaction_dump:4",
     "target": "contact:8757",
     "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:4",
+    "target": "entity:stretch film",
+    "type": "MENTIONS"
   },
   {
     "source": "mail:interaction_dump:3",
@@ -375,6 +535,11 @@
     "type": "LINKED_TO_CONTACT"
   },
   {
+    "source": "mail:interaction_dump:3",
+    "target": "entity:stretch film",
+    "type": "MENTIONS"
+  },
+  {
     "source": "mail:interaction_dump:2",
     "target": "sender:918067859929",
     "type": "SENT_BY"
@@ -390,6 +555,11 @@
     "type": "LINKED_TO_CONTACT"
   },
   {
+    "source": "mail:interaction_dump:2",
+    "target": "entity:stretch film",
+    "type": "MENTIONS"
+  },
+  {
     "source": "mail:interaction_dump:1",
     "target": "sender:918067859929",
     "type": "SENT_BY"
@@ -403,5 +573,10 @@
     "source": "mail:interaction_dump:1",
     "target": "contact:8752",
     "type": "LINKED_TO_CONTACT"
+  },
+  {
+    "source": "mail:interaction_dump:1",
+    "target": "entity:stretch film",
+    "type": "MENTIONS"
   }
 ]

@@ -21,6 +21,11 @@
     "label": "Ca"
   },
   {
+    "id": "entity:LOC-20261014-001",
+    "kind": "entity",
+    "label": "LOC-20261014-001"
+  },
+  {
     "id": "mail:interaction_dump:8",
     "kind": "mail",
     "label": "whatsapp_outbound",
@@ -35,6 +40,11 @@
     "id": "contact:65",
     "kind": "contact",
     "label": "no"
+  },
+  {
+    "id": "entity:LOC-20261001-025",
+    "kind": "entity",
+    "label": "LOC-20261001-025"
   },
   {
     "id": "mail:interaction_dump:7",
@@ -53,6 +63,11 @@
     "label": "@mit"
   },
   {
+    "id": "entity:LOC-012",
+    "kind": "entity",
+    "label": "LOC-012"
+  },
+  {
     "id": "mail:interaction_dump:6",
     "kind": "mail",
     "label": "whatsapp_outbound",
@@ -69,10 +84,25 @@
     "label": "Th"
   },
   {
+    "id": "entity:thermometer",
+    "kind": "entity",
+    "label": "thermometer"
+  },
+  {
+    "id": "entity:LOC-20261004-013",
+    "kind": "entity",
+    "label": "LOC-20261004-013"
+  },
+  {
     "id": "mail:interaction_dump:27",
     "kind": "mail",
     "label": "whatsapp_outbound",
     "intent": "order"
+  },
+  {
+    "id": "entity:LOC-011",
+    "kind": "entity",
+    "label": "LOC-011"
   },
   {
     "id": "mail:interaction_dump:26",
@@ -91,6 +121,11 @@
     "label": "Nagar"
   },
   {
+    "id": "entity:LOC-20261016-001",
+    "kind": "entity",
+    "label": "LOC-20261016-001"
+  },
+  {
     "id": "mail:interaction_dump:25",
     "kind": "mail",
     "label": "whatsapp_outbound",
@@ -107,10 +142,20 @@
     "label": "Rajlaxmi Gruha Udyog"
   },
   {
+    "id": "entity:LOC-017",
+    "kind": "entity",
+    "label": "LOC-017"
+  },
+  {
     "id": "mail:interaction_dump:24",
     "kind": "mail",
     "label": "whatsapp_outbound",
     "intent": "order"
+  },
+  {
+    "id": "entity:LOC-20261004-006",
+    "kind": "entity",
+    "label": "LOC-20261004-006"
   },
   {
     "id": "mail:interaction_dump:23",
@@ -119,16 +164,31 @@
     "intent": "order"
   },
   {
+    "id": "entity:LOC-20261004-007",
+    "kind": "entity",
+    "label": "LOC-20261004-007"
+  },
+  {
     "id": "mail:interaction_dump:22",
     "kind": "mail",
     "label": "whatsapp_outbound",
     "intent": "order"
   },
   {
+    "id": "entity:LOC-20261005-002",
+    "kind": "entity",
+    "label": "LOC-20261005-002"
+  },
+  {
     "id": "mail:interaction_dump:21",
     "kind": "mail",
     "label": "whatsapp_outbound",
     "intent": "order"
+  },
+  {
+    "id": "entity:LOC-20261004-005",
+    "kind": "entity",
+    "label": "LOC-20261004-005"
   },
   {
     "id": "mail:interaction_dump:20",
@@ -147,6 +207,11 @@
     "label": "Electrical"
   },
   {
+    "id": "entity:LOC-20261001-013",
+    "kind": "entity",
+    "label": "LOC-20261001-013"
+  },
+  {
     "id": "mail:interaction_dump:19",
     "kind": "mail",
     "label": "whatsapp_outbound",
@@ -163,10 +228,20 @@
     "label": "Pune"
   },
   {
+    "id": "entity:LOC-20261014-002",
+    "kind": "entity",
+    "label": "LOC-20261014-002"
+  },
+  {
     "id": "mail:interaction_dump:18",
     "kind": "mail",
     "label": "whatsapp_outbound",
     "intent": "order"
+  },
+  {
+    "id": "entity:LOC-20261005-001",
+    "kind": "entity",
+    "label": "LOC-20261005-001"
   },
   {
     "id": "mail:interaction_dump:17",
@@ -175,10 +250,20 @@
     "intent": "order"
   },
   {
+    "id": "entity:LOC-010",
+    "kind": "entity",
+    "label": "LOC-010"
+  },
+  {
     "id": "mail:interaction_dump:16",
     "kind": "mail",
     "label": "whatsapp_outbound",
     "intent": "order"
+  },
+  {
+    "id": "entity:LOC-20261018-001",
+    "kind": "entity",
+    "label": "LOC-20261018-001"
   },
   {
     "id": "mail:interaction_dump:15",
@@ -187,10 +272,20 @@
     "intent": "order"
   },
   {
+    "id": "entity:LOC-20261012-001",
+    "kind": "entity",
+    "label": "LOC-20261012-001"
+  },
+  {
     "id": "mail:interaction_dump:14",
     "kind": "mail",
     "label": "whatsapp_outbound",
     "intent": "order"
+  },
+  {
+    "id": "entity:LOC-20261011-005",
+    "kind": "entity",
+    "label": "LOC-20261011-005"
   },
   {
     "id": "mail:interaction_dump:13",
@@ -199,10 +294,20 @@
     "intent": "order"
   },
   {
+    "id": "entity:LOC-015",
+    "kind": "entity",
+    "label": "LOC-015"
+  },
+  {
     "id": "mail:interaction_dump:12",
     "kind": "mail",
     "label": "whatsapp_outbound",
     "intent": "order"
+  },
+  {
+    "id": "entity:LOC-20261001-006",
+    "kind": "entity",
+    "label": "LOC-20261001-006"
   },
   {
     "id": "mail:interaction_dump:11",
@@ -221,10 +326,20 @@
     "label": "Refman Engineering Equipments Pvt. Ltd."
   },
   {
+    "id": "entity:LOC-20261009-007",
+    "kind": "entity",
+    "label": "LOC-20261009-007"
+  },
+  {
     "id": "mail:interaction_dump:10",
     "kind": "mail",
     "label": "whatsapp_outbound",
     "intent": "order"
+  },
+  {
+    "id": "entity:LOC-006",
+    "kind": "entity",
+    "label": "LOC-006"
   },
   {
     "id": "mail:interaction_dump:5",
@@ -246,6 +361,11 @@
     "id": "contact:8759",
     "kind": "contact",
     "label": "8759"
+  },
+  {
+    "id": "entity:stretch film",
+    "kind": "entity",
+    "label": "stretch film"
   },
   {
     "id": "mail:interaction_dump:4",
