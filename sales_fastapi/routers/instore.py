@@ -19,6 +19,7 @@ from ..instore_mail import (
     save_insights,
 )
 from ..llm.guardrails import scan_prompt, validate_output
+from ..llm.providers import log_llm_error, tag_llm_error
 from ..llm.router import estimate_cost_micros
 from ..models import Contact, EmailConnection, GoogleMailbox, ModelUsage, SyncRun, User
 from ..security import decrypt_secret, encrypt_secret, get_current_user
@@ -74,7 +75,7 @@ class AskIn(BaseModel):
     question: str = Field(..., min_length=2, max_length=4000)
     expertise: str = Field(default="sales_strategist", max_length=64)
     model: str = Field(default="", max_length=128)
-    mail_limit: int = Field(default=12, ge=1, le=50)
+    mail_limit: int = Field(default=8, ge=1, le=50)
 
 
 def _contacts(db: Session, user: User) -> list[dict]:
@@ -290,7 +291,7 @@ def sync(
     }
 
 
-def _snapshot_context(payload: dict, limit: int = 12) -> str:
+def _snapshot_context(payload: dict, limit: int = 8) -> str:
     insights = payload.get("insights", {})
     lines = [
         f"Total mails: {insights.get('total', 0)}; linked contacts: {insights.get('linked', 0)}; "
@@ -301,10 +302,11 @@ def _snapshot_context(payload: dict, limit: int = 12) -> str:
         "Latest mails:",
     ]
     for mail in (payload.get("mails") or [])[:limit]:
+        title = mail.get("working_title") or mail.get("subject", "")
+        client = mail.get("client_name") or mail.get("company") or "unknown"
         lines.append(
-            f"- [{mail.get('date', '')}] {mail.get('from_email', '')} | {mail.get('subject', '')} "
-            f"| intent={mail.get('intent', '')} | company={mail.get('company', '') or 'unknown'} "
-            f"| attachments={', '.join(a.get('name', '') for a in mail.get('attachments', [])) or 'none'}"
+            f"- [{str(mail.get('date', ''))[:10]}] {client} | {title[:90]} "
+            f"| intent={mail.get('intent', '')} | outcome={mail.get('outcome', '')}"
         )
     samples = (payload.get("missing_links") or {}).get("samples", [])[:8]
     if samples:
@@ -368,7 +370,7 @@ def ask(
     for model_id in _chat_chain(payload.model or settings.LLM_GEMMA_MODEL):
         provider = _provider_for(model_id)
         if provider is None or not provider.available or not _model_available(provider.name):
-            attempts.append({"model": model_id, "status": "unavailable"})
+            attempts.append({"model": model_id, "status": "unavailable", "tag": "llm:unavailable"})
             fallback_used = True
             continue
         try:
@@ -376,11 +378,15 @@ def ask(
                 prompt=report.sanitized,
                 system=expertise["system"],
                 model=model_id,
-                max_output_tokens=900,
+                max_output_tokens=512,
                 temperature=0.2,
             )
         except Exception as exc:  # noqa: BLE001 - fall through to the next model
-            attempts.append({"model": model_id, "status": f"error:{type(exc).__name__}"})
+            tag = tag_llm_error(exc)
+            log_llm_error(tag, model=model_id, task="instore_mail_chat", detail=str(exc))
+            attempts.append(
+                {"model": model_id, "status": f"error:{type(exc).__name__}", "tag": tag}
+            )
             fallback_used = True
             continue
         output = validate_output(result.text, max_chars=settings.LLM_MAX_OUTPUT_CHARS)
@@ -421,6 +427,7 @@ def ask(
             "expertise": expertise["id"],
             "fallback_used": fallback_used,
             "attempts": attempts,
+            "error_tags": [a["tag"] for a in attempts if a.get("tag")],
             "cost_micros": cost,
             "context_mails": (snapshot.get("insights") or {}).get("total", 0),
             "missing_links": (snapshot.get("missing_links") or {}).get("count", 0),

@@ -16,7 +16,14 @@ from ..config import settings
 from ..database import get_db
 from ..governance.audit import log_event
 from ..llm.guardrails import scan_prompt, validate_output
-from ..llm.providers import EchoProvider, GeminiProvider, GemmaProvider, OllamaProvider
+from ..llm.providers import (
+    EchoProvider,
+    GeminiProvider,
+    GemmaProvider,
+    OllamaProvider,
+    log_llm_error,
+    tag_llm_error,
+)
 from ..llm.router import estimate_cost_micros
 from ..model_catalog import catalog, default_model
 from ..models import (
@@ -294,7 +301,7 @@ def chat(
             fallback_used = True
             continue
         if not provider.available or not _model_available(provider.name):
-            attempts.append({"model": model_id, "status": "unavailable"})
+            attempts.append({"model": model_id, "status": "unavailable", "tag": "llm:unavailable"})
             fallback_used = True
             continue
         try:
@@ -302,11 +309,15 @@ def chat(
                 prompt=report.sanitized,
                 system=system_prompt,
                 model=model_id,
-                max_output_tokens=700,
+                max_output_tokens=512,
                 temperature=0.3,
             )
         except Exception as exc:  # noqa: BLE001 - try the next model in the chain
-            attempts.append({"model": model_id, "status": f"error:{type(exc).__name__}"})
+            tag = tag_llm_error(exc)
+            log_llm_error(tag, model=model_id, task="daily_rate_chat", detail=str(exc))
+            attempts.append(
+                {"model": model_id, "status": f"error:{type(exc).__name__}", "tag": tag}
+            )
             fallback_used = True
             continue
 
@@ -372,6 +383,7 @@ def chat(
             "model": result.model,
             "requested_model": payload.model or settings.LLM_CHAT_LOCAL_MODEL,
             "fallback_used": fallback_used,
+            "error_tags": [a["tag"] for a in attempts if a.get("tag")],
             "latency_ms": result.latency_ms,
             "input_tokens": result.input_tokens,
             "output_tokens": result.output_tokens,

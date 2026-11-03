@@ -8,11 +8,55 @@ with zero network access.
 
 from __future__ import annotations
 
+import json
+import logging
 from dataclasses import dataclass
+from pathlib import Path
 from time import monotonic
 from typing import Protocol
 
 from ..config import settings
+
+logger = logging.getLogger("kalisoft.llm")
+LLM_ERROR_LOG = Path("logs/llm_errors.log")
+
+
+def tag_llm_error(exc: Exception) -> str:
+    # Classify a provider failure into a short, greppable tag, e.g.
+    # llm:http_404_model (Gemma/Gemini API changed or model retired),
+    # llm:http_429_quota, llm:http_401_auth, llm:network, llm:timeout.
+    try:
+        import httpx
+    except Exception:  # noqa: BLE001 - httpx is a hard dep, this is belt+braces
+        httpx = None
+    if httpx is not None and isinstance(exc, httpx.HTTPStatusError):
+        status = exc.response.status_code
+        if status == 404:
+            return "llm:http_404_model"
+        if status == 429:
+            return "llm:http_429_quota"
+        if status in (401, 403):
+            return "llm:http_401_auth"
+        if status >= 500:
+            return "llm:http_5xx_upstream"
+        return f"llm:http_{status}"
+    if httpx is not None and isinstance(exc, httpx.TimeoutException):
+        return "llm:timeout"
+    if httpx is not None and isinstance(exc, httpx.TransportError):
+        return "llm:network"
+    return f"llm:error_{type(exc).__name__}"
+
+
+def log_llm_error(tag: str, *, model: str, task: str, detail: str = "") -> None:
+    # One tagged JSON line per provider failure -> logs/llm_errors.log.
+    record = {"tag": tag, "model": model, "task": task, "detail": detail[:300]}
+    logger.warning("llm_provider_error %s", record)
+    try:
+        LLM_ERROR_LOG.parent.mkdir(parents=True, exist_ok=True)
+        with LLM_ERROR_LOG.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(record, default=str) + "\n")
+    except OSError:
+        pass
 
 
 def estimate_tokens(text: str) -> int:

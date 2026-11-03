@@ -290,3 +290,53 @@ def test_visits_stats_activity_update_delete(client, auth_headers):
     assert deleted.status_code == 204
     gone = client.get(f"/api/visits/{visit_id}", headers=auth_headers)
     assert gone.status_code == 404
+
+
+def test_llm_error_is_tagged_logged_and_falls_back(client, auth_headers, monkeypatch, tmp_path):
+    import httpx
+
+    from sales_fastapi.llm import providers
+
+    log_file = tmp_path / "llm_errors.log"
+    monkeypatch.setattr(providers, "LLM_ERROR_LOG", log_file)
+
+    def boom(**kwargs):
+        request = httpx.Request("POST", "https://generativelanguage.googleapis.com/x")
+        response = httpx.Response(404, request=request)
+        raise httpx.HTTPStatusError("model not found", request=request, response=response)
+
+    class FailingProvider:
+        name = "gemma"
+        available = True
+
+        def generate(self, **kwargs):
+            boom()
+
+    monkeypatch.setattr("sales_fastapi.routers.instore.load_insights", _empty_snapshot)
+    monkeypatch.setattr("sales_fastapi.routers.instore._model_available", lambda provider: True)
+    from sales_fastapi.llm.providers import EchoProvider
+
+    monkeypatch.setattr(
+        "sales_fastapi.routers.instore._provider_for",
+        lambda model_id: (
+            FailingProvider()
+            if "gemma" in model_id
+            else (EchoProvider() if model_id == "echo" else None)
+        ),
+    )
+    response = client.post(
+        "/api/instore/ask",
+        headers=auth_headers,
+        json={
+            "question": "Next field actions?",
+            "expertise": "sales_strategist",
+            "model": "gemma-4-27b-it",
+        },
+    )
+    # Chain: failing gemma -> ... -> echo keeps the app running.
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["fallback_used"] is True
+    assert body["provider"] == "echo"
+    assert "llm:http_404_model" in body["error_tags"]
+    assert "llm:http_404_model" in log_file.read_text(encoding="utf-8")
