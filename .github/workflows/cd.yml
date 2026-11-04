@@ -62,6 +62,14 @@ jobs:
       - name: Push image
         run: docker push "${IMAGE_BASE}:${GITHUB_SHA}"
 
+      - name: Clear conflicting secret/env refs
+        run: |
+          gcloud run services update "${{ needs.resolve.outputs.service }}" \
+            --project "${{ vars.GCP_PROJECT_ID }}" \
+            --region "${{ vars.GCP_REGION }}" \
+            --remove-env-vars "GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,GOOGLE_ALLOWED_DOMAINS,GOOGLE_ALLOWED_EMAILS,ALLOWED_HOSTS,CORS_ORIGINS" \
+            --remove-secrets "GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET" || true
+
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy "${{ needs.resolve.outputs.service }}" \
@@ -72,17 +80,7 @@ jobs:
             --allow-unauthenticated \
             --add-cloudsql-instances "${{ vars.CLOUD_SQL_INSTANCE }}" \
             --set-secrets "SECRET_KEY=SALES_SECRET_KEY:latest,DATABASE_URL=SALES_DATABASE_URL:latest" \
-                         --set-env-vars "ENV=${{ needs.resolve.outputs.app_env }},GOOGLE_CLOUD_PROJECT=${{ vars.GCP_PROJECT_ID }},GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }},GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }},GOOGLE_REDIRECT_URI=${{ vars.GOOGLE_REDIRECT_URI || 'https://kalisoft-sales-19782268668.asia-south1.run.app' }},GCS_BUCKET_CONTACTS=${{ vars.GCS_BUCKET }},GCS_PATH_CONTACTS=${{ vars.GCS_PATH }},CLOUD_SQL_CONNECTION_NAME=${{ vars.CLOUD_SQL_INSTANCE }},RATE_LIMIT_ENABLED=true,AUTH_DEV_MODE=false,GMAIL_OAUTH_ENABLED=${{ vars.GMAIL_OAUTH_ENABLED || 'true' }},GOOGLE_OAUTH_REDIRECT_URI=${{ vars.GOOGLE_OAUTH_REDIRECT_URI || 'https://kalisoft-sales-19782268668.asia-south1.run.app//api/email/google/callback' }},FRONTEND_URL=${{ vars.FRONTEND_URL || 'https://kalisoft-sales-19782268668.asia-south1.run.app' }},GEMMA_MODEL=${{ vars.GEMMA_MODEL || 'gemma-4-27b-it' }},LLM_GEMMA_MODEL=${{ vars.LLM_GEMMA_MODEL || 'gemma-4-27b-it' }}" \
-
-      - name: Set comma-containing env vars
-        run: |
-          gcloud run services update "${{ needs.resolve.outputs.service }}" \
-            --project "${{ vars.GCP_PROJECT_ID }}" \
-            --region "${{ vars.GCP_REGION }}" \
-            --update-env-vars "GOOGLE_ALLOWED_DOMAINS=${{ vars.GOOGLE_ALLOWED_DOMAINS }}" \
-            --update-env-vars "GOOGLE_ALLOWED_EMAILS=${{ vars.GOOGLE_ALLOWED_EMAILS || 'ai.solutions@kalisoftai.in,kalikaenterprises@gmail.com' }}" \
-            --update-env-vars "ALLOWED_HOSTS=${{ vars.ALLOWED_HOSTS }}" \
-            --update-env-vars "CORS_ORIGINS=${{ needs.resolve.outputs.cors }}"
+            --set-env-vars "ENV=${{ needs.resolve.outputs.app_env }},GOOGLE_CLOUD_PROJECT=${{ vars.GCP_PROJECT_ID }},GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }},GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }},GOOGLE_REDIRECT_URI=${{ vars.GOOGLE_REDIRECT_URI || 'https://kalisoft-sales-19782268668.asia-south1.run.app' }},GCS_BUCKET_CONTACTS=${{ vars.GCS_BUCKET }},GCS_PATH_CONTACTS=${{ vars.GCS_PATH }},CLOUD_SQL_CONNECTION_NAME=${{ vars.CLOUD_SQL_INSTANCE }},RATE_LIMIT_ENABLED=true,AUTH_DEV_MODE=false,GMAIL_OAUTH_ENABLED=${{ vars.GMAIL_OAUTH_ENABLED || 'true' }},GOOGLE_OAUTH_REDIRECT_URI=${{ vars.GOOGLE_OAUTH_REDIRECT_URI || 'https://kalisoft-sales-19782268668.asia-south1.run.app//api/email/google/callback' }},FRONTEND_URL=${{ vars.FRONTEND_URL || 'https://kalisoft-sales-19782268668.asia-south1.run.app' }},GEMMA_MODEL=${{ vars.GEMMA_MODEL || 'gemma-4-27b-it' }},LLM_GEMMA_MODEL=${{ vars.LLM_GEMMA_MODEL || 'gemma-4-27b-it' }}" \
             --min-instances=0 \
             --max-instances="${{ needs.resolve.outputs.max_instances }}" \
             --cpu=1 \
@@ -90,6 +88,25 @@ jobs:
             --concurrency=80 \
             --timeout=300 \
             --cpu-throttling
+
+      - name: Set comma-containing env vars
+        run: |
+          gcloud run services update "${{ needs.resolve.outputs.service }}" \
+            --project "${{ vars.GCP_PROJECT_ID }}" \
+            --region "${{ vars.GCP_REGION }}" \
+            --update-env-vars "GOOGLE_ALLOWED_DOMAINS=${{ vars.GOOGLE_ALLOWED_DOMAINS }}"
+          gcloud run services update "${{ needs.resolve.outputs.service }}" \
+            --project "${{ vars.GCP_PROJECT_ID }}" \
+            --region "${{ vars.GCP_REGION }}" \
+            --update-env-vars "GOOGLE_ALLOWED_EMAILS=${{ vars.GOOGLE_ALLOWED_EMAILS || 'ai.solutions@kalisoftai.in,kalikaenterprises@gmail.com' }}"
+          gcloud run services update "${{ needs.resolve.outputs.service }}" \
+            --project "${{ vars.GCP_PROJECT_ID }}" \
+            --region "${{ vars.GCP_REGION }}" \
+            --update-env-vars "ALLOWED_HOSTS=${{ vars.ALLOWED_HOSTS }}"
+          gcloud run services update "${{ needs.resolve.outputs.service }}" \
+            --project "${{ vars.GCP_PROJECT_ID }}" \
+            --region "${{ vars.GCP_REGION }}" \
+            --update-env-vars "CORS_ORIGINS=${{ needs.resolve.outputs.cors }}"
 
       - name: Smoke test
         run: |
