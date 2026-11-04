@@ -507,3 +507,39 @@ class EventSendResultOut(BaseModel):
     status: str
     phone: str = ""
     error: str = ""
+
+
+# ---------- Marketing companies ----------
+class MarketingCompanyOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    company: str = ""
+    contact_name: str = ""
+    phone: str = ""
+    email: str = ""
+    category: str = ""
+    call_status: str = ""
+    requirements: str = ""
+    source_sheet: str = ""
+    source_row: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+
+class MarketingCompanyUpdate(BaseModel):
+    contact_name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    category: Optional[str] = None
+    call_status: Optional[str] = None
+    requirements: Optional[str] = None
+
+
+class MarketingImportResult(BaseModel):
+    ok: bool = True
+    imported: int = 0
+    updated: int = 0
+    skipped: int = 0
+    source: str = ""
+    sheets: list[str] = Field(default_factory=list)

@@ -602,3 +602,36 @@ class SocialMetric(Base):
     period: Mapped[str] = mapped_column(String(16), index=True, default="")
     meta: Mapped[dict] = mapped_column(JSON, default=dict)
     captured_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class MarketingCompany(Base):
+    """A company from the Kalika marketing list.
+
+    The marketing workbook holds three overlapping company lists and a calling-log
+    sheet. Rows are keyed by a normalised company name per user so the same
+    company merged from multiple sheets collapses to a single row.
+    """
+
+    __tablename__ = "marketing_companies"
+    __table_args__ = (
+        UniqueConstraint("user_id", "company_key", name="uq_marketing_company_user_key"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+
+    company: Mapped[str] = mapped_column(String(255), index=True, default="")
+    company_key: Mapped[str] = mapped_column(String(255), index=True, default="")
+    contact_name: Mapped[str] = mapped_column(String(255), default="")
+    phone: Mapped[str] = mapped_column(String(64), default="")
+    email: Mapped[str] = mapped_column(String(320), default="")
+    category: Mapped[str] = mapped_column(String(255), default="")
+    call_status: Mapped[str] = mapped_column(String(64), default="")
+    requirements: Mapped[str] = mapped_column(Text, default="")
+    source_sheet: Mapped[str] = mapped_column(String(64), default="")
+    source_row: Mapped[int] = mapped_column(Integer, default=0)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )

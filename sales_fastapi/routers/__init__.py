@@ -13,6 +13,7 @@ from .google_email import router as google_email_router
 from .governance import governance_router, llm_router
 from .instore import router as instore_router
 from .journey import router as journey_router
+from .marketing_companies import router as marketing_companies_router
 from .ops import router as ops_router
 from .sales import router as sales_router
 from .scheduler import router as scheduler_router
@@ -44,6 +45,7 @@ __all__ = [
     "governance_router",
     "instore_router",
     "llm_router",
+    "marketing_companies_router",
     "sales_router",
     "scheduler_router",
     "social_router",

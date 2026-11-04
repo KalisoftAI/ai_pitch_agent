@@ -745,3 +745,154 @@ export function Access({ onNotice, user }) {
     </div>
   );
 }
+
+// ---------------------------------------------------------------- Marketing companies
+export function MarketingCompanies({ onNotice }) {
+  const [rows, setRows] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [query, setQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [editing, setEditing] = useState({});
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => {
+    const params = new URLSearchParams();
+    if (query) params.set("q", query);
+    if (categoryFilter) params.set("category", categoryFilter);
+    if (statusFilter) params.set("call_status", statusFilter);
+    try {
+      const [nextRows, nextStats] = await Promise.all([
+        request(`/marketing-companies?${params.toString()}`),
+        request("/marketing-companies/stats"),
+      ]);
+      setRows(nextRows);
+      setStats(nextStats);
+    } catch (error) {
+      onNotice({ type: "error", text: error.message });
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const debounced = query;
+  useEffect(() => {
+    const id = setTimeout(() => load(), 250);
+    return () => clearTimeout(id);
+  }, [debounced, categoryFilter, statusFilter]);
+
+  const updateField = async (id, field, value) => {
+    try {
+      await request(`/marketing-companies/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ [field]: value }),
+      });
+      setRows((previous) => previous.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
+      setEditing((previous) => ({ ...previous, [id]: { ...(previous[id] || {}), [field]: undefined } }));
+    } catch (error) {
+      onNotice({ type: "error", text: error.message });
+    }
+  };
+
+  const runImport = async () => {
+    setBusy(true);
+    try {
+      const result = await request("/marketing-companies/import", { method: "POST" });
+      onNotice({
+        type: "success",
+        text: `Marketing import: ${result.imported} added, ${result.updated} updated, ${result.skipped} unchanged (${result.source}).`,
+      });
+      await load();
+    } catch (error) {
+      onNotice({ type: "error", text: error.message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const categories = stats ? Object.keys(stats.by_category || {}).sort() : [];
+  const statuses = stats ? Object.keys(stats.by_call_status || {}).sort() : [];
+
+  return (
+    <div className="content">
+      <div className="page-heading">
+        <div>
+          <div className="section-kicker">KALIKA MARKETING LIST</div>
+          <h2>Marketing companies</h2>
+          <p className="muted">A clean view of the marketing workbook. Edit requirements directly on each row.</p>
+        </div>
+        <div className="button-row">
+          <button className="secondary-button" onClick={load}><RefreshCw size={16} /> Refresh</button>
+          <button className="primary-button" onClick={runImport} disabled={busy}>
+            <Database size={16} />{busy ? "Importing..." : "Import marketing workbook"}
+          </button>
+        </div>
+      </div>
+      {stats && (
+        <div className="mini-stats">
+          <span><b>{fmtNum(stats.total)}</b> companies</span>
+          <span><b>{fmtNum(stats.with_phone)}</b> with phone</span>
+          <span><b>{fmtNum(stats.with_email)}</b> with email</span>
+          <span><b>{fmtNum(stats.with_requirements)}</b> with requirements</span>
+        </div>
+      )}
+      <section className="panel table-panel">
+        <div className="table-toolbar">
+          <div className="search-field"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search company, contact, email or requirements" /></div>
+          <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
+            <option value="">All categories</option>
+            {categories.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+            <option value="">All call statuses</option>
+            {statuses.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+          <span className="muted">{rows.length} shown</span>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Company</th>
+                <th>Contact</th>
+                <th>Category</th>
+                <th>Call status</th>
+                <th>Requirements</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => {
+                const editingRequirements = (editing[row.id]?.requirements ?? row.requirements) || "";
+                return (
+                  <tr key={row.id}>
+                    <td><b>{row.company}</b></td>
+                    <td className="table-person">
+                      <span>{row.contact_name || "-"}</span>
+                      <small>{row.phone || row.email || ""}</small>
+                    </td>
+                    <td>{row.category || "-"}</td>
+                    <td>{row.call_status || "-"}</td>
+                    <td>
+                      <textarea
+                        rows={2}
+                        value={editingRequirements}
+                        onChange={(event) => setEditing((previous) => ({
+                          ...previous,
+                          [row.id]: { ...(previous[row.id] || {}), requirements: event.target.value },
+                        }))}
+                        onBlur={(event) => {
+                          if (event.target.value !== row.requirements) updateField(row.id, "requirements", event.target.value);
+                        }}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+              {!rows.length && <tr><td colSpan={5}><div className="empty-state"><BriefcaseBusiness size={22} /><p>No marketing companies yet.</p><small>Import the Kalika marketing workbook to populate this view.</small></div></td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  );
+}

@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -120,6 +121,15 @@ def password_login(
     email_address = username if "@" in username else f"{username}@kalika.local"
 
     user = db.query(User).filter(User.email == email_address).first()
+    if user is None and "@" not in username:
+        # Allow an explicit display-name login alias (for example
+        # "Kalika-user1" -> kalikaenterprises@gmail.com). Only use this
+        # fallback when no local e-mail account matches, and require the
+        # alias to resolve to exactly one account.
+        matches = db.query(User).filter(func.lower(User.name) == username).limit(2).all()
+        if len(matches) == 1:
+            user = matches[0]
+            email_address = user.email
     if (
         user is None
         or not user.password_hash

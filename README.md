@@ -1,6 +1,61 @@
-﻿# AI Sales Agent 🚀
+﻿# Kalisoft AI Sales Pipeline
 
-A powerful Django-based web application that automates the entire B2B sales pipeline — from supplier discovery and email extraction to AI-powered pitch generation and tracked email campaign delivery.
+Kalisoft AI Sales Pipeline is a B2B sales workspace built on FastAPI + React. It combines Google sign-in, contact and company intelligence, Gmail/IMAP mailboxes, Tally and ERP sales data, field visits, outreach, governance, and external market signals. The repository also retains the legacy Django supplier extractor and pitch generator.
+
+## Current production snapshot (2026-11-04)
+
+| Item | Value |
+|---|---|
+| GCP project | `gen-lang-client-0132243782` |
+| Project number | `19782268668` |
+| Region | `asia-south1` |
+| Cloud Run service | `kalisoft-sales` |
+| Production URL | `https://kalisoft-sales-19782268668.asia-south1.run.app` |
+| Cloud SQL | `gen-lang-client-0132243782:us-central1:kalisoft-sales-data` |
+| Runtime / CI service account | `kalisoft-sales-run@gen-lang-client-0132243782.iam.gserviceaccount.com` |
+| GitHub repository | `KalisoftAI/ai_pitch_agent` |
+| Local entry point | `python run.py` on `http://localhost:8000` |
+| Frontend dev server | `npm run dev` on `http://localhost:5173` |
+
+### Current application architecture
+
+```text
+Browser / React SPA
+        |
+        | HTTPS + Google ID token / JWT
+        v
+Cloud Run: kalisoft-sales (FastAPI)
+        |
+        +--> Auth, RBAC, audit, prompt review
+        +--> Contacts, companies, outreach, campaigns
+        +--> Tally, ERP, dashboard, KPIs
+        +--> Gmail OAuth, IMAP/SMTP, in-store mail desk
+        +--> LinkedIn / Reddit / YouTube signal desk
+        |
+        +--> Cloud SQL PostgreSQL
+        +--> Google Cloud Storage
+        +--> Gemma / Gemini LLM router
+```
+
+### What is live
+
+- Google Identity Services sign-in, username/password fallback, strict email allowlist, JWT sessions and role checks.
+- Per-user contacts, mailboxes, company visits, campaigns, audit records and retention settings.
+- Tally Sales Register sync, ERP report sync, sales BI, KPI endpoints and dashboard summaries.
+- Gmail OAuth read-only mailbox connection, IMAP/SMTP mailbox tests and in-store mail extraction.
+- LinkedIn, Reddit and YouTube Data API v3 signal endpoints.
+- Governance: Fernet-encrypted secrets, PII redaction, audit trail, rate limits, LLM guardrails and human review.
+- GitHub Actions CI/CD to Cloud Run with Cloud SQL, Artifact Registry and Secret Manager.
+
+### Next scope
+
+- **Reddit + Medium content intelligence:** port the topic discovery, concept extraction, trend clustering, ranking, research, article generation and LinkedIn/graphic prompt pipeline from `D:\KaliSoftAI\Reddit-Post-Topic-Finder-main\backend`.
+- **LinkedIn:** official API company monitoring, hiring signals, contact/account enrichment, thought-leadership post generation and engagement analytics.
+- **YouTube:** company and technology search, channel statistics, transcripts, comment mining, video-to-article and video-to-LinkedIn workflows.
+- **Gmail contact intelligence:** extract contacts and signatures, resolve company domains, enrich company profiles, score fit/intent and recommend the next best action with evidence.
+- **Gemma agent orchestration:** decompose recommendations into subtasks, assign them to research, enrichment, outreach, follow-up and QA agents, and require human approval before execution.
+
+Full environment contract, OAuth setup, data model and phased roadmap: [PROJECT_STATUS_AND_FUTURE_SCOPE.md](PROJECT_STATUS_AND_FUTURE_SCOPE.md).
 
 ---
 

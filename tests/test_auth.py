@@ -194,3 +194,48 @@ def test_password_login_unaffected_by_google_allowlist(client, auth_headers):
     )
     assert resp.status_code == 200, resp.text
     assert resp.json()["access_token"]
+
+
+def test_password_login_accepts_unique_name_alias(client, auth_headers):
+    created = client.post(
+        "/api/users",
+        headers=auth_headers,
+        json={
+            "email": "alias.owner@kalisoftai.com",
+            "name": "Kalika-user1",
+            "password": "secret123",
+            "role": "admin",
+        },
+    )
+    assert created.status_code == 201, created.text
+    resp = client.post(
+        "/api/auth/password",
+        json={"username": "Kalika-user1", "password": "secret123"},
+    )
+    assert resp.status_code == 200, resp.text
+    me = client.get(
+        "/api/auth/me",
+        headers={"Authorization": f"Bearer {resp.json()['access_token']}"},
+    )
+    assert me.json()["email"] == "alias.owner@kalisoftai.com"
+    assert me.json()["role"] == "admin"
+
+
+def test_password_login_rejects_ambiguous_name_alias(client, auth_headers):
+    for email_address in ("dupe.one@kalisoftai.com", "dupe.two@kalisoftai.com"):
+        created = client.post(
+            "/api/users",
+            headers=auth_headers,
+            json={
+                "email": email_address,
+                "name": "Shared Alias",
+                "password": "secret123",
+                "role": "sales",
+            },
+        )
+        assert created.status_code == 201, created.text
+    resp = client.post(
+        "/api/auth/password",
+        json={"username": "Shared Alias", "password": "secret123"},
+    )
+    assert resp.status_code == 401

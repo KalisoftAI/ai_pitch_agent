@@ -1,9 +1,9 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
@@ -27,6 +27,7 @@ from .routers import (
     instore_router,
     journey_router,
     llm_router,
+    marketing_companies_router,
     ops_router,
     sales_router,
     scheduler_router,
@@ -86,6 +87,7 @@ app.include_router(catalog_router, prefix=api_prefix)
 app.include_router(social_router, prefix=api_prefix)
 app.include_router(governance_router, prefix=api_prefix)
 app.include_router(llm_router, prefix=api_prefix)
+app.include_router(marketing_companies_router, prefix=api_prefix)
 app.include_router(whatsapp_router, prefix=api_prefix)
 app.include_router(voice_router, prefix=api_prefix)
 app.include_router(templates_router, prefix=api_prefix)
@@ -103,6 +105,22 @@ app.include_router(instore_router, prefix=api_prefix)
 app.include_router(team_router, prefix=api_prefix)
 app.include_router(visits_router, prefix=api_prefix)
 app.include_router(users_router, prefix=api_prefix)
+
+
+@app.get("//api/email/google/callback", include_in_schema=False)
+def gmail_oauth_callback_bridge(request: Request):
+    """Bridge the OAuth client's registered double-slash callback to the app route.
+
+    The existing Google OAuth web client has the callback registered as
+    ``https://<host>//api/email/google/callback``. The token exchange must use
+    that exact URI, so redirect the browser to the canonical single-slash path
+    while preserving the OAuth code and state query parameters.
+    """
+    query = request.url.query
+    target = "/api/email/google/callback"
+    if query:
+        target = f"{target}?{query}"
+    return RedirectResponse(target, status_code=307)
 
 
 @app.get("/", include_in_schema=False)
