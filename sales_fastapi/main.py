@@ -49,10 +49,51 @@ STATIC_DIR = Path(__file__).parent / "static"
 async def lifespan(app: FastAPI):
     try:
         init_db()
+        _ensure_seed_users()
         app.state.db_ready = True
     except Exception:  # pragma: no cover - depends on DB availability
         app.state.db_ready = False
     yield
+
+
+def _ensure_seed_users() -> None:
+    """Create the Kalika password-login users on startup if missing.
+
+    The seed script is only run manually; production needs these accounts
+    to exist without a manual step so that both Google OAuth and
+    username/password sign-in work from day one.
+    """
+    from .database import SessionLocal
+    from .models import User
+    from .security import hash_password
+
+    db = SessionLocal()
+    try:
+        for username, display, pwd, role in (
+            ("kalika", "Kalika Admin", "kalika123", "admin"),
+            ("field", "Field Executive", "field123", "field"),
+        ):
+            email_address = f"{username}@kalika.local"
+            user = db.query(User).filter(User.email == email_address).first()
+            if user is None:
+                user = User(
+                    google_sub=f"pwd-{username}",
+                    email=email_address,
+                    name=display,
+                    domain="kalika.local",
+                    role=role,
+                    password_hash=hash_password(pwd),
+                    is_active=True,
+                )
+                db.add(user)
+            else:
+                if not user.password_hash:
+                    user.password_hash = hash_password(pwd)
+        db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        db.close()
 
 
 app = FastAPI(

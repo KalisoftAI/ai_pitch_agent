@@ -5,6 +5,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..database import get_db
+from ..config import settings
 from ..governance.audit import log_event
 from ..models import User
 from ..schemas import GoogleLoginIn, PasswordLoginIn, SetPasswordIn, TokenOut, UserOut
@@ -59,7 +60,7 @@ def google_login(
             name=claims.get("name", ""),
             picture=claims.get("picture", ""),
             domain=_domain_of(email_address),
-            role="sales",
+            role="admin" if email_address in settings.admin_emails else "sales",
         )
         db.add(user)
     else:
