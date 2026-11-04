@@ -50,6 +50,27 @@ def seed() -> None:
             db.commit()
             db.refresh(user)
 
+        # Kalika field/sales demo users with username+password sign-in
+        from .security import hash_password
+
+        for username, display, pwd, role in (
+            ("kalika", "Kalika Admin", "kalika123", "admin"),
+            ("field", "Field Executive", "field123", "field"),
+        ):
+            email_address = f"{username}@kalika.local"
+            kuser = db.query(User).filter(User.email == email_address).first()
+            if kuser is None:
+                kuser = User(
+                    google_sub=f"pwd-{username}",
+                    email=email_address,
+                    name=display,
+                    domain="kalika.local",
+                )
+                db.add(kuser)
+            kuser.password_hash = hash_password(pwd)
+            kuser.role = role
+            db.commit()
+
         created = 0
         for item in SEED_CONTACTS:
             exists = (

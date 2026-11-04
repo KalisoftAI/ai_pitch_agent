@@ -1,0 +1,25 @@
+# Build and push the image only (no deploy). Cheap, single-purpose build.
+#   gcloud builds submit --config cloudbuild.image.yaml
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - build
+      - "-f"
+      - "Dockerfile.sales"
+      - "-t"
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_SERVICE}:$BUILD_ID"
+      - "-t"
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_SERVICE}:latest"
+      - "."
+
+images:
+  - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_SERVICE}:$BUILD_ID"
+  - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_SERVICE}:latest"
+
+substitutions:
+  _REGION: "asia-south1"
+  _AR_REPOSITORY: "sales-pipeline"
+  _SERVICE: "kalisoft-sales"
+
+options:
+  logging: CLOUD_LOGGING_ONLY

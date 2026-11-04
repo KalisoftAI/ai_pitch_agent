@@ -1,0 +1,18 @@
+{
+  "name": "kalisoft-wechaty-gateway",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HTTP gateway that bridges Kalisoft FastAPI to Wechaty (WhatsApp/WeChat).",
+  "type": "module",
+  "engines": {
+    "node": ">=16"
+  },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "test": "node --test"
+  },
+  "optionalDependencies": {
+    "wechaty": "^1.20.2",
+    "wechaty-puppet-wechat4u": "^1.14.5"
+  }
+}

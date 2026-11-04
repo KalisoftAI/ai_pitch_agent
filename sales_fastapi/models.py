@@ -6,6 +6,8 @@ from sqlalchemy import (
     JSON,
     Boolean,
     DateTime,
+    Float,
+    ForeignKey,
     Integer,
     String,
     Text,
@@ -27,6 +29,8 @@ class User(Base):
     picture: Mapped[str] = mapped_column(String(512), default="")
     domain: Mapped[str] = mapped_column(String(255), default="", index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    password_hash: Mapped[str] = mapped_column(String(255), default="")
+    role: Mapped[str] = mapped_column(String(32), default="sales", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
@@ -89,6 +93,24 @@ class EmailConnection(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
+class GoogleMailbox(Base):
+    __tablename__ = "google_mailboxes"
+    __table_args__ = (
+        UniqueConstraint("user_id", "email_address", name="uq_google_mailbox_user_email"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True)
+    email_address: Mapped[str] = mapped_column(String(320), index=True)
+    access_token_encrypted: Mapped[str] = mapped_column(Text, default="")
+    refresh_token_encrypted: Mapped[str] = mapped_column(Text, default="")
+    token_expiry: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    scopes: Mapped[str] = mapped_column(Text, default="")
+    is_connected: Mapped[bool] = mapped_column(Boolean, default=False)
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
 class LinkedInProfile(Base):
     __tablename__ = "linkedin_profiles"
 
@@ -127,3 +149,489 @@ class WhatsAppMessage(Base):
     status: Mapped[str] = mapped_column(String(32), default="pending")
     sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class Event(Base):
+    """An exhibition, webinar or meetup imported from the event workbook."""
+
+    __tablename__ = "events"
+    __table_args__ = (UniqueConstraint("user_id", "fingerprint", name="uq_event_user_fingerprint"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True)
+    fingerprint: Mapped[str] = mapped_column(String(64), default="")
+    title: Mapped[str] = mapped_column(String(255), index=True, default="")
+    event_url: Mapped[str] = mapped_column(String(512), default="")
+    starts_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    ends_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    when_text: Mapped[str] = mapped_column(String(512), default="")
+    location: Mapped[str] = mapped_column(String(512), default="")
+    mode: Mapped[str] = mapped_column(String(32), default="unknown", index=True)
+    status: Mapped[str] = mapped_column(String(32), default="upcoming", index=True)
+    organiser: Mapped[str] = mapped_column(String(255), default="")
+    attendance: Mapped[str] = mapped_column(String(128), default="")
+    about: Mapped[str] = mapped_column(Text, default="")
+    todo: Mapped[str] = mapped_column(Text, default="")
+    source_sheet: Mapped[str] = mapped_column(String(64), default="")
+    source_row: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class EventRecipient(Base):
+    """A WhatsApp contact extracted from the workbook contacts sheet."""
+
+    __tablename__ = "event_recipients"
+    __table_args__ = (UniqueConstraint("user_id", "phone", name="uq_event_recipient_user_phone"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True)
+    phone: Mapped[str] = mapped_column(String(32), index=True, default="")
+    name: Mapped[str] = mapped_column(String(255), default="")
+    company: Mapped[str] = mapped_column(String(255), default="", index=True)
+    notes: Mapped[str] = mapped_column(Text, default="")
+    source_sheet: Mapped[str] = mapped_column(String(64), default="")
+    source_row: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class EventMessage(Base):
+    """A queued WhatsApp message for one event recipient."""
+
+    __tablename__ = "event_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True)
+    event_id: Mapped[int] = mapped_column(Integer, ForeignKey("events.id"), index=True)
+    recipient_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("event_recipients.id"), index=True
+    )
+    phone: Mapped[str] = mapped_column(String(32), default="")
+    body: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(32), default="queued", index=True)
+    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    error: Mapped[str] = mapped_column(String(512), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class AuditLog(Base):
+    """Append-only security/audit trail. Details are always PII-redacted."""
+
+    __tablename__ = "audit_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    actor_user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    action: Mapped[str] = mapped_column(String(128), index=True)
+    resource_type: Mapped[str] = mapped_column(String(64), default="")
+    resource_id: Mapped[str] = mapped_column(String(128), default="")
+    tenant_id: Mapped[str] = mapped_column(String(64), default="", index=True)
+    status: Mapped[str] = mapped_column(String(32), default="success", index=True)
+    ip_address: Mapped[str] = mapped_column(String(64), default="")
+    detail: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
+
+
+class ModelUsage(Base):
+    """Per-call LLM usage/cost ledger for budget and cost optimisation."""
+
+    __tablename__ = "model_usage"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    task: Mapped[str] = mapped_column(String(64), index=True)
+    tier: Mapped[str] = mapped_column(String(16), default="")
+    provider: Mapped[str] = mapped_column(String(32), default="")
+    model: Mapped[str] = mapped_column(String(128), default="")
+    input_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    output_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    cost_micros: Mapped[int] = mapped_column(Integer, default=0)
+    latency_ms: Mapped[int] = mapped_column(Integer, default=0)
+    fallback_used: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
+
+
+class Feedback(Base):
+    """User feedback submitted from the UI; triggers a mail notification."""
+
+    __tablename__ = "feedback"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    category: Mapped[str] = mapped_column(String(32), default="general", index=True)
+    rating: Mapped[int] = mapped_column(Integer, default=5)
+    message: Mapped[str] = mapped_column(Text, default="")
+    page: Mapped[str] = mapped_column(String(64), default="")
+    status: Mapped[str] = mapped_column(String(32), default="new", index=True)
+    notified: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class PromptReview(Base):
+    """A human comment or refinement proposal for a weekly prompt sample."""
+
+    __tablename__ = "prompt_reviews"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    prompt_id: Mapped[str] = mapped_column(String(16), index=True, default="")
+    prompt_version: Mapped[str] = mapped_column(String(32), default="")
+    task: Mapped[str] = mapped_column(String(64), default="")
+    comment: Mapped[str] = mapped_column(Text, default="")
+    proposed_change: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(16), index=True, default="pending")
+    submitted_by: Mapped[str] = mapped_column(String(255), default="")
+    submitted_by_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    reviewed_by: Mapped[str] = mapped_column(String(255), default="")
+    review_note: Mapped[str] = mapped_column(Text, default="")
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class MessageTemplate(Base):
+    """Reusable outreach template for a channel and sales-funnel strategy."""
+
+    __tablename__ = "message_templates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    name: Mapped[str] = mapped_column(String(128), index=True)
+    channel: Mapped[str] = mapped_column(String(32), index=True, default="email")
+    strategy: Mapped[str] = mapped_column(String(32), index=True, default="cold_outreach")
+    funnel_stage: Mapped[str] = mapped_column(String(32), default="awareness")
+    subject: Mapped[str] = mapped_column(String(255), default="")
+    body: Mapped[str] = mapped_column(Text, default="")
+    variables: Mapped[list] = mapped_column(JSON, default=list)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class Campaign(Base):
+    """A bulk outreach run built from a template and a contact selection."""
+
+    __tablename__ = "campaigns"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    name: Mapped[str] = mapped_column(String(160), default="")
+    channel: Mapped[str] = mapped_column(String(32), index=True, default="email")
+    strategy: Mapped[str] = mapped_column(String(32), default="cold_outreach")
+    template_id: Mapped[int] = mapped_column(Integer, default=0)
+    ai_model: Mapped[str] = mapped_column(String(64), default="")
+    status: Mapped[str] = mapped_column(String(32), index=True, default="pending_review")
+    total: Mapped[int] = mapped_column(Integer, default=0)
+    sent_count: Mapped[int] = mapped_column(Integer, default=0)
+    failed_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class CampaignMessage(Base):
+    """A single personalised message within a campaign (human-reviewable)."""
+
+    __tablename__ = "campaign_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    campaign_id: Mapped[int] = mapped_column(Integer, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    contact_id: Mapped[int] = mapped_column(Integer, default=0)
+    to_address: Mapped[str] = mapped_column(String(320), default="")
+    rendered_subject: Mapped[str] = mapped_column(String(255), default="")
+    rendered_body: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(32), index=True, default="pending_review")
+    error: Mapped[str] = mapped_column(String(512), default="")
+    provider_id: Mapped[str] = mapped_column(String(128), default="")
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class ErpDispatch(Base):
+    """Dispatch rows synced daily from the ERP report (ERP-V1/Reports -> Dispatch)."""
+
+    __tablename__ = "erp_dispatch"
+    __table_args__ = (
+        UniqueConstraint("report_date", "dispatch_no", name="uq_erp_dispatch_day_no"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    report_date: Mapped[str] = mapped_column(String(10), index=True, default="")
+    dispatch_no: Mapped[str] = mapped_column(String(64), index=True, default="")
+    customer: Mapped[str] = mapped_column(String(255), index=True, default="")
+    plant: Mapped[str] = mapped_column(String(64), index=True, default="")
+    sales_person: Mapped[str] = mapped_column(String(128), default="")
+    schedule_qty: Mapped[float] = mapped_column(Integer, default=0)
+    dispatched_qty: Mapped[float] = mapped_column(Integer, default=0)
+    balance_qty: Mapped[float] = mapped_column(Integer, default=0)
+    pct_complete: Mapped[float] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(32), index=True, default="")
+    synced_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class ErpOrder(Base):
+    """Order rows synced from the ERP report (Orders sheet)."""
+
+    __tablename__ = "erp_orders"
+    __table_args__ = (UniqueConstraint("report_date", "order_no", name="uq_erp_order_day_no"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    report_date: Mapped[str] = mapped_column(String(10), index=True, default="")
+    order_no: Mapped[str] = mapped_column(String(64), index=True, default="")
+    customer: Mapped[str] = mapped_column(String(255), index=True, default="")
+    order_date: Mapped[str] = mapped_column(String(10), index=True, default="")
+    required_date: Mapped[str] = mapped_column(String(10), default="")
+    status: Mapped[str] = mapped_column(String(32), index=True, default="")
+    total_value: Mapped[float] = mapped_column(Integer, default=0)
+    synced_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class TallySale(Base):
+    """One Tally Sales Register line synced from gs://kalika_enterprises/kalika_sales2026/."""
+
+    __tablename__ = "tally_sales"
+    __table_args__ = (
+        UniqueConstraint("source_file", "source_row", name="uq_tally_sale_source_row"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_file: Mapped[str] = mapped_column(String(255), index=True, default="")
+    source_row: Mapped[int] = mapped_column(Integer, default=0)
+    sale_date: Mapped[str] = mapped_column(String(10), index=True, default="")
+    period: Mapped[str] = mapped_column(String(7), index=True, default="")
+    buyer: Mapped[str] = mapped_column(String(255), index=True, default="")
+    buyer_address: Mapped[str] = mapped_column(Text, default="")
+    consignee: Mapped[str] = mapped_column(String(255), default="")
+    gstin: Mapped[str] = mapped_column(String(32), index=True, default="")
+    voucher_type: Mapped[str] = mapped_column(String(64), default="")
+    voucher_no: Mapped[str] = mapped_column(String(64), index=True, default="")
+    item_name: Mapped[str] = mapped_column(String(512), default="")
+    quantity: Mapped[float] = mapped_column(Float, default=0)
+    rate: Mapped[float] = mapped_column(Float, default=0)
+    value: Mapped[float] = mapped_column(Float, default=0)
+    invoice_total: Mapped[float] = mapped_column(Float, default=0)
+    tax: Mapped[float] = mapped_column(Float, default=0)
+    synced_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class IntegrationSetting(Base):
+    """Key/value settings (YouTube API key, channel id, sync schedule...)."""
+
+    __tablename__ = "integration_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    key: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    value: Mapped[str] = mapped_column(Text, default="")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class SyncRun(Base):
+    """Audit trail for sync jobs (ERP dispatch, YouTube, graph, dump)."""
+
+    __tablename__ = "sync_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    job: Mapped[str] = mapped_column(String(64), index=True)
+    status: Mapped[str] = mapped_column(String(32), index=True, default="ok")
+    detail: Mapped[str] = mapped_column(Text, default="")
+    started_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class JourneyEvent(Base):
+    """Customer-journey event (stage transitions, feedback, purchases, stories)."""
+
+    __tablename__ = "journey_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    contact_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    customer_type: Mapped[str] = mapped_column(String(32), index=True, default="lead")
+    stage: Mapped[str] = mapped_column(String(32), index=True, default="awareness")
+    event: Mapped[str] = mapped_column(String(64), index=True, default="")
+    channel: Mapped[str] = mapped_column(String(32), default="")
+    detail: Mapped[str] = mapped_column(Text, default="")
+    meta: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class VoiceTranscript(Base):
+    """Call-recording transcription + layered analysis (sound, tone, context, lead)."""
+
+    __tablename__ = "voice_transcripts"
+    __table_args__ = (UniqueConstraint("gcs_path", name="uq_voice_transcript_path"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    gcs_path: Mapped[str] = mapped_column(String(512), unique=True, index=True)
+    file_name: Mapped[str] = mapped_column(String(255), index=True, default="")
+    size_bytes: Mapped[int] = mapped_column(Integer, default=0)
+    gcs_updated: Mapped[str] = mapped_column(String(64), default="")
+    duration_sec: Mapped[float] = mapped_column(Integer, default=0)
+    sample_rate: Mapped[int] = mapped_column(Integer, default=0)
+    channels: Mapped[int] = mapped_column(Integer, default=0)
+    mean_volume_db: Mapped[float] = mapped_column(Integer, default=0)
+    max_volume_db: Mapped[float] = mapped_column(Integer, default=0)
+    silence_ratio: Mapped[float] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(32), index=True, default="pending")
+    language: Mapped[str] = mapped_column(String(16), default="")
+    transcript: Mapped[str] = mapped_column(Text, default="")
+    speakers: Mapped[dict] = mapped_column(JSON, default=dict)
+    layers: Mapped[dict] = mapped_column(JSON, default=dict)
+    tone: Mapped[dict] = mapped_column(JSON, default=dict)
+    lead: Mapped[dict] = mapped_column(JSON, default=dict)
+    model: Mapped[str] = mapped_column(String(128), default="")
+    error: Mapped[str] = mapped_column(String(512), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class TeamMessage(Base):
+    """Internal team chat — daily rate reviews + field-executive voice/text updates.
+
+    kind: rate_review | field_update | general
+    status: pending -> approved | rejected  (two-option approval for field updates)
+    """
+
+    __tablename__ = "team_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    author_name: Mapped[str] = mapped_column(String(255), default="")
+    author_role: Mapped[str] = mapped_column(String(64), default="sales")
+    kind: Mapped[str] = mapped_column(String(32), index=True, default="general")
+    body: Mapped[str] = mapped_column(Text, default="")
+    transcript_id: Mapped[int] = mapped_column(Integer, default=0)
+    meta: Mapped[dict] = mapped_column(JSON, default=dict)
+    status: Mapped[str] = mapped_column(String(16), index=True, default="posted")
+    reviewed_by: Mapped[str] = mapped_column(String(255), default="")
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class Product(Base):
+    """Sales product master."""
+
+    __tablename__ = "products"
+    __table_args__ = (UniqueConstraint("user_id", "code", name="uq_product_user_code"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    code: Mapped[str] = mapped_column(String(64), index=True, default="")
+    name: Mapped[str] = mapped_column(String(255), index=True)
+    category: Mapped[str] = mapped_column(String(128), default="", index=True)
+    unit: Mapped[str] = mapped_column(String(32), default="kg")
+    description: Mapped[str] = mapped_column(Text, default="")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ProductRate(Base):
+    """A product rate submission with internal approval workflow."""
+
+    __tablename__ = "product_rates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    product_id: Mapped[int] = mapped_column(Integer, ForeignKey("products.id"), index=True)
+    rate: Mapped[float] = mapped_column(Float, default=0)
+    currency: Mapped[str] = mapped_column(String(8), default="INR")
+    unit: Mapped[str] = mapped_column(String(32), default="kg")
+    effective_date: Mapped[str] = mapped_column(String(10), index=True, default="")
+    status: Mapped[str] = mapped_column(String(16), index=True, default="pending")
+    submitted_by: Mapped[str] = mapped_column(String(255), default="")
+    approved_by: Mapped[str] = mapped_column(String(255), default="")
+    notes: Mapped[str] = mapped_column(Text, default="")
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class CompanyVisit(Base):
+    """A salesperson's company visit with optional GCS media attachments."""
+
+    __tablename__ = "company_visits"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    contact_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    company: Mapped[str] = mapped_column(String(255), index=True, default="")
+    contact_name: Mapped[str] = mapped_column(String(255), default="")
+    contact_phone: Mapped[str] = mapped_column(String(64), default="")
+    visit_date: Mapped[str] = mapped_column(String(10), index=True, default="")
+    visit_type: Mapped[str] = mapped_column(String(32), index=True, default="in_person")
+    sales_person: Mapped[str] = mapped_column(String(255), index=True, default="")
+    purpose: Mapped[str] = mapped_column(String(512), default="")
+    notes: Mapped[str] = mapped_column(Text, default="")
+    # Field-executive sample: who/where we met, what was discussed earlier,
+    # the mail/chat trail, and a map pin for route planning.
+    meet_person: Mapped[str] = mapped_column(String(255), default="")
+    meet_home_location: Mapped[str] = mapped_column(String(255), default="")
+    previous_discussion: Mapped[str] = mapped_column(Text, default="")
+    mail_chat_details: Mapped[str] = mapped_column(Text, default="")
+    map_location: Mapped[str] = mapped_column(String(512), default="")
+    outcome: Mapped[str] = mapped_column(String(64), default="")
+    next_action: Mapped[str] = mapped_column(Text, default="")
+    follow_up_date: Mapped[str] = mapped_column(String(10), default="")
+    status: Mapped[str] = mapped_column(String(32), index=True, default="completed")
+    media: Mapped[list] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class SocialMetric(Base):
+    """A platform metric snapshot (real API value or an explicit sync status)."""
+
+    __tablename__ = "social_metrics"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    platform: Mapped[str] = mapped_column(String(32), index=True, default="")
+    metric: Mapped[str] = mapped_column(String(64), index=True, default="")
+    value: Mapped[float] = mapped_column(Float, default=0)
+    period: Mapped[str] = mapped_column(String(16), index=True, default="")
+    meta: Mapped[dict] = mapped_column(JSON, default=dict)
+    captured_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class MarketingCompany(Base):
+    """A company from the Kalika marketing list.
+
+    The marketing workbook holds three overlapping company lists and a calling-log
+    sheet. Rows are keyed by a normalised company name per user so the same
+    company merged from multiple sheets collapses to a single row.
+    """
+
+    __tablename__ = "marketing_companies"
+    __table_args__ = (
+        UniqueConstraint("user_id", "company_key", name="uq_marketing_company_user_key"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+
+    company: Mapped[str] = mapped_column(String(255), index=True, default="")
+    company_key: Mapped[str] = mapped_column(String(255), index=True, default="")
+    contact_name: Mapped[str] = mapped_column(String(255), default="")
+    phone: Mapped[str] = mapped_column(String(64), default="")
+    email: Mapped[str] = mapped_column(String(320), default="")
+    category: Mapped[str] = mapped_column(String(255), default="")
+    call_status: Mapped[str] = mapped_column(String(64), default="")
+    requirements: Mapped[str] = mapped_column(Text, default="")
+    source_sheet: Mapped[str] = mapped_column(String(64), default="")
+    source_row: Mapped[int] = mapped_column(Integer, default=0)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )

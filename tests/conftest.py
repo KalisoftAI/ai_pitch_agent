@@ -12,6 +12,8 @@ os.environ["SECRET_KEY"] = "test-secret-key-that-is-long-enough-for-hs256"
 os.environ["AUTH_DEV_MODE"] = "true"
 os.environ["GOOGLE_CLIENT_ID"] = ""
 os.environ["ENV"] = "test"
+# The dev-login fixture user acts as the admin during tests.
+os.environ["ADMIN_EMAILS"] = "tester@kalisoftai.com,ai.solutions@kalisoftai.in"
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 

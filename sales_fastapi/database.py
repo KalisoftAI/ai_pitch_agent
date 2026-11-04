@@ -67,3 +67,33 @@ def init_db() -> None:
     from . import models  # noqa: F401  (register mappers)
 
     Base.metadata.create_all(bind=engine)
+    _ensure_columns()
+
+
+def _ensure_columns() -> None:
+    """Idempotent column adds for existing databases (create_all only makes new tables)."""
+    from sqlalchemy import inspect, text
+
+    insp = inspect(engine)
+    if "users" in insp.get_table_names():
+        cols = {c["name"] for c in insp.get_columns("users")}
+        if "password_hash" not in cols:
+            with engine.begin() as conn:
+                conn.execute(
+                    text("ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) DEFAULT ''")
+                )
+        if "role" not in cols:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR(32) DEFAULT 'sales'"))
+    if "company_visits" in insp.get_table_names():
+        cols = {c["name"] for c in insp.get_columns("company_visits")}
+        for column, ddl in (
+            ("meet_person", "VARCHAR(255) DEFAULT ''"),
+            ("meet_home_location", "VARCHAR(255) DEFAULT ''"),
+            ("previous_discussion", "TEXT DEFAULT ''"),
+            ("mail_chat_details", "TEXT DEFAULT ''"),
+            ("map_location", "VARCHAR(512) DEFAULT ''"),
+        ):
+            if column not in cols:
+                with engine.begin() as conn:
+                    conn.execute(text(f"ALTER TABLE company_visits ADD COLUMN {column} {ddl}"))

@@ -1,15 +1,22 @@
 from __future__ import annotations
 
-import csv
-import io
-import json
-
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+)
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..config import settings
 from ..database import get_db
+from ..governance.audit import log_event
+from ..importer import normalise_record, records_from_bytes
 from ..models import Contact, User
 from ..schemas import ContactCreate, ContactOut, ContactUpdate
 from ..security import get_current_user
@@ -40,9 +47,7 @@ def list_contacts(
     if q:
         like = f"%{q}%"
         query = query.filter(
-            Contact.company.ilike(like)
-            | Contact.name.ilike(like)
-            | Contact.email.ilike(like)
+            Contact.company.ilike(like) | Contact.name.ilike(like) | Contact.email.ilike(like)
         )
     return query.order_by(Contact.created_at.desc()).all()
 
@@ -50,13 +55,12 @@ def list_contacts(
 @router.post("", response_model=ContactOut, status_code=201)
 def create_contact(
     payload: ContactCreate,
+    request: Request,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     existing = (
-        db.query(Contact)
-        .filter(Contact.user_id == user.id, Contact.email == payload.email)
-        .first()
+        db.query(Contact).filter(Contact.user_id == user.id, Contact.email == payload.email).first()
     )
     if existing:
         raise HTTPException(status_code=409, detail="Contact with this email already exists")
@@ -88,6 +92,18 @@ def create_contact(
         contact.gcs_path = path
         db.commit()
         db.refresh(contact)
+
+    log_event(
+        db,
+        action="contact.create",
+        actor_user_id=user.id,
+        resource_type="contact",
+        resource_id=str(contact.id),
+        tenant_id=user.domain,
+        ip_address=request.client.host if request.client else "",
+        detail={"source": contact.source, "intent": contact.intent},
+        commit=True,
+    )
     return contact
 
 
@@ -99,11 +115,7 @@ def contact_stats(
     base = db.query(Contact).filter(Contact.user_id == user.id)
 
     def group(column):
-        rows = (
-            base.with_entities(column, func.count(Contact.id))
-            .group_by(column)
-            .all()
-        )
+        rows = base.with_entities(column, func.count(Contact.id)).group_by(column).all()
         return {(value or "(none)"): count for value, count in rows}
 
     return {
@@ -120,11 +132,7 @@ def get_contact(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    contact = (
-        db.query(Contact)
-        .filter(Contact.id == contact_id, Contact.user_id == user.id)
-        .first()
-    )
+    contact = db.query(Contact).filter(Contact.id == contact_id, Contact.user_id == user.id).first()
     if contact is None:
         raise HTTPException(status_code=404, detail="Contact not found")
     return contact
@@ -134,90 +142,149 @@ def get_contact(
 def update_contact(
     contact_id: int,
     payload: ContactUpdate,
+    request: Request,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    contact = (
-        db.query(Contact)
-        .filter(Contact.id == contact_id, Contact.user_id == user.id)
-        .first()
-    )
+    contact = db.query(Contact).filter(Contact.id == contact_id, Contact.user_id == user.id).first()
     if contact is None:
         raise HTTPException(status_code=404, detail="Contact not found")
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    changed = payload.model_dump(exclude_unset=True)
+    for field, value in changed.items():
         setattr(contact, field, value)
     db.commit()
     db.refresh(contact)
+    log_event(
+        db,
+        action="contact.update",
+        actor_user_id=user.id,
+        resource_type="contact",
+        resource_id=str(contact.id),
+        tenant_id=user.domain,
+        ip_address=request.client.host if request.client else "",
+        detail={"fields": sorted(changed.keys())},
+        commit=True,
+    )
     return contact
 
 
 @router.delete("/{contact_id}", status_code=204)
 def delete_contact(
     contact_id: int,
+    request: Request,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    contact = (
-        db.query(Contact)
-        .filter(Contact.id == contact_id, Contact.user_id == user.id)
-        .first()
-    )
+    contact = db.query(Contact).filter(Contact.id == contact_id, Contact.user_id == user.id).first()
     if contact is None:
         raise HTTPException(status_code=404, detail="Contact not found")
     db.delete(contact)
     db.commit()
+    log_event(
+        db,
+        action="contact.delete",
+        actor_user_id=user.id,
+        resource_type="contact",
+        resource_id=str(contact_id),
+        tenant_id=user.domain,
+        ip_address=request.client.host if request.client else "",
+        detail={},
+        commit=True,
+    )
 
 
 # --------------------------------------------------------------------------
-# GCS import
+# File / GCS import
 # --------------------------------------------------------------------------
-def _records_from_bytes(name: str, raw: bytes) -> list[dict]:
-    lower = name.lower()
-    if lower.endswith(".json"):
-        try:
-            parsed = json.loads(raw.decode("utf-8", errors="ignore"))
-        except json.JSONDecodeError:
-            return []
-        if isinstance(parsed, dict):
-            # support {"contacts": [...]}
-            return parsed.get("contacts", [parsed])
-        if isinstance(parsed, list):
-            return parsed
-        return []
-    if lower.endswith(".csv"):
-        text = raw.decode("utf-8", errors="ignore")
-        return list(csv.DictReader(io.StringIO(text)))
-    return []
+def _insert_records(
+    db: Session, user: User, records: list[dict], *, source: str, gcs_path: str = ""
+) -> tuple[int, int]:
+    """Insert normalised records for a user, skipping duplicates and blanks."""
+    imported = skipped = 0
+    for record in records:
+        normalised = normalise_record(record)
+        if not normalised:
+            skipped += 1
+            continue
+        exists = (
+            db.query(Contact)
+            .filter(Contact.user_id == user.id, Contact.email == normalised["email"])
+            .first()
+        )
+        if exists:
+            skipped += 1
+            continue
+        db.add(Contact(user_id=user.id, source=source, gcs_path=gcs_path, **normalised))
+        imported += 1
+    return imported, skipped
 
 
-def _normalise(record: dict) -> dict | None:
-    def pick(*keys):
-        for key in keys:
-            for record_key in record:
-                if record_key and record_key.strip().lower() == key:
-                    value = record[key]
-                    if value:
-                        return str(value).strip()
-        return ""
+@router.post("/upload")
+async def upload_contacts(
+    request: Request,
+    files: list[UploadFile] = File(default=[]),
+    gcs_prefix: str = Form(default=""),
+    gcs_bucket: str = Form(default=""),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Upload one or more CSV/Excel/VCF/JSON files, and/or import a GCS prefix.
 
-    email_address = pick("email", "email (company / division)", "e-mail", "mail")
-    company = pick("company", "organisation", "organization")
-    if not email_address and not company:
-        return None
-    verdict = classify_contact(email_address, company)
+    A user may attach multiple files; each supported file is parsed and merged
+    into their own contact list. Optionally a GCS prefix can be synced in the
+    same call.
+    """
+    imported = skipped = gcs_imported = gcs_skipped = 0
+
+    for upload in files:
+        if not upload.filename:
+            continue
+        raw = await upload.read()
+        records = records_from_bytes(upload.filename, raw)
+        file_imported, file_skipped = _insert_records(db, user, records, source="upload")
+        imported += file_imported
+        skipped += file_skipped
+
+    gcs_scanned = 0
+    if gcs_prefix.strip():
+        gcs = GCSStorage(bucket_name=gcs_bucket.strip() or None)
+        if not gcs.available:
+            raise HTTPException(status_code=503, detail="GCS is not available")
+        blobs = gcs.list_contacts(prefix=gcs_prefix.strip())
+        gcs_scanned = len(blobs)
+        for blob in blobs:
+            raw = gcs.download_blob(blob["name"])
+            if not raw:
+                continue
+            records = records_from_bytes(blob["name"], raw)
+            done, missed = _insert_records(db, user, records, source="gcs", gcs_path=blob["name"])
+            gcs_imported += done
+            gcs_skipped += missed
+
+    db.commit()
+    total_imported = imported + gcs_imported
+    log_event(
+        db,
+        action="contact.upload",
+        actor_user_id=user.id,
+        resource_type="contact",
+        tenant_id=user.domain,
+        ip_address=request.client.host if request.client else "",
+        detail={
+            "files": len(files),
+            "gcs_prefix": gcs_prefix,
+            "imported": total_imported,
+        },
+        commit=True,
+    )
     return {
-        "company": company,
-        "name": pick("name", "contact", "contact name"),
-        "email": email_address or f"unknown-{abs(hash(company))}@placeholder.local",
-        "phone": pick("phone", "contact (phone)"),
-        "address": pick("address", "address (ahmednagar unit)"),
-        "linkedin_company": pick("linkedin", "linkedin (company / key scm profile)"),
-        "purchase_contact_name": pick("purchase / scm contact (name, role)"),
-        "purchase_contact_email": pick("purchase contact details (email / phone)"),
-        "domain": verdict["domain"],
-        "intent": verdict["intent"],
-        "context": company,
-        "source": "gcs",
+        "files": len(files),
+        "imported": imported,
+        "skipped": skipped,
+        "gcs_scanned": gcs_scanned,
+        "gcs_imported": gcs_imported,
+        "gcs_skipped": gcs_skipped,
+        "total_imported": total_imported,
     }
 
 
@@ -227,13 +294,16 @@ def import_from_gcs(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    prefix = prefix or settings.GCS_PATH_CONTACTS
+    allowed_prefix = settings.GCS_PATH_CONTACTS.rstrip("/") + "/"
+    if prefix != settings.GCS_PATH_CONTACTS and not prefix.startswith(allowed_prefix):
+        raise HTTPException(status_code=400, detail="GCS prefix is outside the contacts namespace")
     gcs = GCSStorage()
     if not gcs.available:
         raise HTTPException(
             status_code=503,
             detail="GCS is not available (missing credentials / package)",
         )
-    prefix = prefix or settings.GCS_PATH_CONTACTS
     blobs = gcs.list_contacts(prefix=prefix)
 
     imported = skipped = 0
@@ -241,20 +311,9 @@ def import_from_gcs(
         raw = gcs.download_blob(blob["name"])
         if not raw:
             continue
-        for record in _records_from_bytes(blob["name"], raw):
-            normalised = _normalise(record)
-            if not normalised:
-                skipped += 1
-                continue
-            exists = (
-                db.query(Contact)
-                .filter(Contact.user_id == user.id, Contact.email == normalised["email"])
-                .first()
-            )
-            if exists:
-                skipped += 1
-                continue
-            db.add(Contact(user_id=user.id, gcs_path=blob["name"], **normalised))
-            imported += 1
+        records = records_from_bytes(blob["name"], raw)
+        done, missed = _insert_records(db, user, records, source="gcs", gcs_path=blob["name"])
+        imported += done
+        skipped += missed
     db.commit()
     return {"scanned": len(blobs), "imported": imported, "skipped": skipped, "prefix": prefix}

@@ -1,6 +1,84 @@
-﻿# AI Sales Agent 🚀
+﻿# Kalisoft AI Sales Pipeline
 
-A powerful Django-based web application that automates the entire B2B sales pipeline — from supplier discovery and email extraction to AI-powered pitch generation and tracked email campaign delivery.
+Kalisoft AI Sales Pipeline is a B2B sales workspace built on FastAPI + React. It combines Google sign-in, contact and company intelligence, Gmail/IMAP mailboxes, Tally and ERP sales data, field visits, outreach, governance, and external market signals. The repository also retains the legacy Django supplier extractor and pitch generator.
+
+## Current production snapshot (2026-11-04)
+
+| Item | Value |
+|---|---|
+| GCP project | `gen-lang-client-0132243782` |
+| Project number | `19782268668` |
+| Region | `asia-south1` |
+| Cloud Run service | `kalisoft-sales` |
+| Production URL | `https://kalisoft-sales-19782268668.asia-south1.run.app` |
+| Cloud SQL | `gen-lang-client-0132243782:us-central1:kalisoft-sales-data` |
+| Runtime / CI service account | `kalisoft-sales-run@gen-lang-client-0132243782.iam.gserviceaccount.com` |
+| GitHub repository | `KalisoftAI/ai_pitch_agent` |
+| Local entry point | `python run.py` on `http://localhost:8000` |
+| Frontend dev server | `npm run dev` on `http://localhost:5173` |
+
+### Current application architecture
+
+```text
+Browser / React SPA
+        |
+        | HTTPS + Google ID token / JWT
+        v
+Cloud Run: kalisoft-sales (FastAPI)
+        |
+        +--> Auth, RBAC, audit, prompt review
+        +--> Contacts, companies, outreach, campaigns
+        +--> Tally, ERP, dashboard, KPIs
+        +--> Gmail OAuth, IMAP/SMTP, in-store mail desk
+        +--> LinkedIn / Reddit / YouTube signal desk
+        |
+        +--> Cloud SQL PostgreSQL
+        +--> Google Cloud Storage
+        +--> Gemma / Gemini LLM router
+```
+
+### What is live
+
+- Google Identity Services sign-in, username/password fallback, strict email allowlist, JWT sessions and role checks.
+- Per-user contacts, mailboxes, company visits, campaigns, audit records and retention settings.
+- Tally Sales Register sync, ERP report sync, sales BI, KPI endpoints and dashboard summaries.
+- Gmail OAuth read-only mailbox connection, IMAP/SMTP mailbox tests and in-store mail extraction.
+- LinkedIn, Reddit and YouTube Data API v3 signal endpoints.
+- Governance: Fernet-encrypted secrets, PII redaction, audit trail, rate limits, LLM guardrails and human review.
+- GitHub Actions CI/CD to Cloud Run with Cloud SQL, Artifact Registry and Secret Manager.
+
+### Next scope
+
+- **Reddit + Medium content intelligence:** port the topic discovery, concept extraction, trend clustering, ranking, research, article generation and LinkedIn/graphic prompt pipeline from `D:\KaliSoftAI\Reddit-Post-Topic-Finder-main\backend`.
+- **LinkedIn:** official API company monitoring, hiring signals, contact/account enrichment, thought-leadership post generation and engagement analytics.
+- **YouTube:** company and technology search, channel statistics, transcripts, comment mining, video-to-article and video-to-LinkedIn workflows.
+- **Gmail contact intelligence:** extract contacts and signatures, resolve company domains, enrich company profiles, score fit/intent and recommend the next best action with evidence.
+- **Gemma agent orchestration:** decompose recommendations into subtasks, assign them to research, enrichment, outreach, follow-up and QA agents, and require human approval before execution.
+
+Full environment contract, OAuth setup, data model and phased roadmap: [PROJECT_STATUS_AND_FUTURE_SCOPE.md](PROJECT_STATUS_AND_FUTURE_SCOPE.md).
+
+---
+
+## 🆕 FastAPI Pipeline — latest updates (branch `sales-gcp-migration`)
+
+The FastAPI workspace (`sales_fastapi/` + React `frontend/`) is the actively developed product. Latest additions:
+
+- **Customized scheduler** — `POST /api/scheduler/run` (manual sweep + Cloud Scheduler target), `/status`, `/tasks` (cron expressions per task), `/clear`. Redis queue with in-memory fallback; user-scoped.
+- **Business KPI monitoring** — `GET /api/kpi/overview | pipeline | outreach | costs` power the new **KPIs** tab (contacts funnel, delivery rate, AI spend from the micro-USD ledger).
+- **Google-secured APIs (ADC)** — LinkedIn, Reddit and now **YouTube Data API v3** (`POST /api/social/youtube/search`); ADC works on Cloud Run, `GOOGLE_APPLICATION_CREDENTIALS` locally.
+- **Feedback + mail notification** — `POST /api/feedback` stores feedback and notifies the team by Gmail SMTP; **Feedback** tab in the UI with star rating.
+- **Data-security guardrails UI** — `GET /api/security/status` drives the "Your data, guarded" panel (Google Sign-In, per-user isolation, Fernet encryption, PII redaction, audit trail, rate limits, LLM guardrails, retention).
+- **Engaging next-scope section** — sign-in page previews Gemma 4 personalisation, knowledge-catalog graph DB, YouTube signals, smart notifications, BigQuery KPI warehouse, multi-tenant RLS, and the Account catalog → quote → invoice workflow.
+- **UAT/Prod parity** — env badge in the UI (DEV/UAT/PROD) fed by `/api/health`; CD pipeline maps `main`→production, `UAT`→staging, `DEV`→development Cloud Run services.
+
+### Run it
+
+```powershell
+pip install -r requirements-sales.txt
+python run.py --seed            # backend → http://localhost:8000
+cd frontend; npm run dev        # frontend dev → http://localhost:5173 (proxies /api)
+npm run build                   # frontend prod → served by FastAPI at /
+```
 
 ---
 
@@ -630,3 +708,225 @@ Recommended order:
 | Emulator will not start | Stop stale emulator processes, inspect the extension output panel, and verify the generated Firebase configuration |
 | PGlite data differs from Django data | Expected: PGlite is a separate local database; seed or import test data explicitly |
 | Production data is missing | Expected: local emulators do not read Cloud SQL, GCS, BigQuery, or Google Sheets |
+
+---
+
+# 🔐 FastAPI Sales Service — Security, Governance, SLM Routing & CI/CD
+
+Canonical, exhaustive reference: [`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md).
+This section is the README-level summary of the implemented FastAPI service.
+
+Status: **Phases 1–6 implemented** on `sales-gcp-migration` (`123402c`, `45eb45c`).
+**57 tests passing**, coverage **74%**, `ruff` clean, `bandit -ll` clean, `alembic check` no drift.
+
+## 1. Secure request path (ASCII)
+
+```text
+Browser / React (frontend/)
+   │
+   v
+RequestGuardrails  (413 size · 429 rate · CSP · HSTS · nosniff)
+   │
+   v
+TrustedHostMiddleware  (host allow-list)
+   │
+   v
+Google ID token ─► JWT ─► get_current_user
+   │
+   ├── contacts router        (audited CRUD, user-scoped, GCS mirror)
+   ├── governance router      /policy /gcp /audit /usage /retention/purge
+   └── llm router             /tasks /plan/{task} /run
+            │
+            v
+   LLM Guardrails (injection · PII · output validation)
+            │
+            v
+   ModelRouter (cost): nano ▸ small ▸ medium ▸ large ▸ echo
+            │                    │            │
+            v                    v            v
+   Ollama local SLM ($0)   Gemini cloud    offline echo
+            │
+            v
+   SQLAlchemy ORM ─► SQLite (local) ◄─Alembic─► Cloud SQL Postgres
+        tables: users · contacts · email_connections · linkedin_profiles
+                reddit_posts · whatsapp_messages · audit_logs · model_usage
+```
+
+## 2. Security controls
+
+- **HTTP:** body-size cap (413), per-client rate limits (429), `TrustedHost`, CSP,
+  `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`,
+  HSTS in production, docs disabled in production, explicit CORS methods/headers.
+- **Auth:** server-side Google ID-token verification (audience, signature,
+  `email_verified`, domain allow-list) → short-lived HS256 JWT; inactive users rejected.
+- **Secrets:** IMAP/SMTP passwords encrypted with Fernet (key from `SECRET_KEY`);
+  never returned. Deploy secrets come from Secret Manager.
+- **Production validator:** rejects default/short `SECRET_KEY`, `AUTH_DEV_MODE=true`,
+  wildcard CORS/hosts, and disabled PII redaction/audit.
+
+## 3. LLM/agent guardrails
+
+| Control | Example trigger |
+|---|---|
+| `override_instructions` | "ignore all previous instructions" |
+| `reveal_system_prompt` | "print/reveal your system prompt" |
+| `role_hijack` | "you are now…", "DAN mode", "developer mode" |
+| `secret_exfiltration` | "print the api key/token/password" |
+| `tool_abuse` | "run shell/python/os.system" |
+| `delimiter_escape` | `<\|im_start\|>`, `[INST]` |
+| size / empty / JSON | prompt too large, empty or invalid JSON output |
+
+Rejected prompts raise `PromptRejected` (HTTP 400) and are written to the audit trail.
+
+## 4. Data governance
+
+- **Classification:** every field → public / internal / confidential / restricted;
+  sensitive names auto-escalate; `may_leave_environment()` blocks restricted fields
+  from external providers.
+- **PII:** email, phone, Aadhaar, PAN, GSTIN, credit card (Luhn-validated), IPv4;
+  `redact()` → `[KIND]`, `mask()` preserves shape, `redact_structured()` recurses.
+- **Audit:** append-only `audit_logs`; recorded on `auth.login`,
+  `contact.create/update/delete`, every `llm.run`, and governance actions; details
+  always PII-redacted.
+- **Retention:** per-dataset windows; `POST /api/governance/retention/purge?dry_run=`.
+- **GCP verification:** `GET /api/governance/gcp?deep=` reports project/ADC/DB/GCS/
+  Secret Manager status only — never values.
+
+## 5. Cost-optimised SLM routing
+
+| Task | Tier | Primary | Fallback | External | JSON |
+|---|---|---|---|---|---|
+| `dedupe_match` | nano | local 0.5B | local 3B | no | yes |
+| `classify_intent` | small | local 3B | local 8B | no | yes |
+| `extract_entities` | small | local 3B | cloud flash | yes | yes |
+| `summarize_profile` | small | local 3B | cloud flash | yes | no |
+| `translate_script` | small | local 3B | cloud flash | yes | no |
+| `draft_outreach_email` | medium | local 8B | cloud flash | yes | no |
+| `generate_pitch` | large | cloud pro | cloud flash | yes | no |
+| `research_synthesis` | large | cloud pro | cloud flash | yes | no |
+
+Cost estimate (micro-USD / 1K tokens): local & echo `0/0`, flash-lite `50/200`,
+flash `100/400`, pro `1250/5000`. Every chain ends in the offline `echo` provider.
+
+## 6. Configuration reference
+
+| Group | Variables |
+|---|---|
+| Core | `ENV`, `SECRET_KEY`, `ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES` |
+| Database | `DATABASE_URL`, `CLOUD_SQL_CONNECTION_NAME`, `POSTGRES_*`, `SQLITE_PATH` |
+| Google | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_ALLOWED_DOMAINS`, `GEMINI_API_KEY` |
+| GCS | `GCS_BUCKET_CONTACTS`, `GCS_PATH_CONTACTS` |
+| HTTP guardrails | `ALLOWED_HOSTS`, `MAX_REQUEST_BYTES`, `RATE_LIMIT_ENABLED`, `AUTH_RATE_LIMIT`, `API_RATE_LIMIT`, `CORS_ORIGINS` |
+| Governance | `GOVERNANCE_ENABLED`, `PII_REDACTION_ENABLED`, `AUDIT_LOG_ENABLED`, `RETENTION_DAYS_AUDIT`, `RETENTION_DAYS_CONTACTS` |
+| SLM routing | `LLM_ENABLED`, `LLM_LOCAL_BASE_URL`, `LLM_LOCAL_NANO_MODEL`, `LLM_LOCAL_MODEL`, `LLM_LOCAL_MEDIUM_MODEL`, `LLM_CLOUD_FLASH_MODEL`, `LLM_CLOUD_MODEL`, `LLM_MONTHLY_TOKEN_BUDGET`, `LLM_ENFORCE_BUDGET`, `LLM_TIMEOUT_SECONDS`, `LLM_MAX_INPUT_CHARS`, `LLM_MAX_OUTPUT_CHARS` |
+| Mail / social | `SMTP_*`, `IMAP_*`, `LINKEDIN_*`, `REDDIT_*`, `WHATSAPP_*`, `GEMMA_MODEL`, `REDIS_*` |
+
+DB resolution order: `DATABASE_URL` → `CLOUD_SQL_CONNECTION_NAME` → `POSTGRES_HOST` → SQLite.
+
+## 7. Data model
+
+| Table | Purpose |
+|---|---|
+| `users` | identities (`google_sub`, `email`, `domain`, `is_active`) |
+| `contacts` | user-scoped contacts; unique `(user_id, email)` |
+| `email_connections` | IMAP/SMTP + Fernet-encrypted password |
+| `linkedin_profiles` / `reddit_posts` | scraped hiring signal |
+| `whatsapp_messages` | outbound queue |
+| `audit_logs` | append-only, redacted audit trail |
+| `model_usage` | per-call LLM tokens/cost ledger |
+
+## 8. API reference
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/config` | public config (no secrets) |
+| GET | `/api/health` | DB / Redis / GCS / sign-in status |
+| GET | `/api/integrations` | integration availability |
+| POST | `/api/cron/run` | enqueue scheduled tasks |
+| POST | `/api/auth/google` | Google ID token → JWT (audited) |
+| GET | `/api/auth/me` | current user |
+| GET/POST | `/api/contacts` | list / create (audited) |
+| GET | `/api/contacts/stats` | totals by domain/intent/source |
+| GET/PATCH/DELETE | `/api/contacts/{id}` | read / update / delete (audited) |
+| POST | `/api/contacts/import/gcs` | namespace-constrained import |
+| GET/POST | `/api/email/connections` | list / register IMAP+SMTP |
+| POST | `/api/email/connections/{id}/test` | IMAP + SMTP check |
+| GET | `/api/email/connections/{id}/inbox` | fetch messages |
+| POST | `/api/email/send` | send via SMTP |
+| POST/GET | `/api/social/linkedin/*`, `/api/social/reddit/*`, `/api/social/whatsapp/*` | social + WhatsApp queue |
+| GET | `/api/governance/policy` | classification + retention + flags |
+| GET | `/api/governance/gcp` | status-only GCP verification |
+| GET | `/api/governance/audit` | current user's audit events |
+| POST | `/api/governance/retention/purge` | retention purge |
+| GET | `/api/governance/usage` | LLM cost/token usage |
+| GET | `/api/llm/tasks` | task registry + tiers |
+| GET | `/api/llm/plan/{task}` | routing chain |
+| POST | `/api/llm/run` | guarded, budgeted, audited execution |
+
+## 9. Migrations (SQLite → Cloud SQL)
+
+```text
+alembic upgrade head   # apply schema
+alembic check          # must print "No new upgrade operations detected"
+alembic downgrade base # prove reversibility (staging)
+```
+
+Local helper: `scripts/verify_migrations.ps1` / `scripts/verify_migrations.sh`.
+Full runbook: `docs/IMPLEMENTATION_ROADMAP.md` §9.
+
+## 10. Testing
+
+```powershell
+python -m pytest -q        # 57 tests, ~74% coverage
+python -m ruff check sales_fastapi tests migrations
+python -m bandit -r sales_fastapi -x sales_fastapi/static -ll
+```
+
+Suites: auth, system, contacts (user scoping), services, social, security guardrails,
+PII, governance, LLM guardrails, LLM router.
+
+## 11. CI/CD
+
+```text
+PR      → .github/workflows/ci.yml
+           ruff · gitleaks · pytest+coverage(70%) · alembic parity · pip-audit · docker build
+Merge   → .github/workflows/cd.yml
+           Workload Identity Federation → Cloud Build → Cloud Run + /api/health smoke test
+Release → cloudbuild.checks.yaml
+           lint · SAST · tests · migrations · image build · Trivy HIGH/CRITICAL
+```
+
+Required GitHub config — secrets: `GCP_WORKLOAD_IDENTITY_PROVIDER`,
+`GCP_SERVICE_ACCOUNT`; vars: `GCP_PROJECT_ID`, `GCP_REGION`, `ARTIFACT_REPOSITORY`,
+`CLOUD_SQL_INSTANCE`, `CORS_ORIGINS`, `ALLOWED_HOSTS`, `GCS_BUCKET`.
+Deploy secrets (Secret Manager): `SALES_SECRET_KEY`, `SALES_DATABASE_URL`,
+`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GEMINI_API_KEY`.
+
+## 12. Troubleshooting
+
+| Symptom | Check |
+|---|---|
+| `SECRET_KEY` startup error | set a ≥32-char non-default value |
+| `alembic check` drift | regenerate a revision (`alembic revision --autogenerate`) |
+| LLM always `echo` | Ollama down and `GEMINI_API_KEY` unset — expected offline fallback |
+| HTTP 429 in tests | disable `RATE_LIMIT_ENABLED` |
+| HTTP 400 untrusted host | add host to `ALLOWED_HOSTS` |
+| `/api/governance/gcp` not ok | `gcloud auth application-default login` or fix service account |
+
+---
+
+## 🚀 Production & Outreach (live)
+
+- **Production:** https://kalisoft-sales-19782268668.asia-south1.run.app (Cloud Run, `env=production`, Cloud SQL attached, scale-to-zero).
+- **Sign-in:** official email `ai.solutions@kalisoftai.in` (restricted dev-login allowlist until Google OAuth is configured).
+- **Sign-in page also shows pricing** (Free 2 AI users → Starter ₹499 → Growth ₹1,499 → Scale ₹3,999/mo) and a transparent **WhatsApp cost-per-message** table/calculator sourced from Meta's official India rate card.
+- **Contacts:** 7,924 records migrated to Cloud SQL (reconcile PASS); upload CSV/Excel/VCF/JSON or sync a GCS bucket/prefix per user.
+- **Templates:** 12 Kalisoft defaults across email / WhatsApp / LinkedIn / WeChat and 6 funnel strategies.
+- **Bulk campaigns:** create → human review → approve → send (SMTP / Wechaty gateway / LinkedIn queue) with per-message status and audit trail.
+- **Wechaty gateway:** mock mode for tests, live mode for real WhatsApp/WeChat.
+- **Gemma:** routed but disabled until an API key is supplied (see future scope).
+- **CI/CD:** `main`→production, `UAT`→staging, `DEV`→development; build in GitHub Actions → Artifact Registry → Cloud Run.
+
+See [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md), [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md),
+[`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md) §13 (future scope), and
+[`docs/ACCOUNT_TEMPLATES.md`](docs/ACCOUNT_TEMPLATES.md) (account catalog, quotes, invoices).

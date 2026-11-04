@@ -1,9 +1,17 @@
 # Secrets & credentials
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+!*.env.example
 cloudrun.env*
 credentials.json
+secrets*.json
+*-credentials.json
+service-account*.json
+*.pem
+*.key
+*.p12
+*.pfx
 
 # Python
 __pycache__/
@@ -11,6 +19,9 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
+
+# Node frontend dependencies
+node_modules/
 
 # Django build/runtime artifacts
 staticfiles/
@@ -36,6 +47,23 @@ Thumbs.db
 # Local tooling / scratch
 opencode_task*
 .pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.ruff_cache/
 
-# data
+# Local databases
+*.db
+
+# data & docs (local-only: sample data, GCS extracts, tracking sheets, client docs)
 /data/
+/docs/
+
+# Local sample data / raw extracts (transcribed, not for push)
+sample_data/
+
+
+# Excel lock files
+*.xlsx
+*.xls
+*.docx

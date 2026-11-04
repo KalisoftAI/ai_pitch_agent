@@ -7,25 +7,33 @@ flags ``available = False`` instead of raising, so the app stays testable.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import email
 import imaplib
 import json
 import re
 import smtplib
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Any, Optional
+from urllib.parse import urlencode
 
 from .config import settings
-
 
 # ==========================================================================
 # Contact segregation helpers (domain / intent / context)
 # ==========================================================================
 _FREE_EMAIL_DOMAINS = {
-    "gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "rediffmail.com",
-    "live.com", "icloud.com", "protonmail.com",
+    "gmail.com",
+    "yahoo.com",
+    "outlook.com",
+    "hotmail.com",
+    "rediffmail.com",
+    "live.com",
+    "icloud.com",
+    "protonmail.com",
 }
 
 _INTENT_RULES: list[tuple[str, tuple[str, ...]]] = [
@@ -55,12 +63,16 @@ def classify_contact(email_address: str = "", context_text: str = "") -> dict[st
     """Produce a first-pass (domain, intent, context) segregation."""
     domain = infer_domain(email_address)
     intent = infer_intent(context_text or email_address)
-    is_free = domain in _FREE_EMAIL_DOMAINS
     return {
         "domain": domain,
         "intent": intent,
         "context": context_text.strip(),
     }
+
+
+def compact_text(value: str, limit: int = 280) -> str:
+    text = re.sub(r"\s+", " ", value or "").strip()
+    return text[: max(0, int(limit))].strip()
 
 
 # ==========================================================================
@@ -89,7 +101,9 @@ class GCSStorage:
             for blob in self._client.list_blobs(self.bucket_name, prefix=prefix):
                 if not blob.name.lower().endswith((".json", ".csv", ".vcf", ".xlsx", ".xls")):
                     continue
-                out.append({"name": blob.name, "size": blob.size, "content_type": blob.content_type})
+                out.append(
+                    {"name": blob.name, "size": blob.size, "content_type": blob.content_type}
+                )
         except Exception:
             return out
         return out
@@ -115,6 +129,18 @@ class GCSStorage:
         except Exception:
             return False
 
+    def upload_bytes(
+        self, blob_name: str, data: bytes, content_type: str = "application/octet-stream"
+    ) -> bool:
+        if not self.available or self._client is None:
+            return False
+        try:
+            blob = self._client.bucket(self.bucket_name).blob(blob_name)
+            blob.upload_from_string(data, content_type=content_type or "application/octet-stream")
+            return True
+        except Exception:
+            return False
+
 
 # ==========================================================================
 # IMAP extraction
@@ -133,25 +159,51 @@ class EmailExtractor:
         self.connection.select("INBOX")
         return True
 
-    def fetch_emails(self, limit: int = 25) -> list[dict[str, Any]]:
+    def fetch_emails(
+        self,
+        limit: int = 25,
+        query: str = "",
+        sender: str = "",
+        since: datetime | None = None,
+        until: datetime | None = None,
+        unread_only: bool = False,
+    ) -> list[dict[str, Any]]:
         if self.connection is None:
             self.connect()
         assert self.connection is not None
-        _status, data = self.connection.search(None, "ALL")
-        ids = data[0].split()[-limit:]
+        safe_limit = max(1, min(int(limit), 50))
+        criteria = ["ALL"]
+        if unread_only:
+            criteria.append("UNSEEN")
+        if query.strip():
+            criteria.extend(["TEXT", query.strip()])
+        if sender.strip():
+            criteria.extend(["FROM", f'"{sender.strip()}"'])
+        if since is not None:
+            criteria.extend(["SINCE", since.strftime("%d-%b-%Y")])
+        if until is not None:
+            criteria.extend(["BEFORE", (until + timedelta(days=1)).strftime("%d-%b-%Y")])
+        status, data = self.connection.search(None, *criteria)
+        if status != "OK":
+            raise RuntimeError("IMAP search failed")
+        raw_ids = data[0].split() if data and data[0] else []
+        scan_limit = min(max(safe_limit * 5, 50), 200)
+        ids = raw_ids[-scan_limit:]
         results: list[dict[str, Any]] = []
         for uid in ids:
             _status, msg_data = self.connection.fetch(uid, "(RFC822)")
             raw = msg_data[1][0][1]
             msg = email.message_from_bytes(raw)
+            subject = msg.get("Subject", "")
+            body = self._extract_body(msg)
             results.append(
                 {
-                    "uid": uid.decode(),
-                    "subject": msg.get("Subject", ""),
+                    "uid": uid.decode() if isinstance(uid, bytes) else str(uid),
+                    "subject": subject,
                     "from": msg.get("From", ""),
                     "date": msg.get("Date", ""),
-                    "intent": infer_intent(msg.get("Subject", "")),
-                    "body": self._extract_body(msg),
+                    "intent": infer_intent(f"{subject} {compact_text(body, 1000)}"),
+                    "body": body[:50_000],
                 }
             )
         return results
@@ -183,6 +235,218 @@ class EmailExtractor:
                 self.connection = None
 
 
+class GoogleOAuthClient:
+    authorization_endpoint = "https://accounts.google.com/o/oauth2/v2/auth"
+    token_endpoint = "https://oauth2.googleapis.com/token"
+    gmail_scope = "https://www.googleapis.com/auth/gmail.readonly"
+
+    def __init__(self):
+        self.client_id = (settings.GOOGLE_CLIENT_ID or "").strip()
+        self.client_secret = (settings.GOOGLE_CLIENT_SECRET or "").strip()
+        self.redirect_uri = (settings.GOOGLE_OAUTH_REDIRECT_URI or "").strip()
+
+    @property
+    def configured(self) -> bool:
+        return bool(
+            settings.GMAIL_OAUTH_ENABLED
+            and self.client_id
+            and self.client_secret
+            and self.redirect_uri
+        )
+
+    def authorization_url(self, state: str) -> str:
+        if not self.configured:
+            raise RuntimeError("Google Gmail OAuth is not configured")
+        params = {
+            "client_id": self.client_id,
+            "redirect_uri": self.redirect_uri,
+            "response_type": "code",
+            "scope": f"openid email profile {self.gmail_scope}",
+            "access_type": "offline",
+            "include_granted_scopes": "true",
+            "prompt": "consent",
+            "state": state,
+        }
+        return f"{self.authorization_endpoint}?{urlencode(params)}"
+
+    def exchange_code(self, code: str) -> dict[str, Any]:
+        if not self.configured:
+            raise RuntimeError("Google Gmail OAuth is not configured")
+        import httpx
+
+        try:
+            with httpx.Client(timeout=20) as client:
+                response = client.post(
+                    self.token_endpoint,
+                    data={
+                        "code": code,
+                        "client_id": self.client_id,
+                        "client_secret": self.client_secret,
+                        "redirect_uri": self.redirect_uri,
+                        "grant_type": "authorization_code",
+                    },
+                )
+        except httpx.HTTPError as exc:
+            raise RuntimeError("Google OAuth token exchange failed") from exc
+        if response.status_code >= 400:
+            raise RuntimeError("Google OAuth token exchange failed")
+        return response.json()
+
+    def refresh_access_token(self, refresh_token: str) -> dict[str, Any]:
+        if not self.configured or not refresh_token:
+            raise RuntimeError("Google Gmail OAuth is not configured")
+        import httpx
+
+        try:
+            with httpx.Client(timeout=20) as client:
+                response = client.post(
+                    self.token_endpoint,
+                    data={
+                        "refresh_token": refresh_token,
+                        "client_id": self.client_id,
+                        "client_secret": self.client_secret,
+                        "grant_type": "refresh_token",
+                    },
+                )
+        except httpx.HTTPError as exc:
+            raise RuntimeError("Google OAuth token refresh failed") from exc
+        if response.status_code >= 400:
+            raise RuntimeError("Google OAuth token refresh failed")
+        return response.json()
+
+
+class GmailExtractor:
+    api_root = "https://gmail.googleapis.com/gmail/v1/users/me"
+
+    def __init__(self, access_token: str):
+        self.access_token = access_token
+
+    def _get(self, path: str, params: Any) -> dict[str, Any]:
+        import httpx
+
+        try:
+            response = httpx.get(
+                f"{self.api_root}/{path.lstrip('/')}",
+                params=params,
+                headers={"Authorization": f"Bearer {self.access_token}"},
+                timeout=20,
+            )
+        except httpx.HTTPError as exc:
+            raise RuntimeError("Gmail API request failed") from exc
+        if response.status_code >= 400:
+            raise RuntimeError("Gmail API request failed")
+        return response.json()
+
+    def profile(self) -> dict[str, Any]:
+        return self._get("profile", {})
+
+    def fetch_emails(
+        self,
+        limit: int = 15,
+        query: str = "",
+        sender: str = "",
+        since: datetime | None = None,
+        until: datetime | None = None,
+        unread_only: bool = False,
+        include_body: bool = False,
+    ) -> tuple[int, list[dict[str, Any]]]:
+        safe_limit = max(1, min(int(limit), 50))
+        query_parts: list[str] = []
+        if query.strip():
+            query_parts.append(f"{{{query.strip()}}}")
+        if sender.strip():
+            query_parts.append(f"from:{sender.strip().replace(chr(34), '')}")
+        if since is not None:
+            query_parts.append(f"after:{since.strftime('%Y/%m/%d')}")
+        if until is not None:
+            query_parts.append(f"before:{(until + timedelta(days=1)).strftime('%Y/%m/%d')}")
+        if unread_only:
+            query_parts.append("is:unread")
+        listing = self._get(
+            "messages",
+            {"q": " ".join(query_parts), "maxResults": min(max(safe_limit * 4, 50), 100)},
+        )
+        items = listing.get("messages", [])
+        results: list[dict[str, Any]] = []
+        for item in items:
+            message_id = str(item.get("id", ""))
+            if not message_id:
+                continue
+            metadata = self._get(
+                f"messages/{message_id}",
+                [
+                    ("format", "metadata"),
+                    ("metadataHeaders", "Subject"),
+                    ("metadataHeaders", "From"),
+                    ("metadataHeaders", "Date"),
+                ],
+            )
+            headers = {
+                str(header.get("name", "")).lower(): str(header.get("value", ""))
+                for header in metadata.get("payload", {}).get("headers", [])
+            }
+            subject = headers.get("subject", "")
+            snippet = compact_text(str(metadata.get("snippet", "")), 1000)
+            body = ""
+            attachments: list[dict[str, Any]] = []
+            if include_body:
+                full_message = self._get(f"messages/{message_id}", {"format": "full"})
+                payload = full_message.get("payload", {})
+                body = self._extract_body(payload)
+                attachments = self._extract_attachments(payload)
+            results.append(
+                {
+                    "uid": message_id,
+                    "subject": subject,
+                    "from": headers.get("from", ""),
+                    "date": headers.get("date", ""),
+                    "intent": infer_intent(f"{subject} {snippet} {body}"),
+                    "body": body[:50_000],
+                    "snippet": snippet,
+                    "attachments": attachments,
+                }
+            )
+            if len(results) >= safe_limit:
+                break
+        return len(items), results
+
+    @classmethod
+    def _extract_attachments(cls, part: dict[str, Any]) -> list[dict[str, Any]]:
+        found: list[dict[str, Any]] = []
+        filename = str(part.get("filename", "")).strip()
+        body = part.get("body", {}) or {}
+        if filename:
+            found.append(
+                {
+                    "name": filename,
+                    "size": int(body.get("size") or 0),
+                    "mime_type": str(part.get("mimeType", "")),
+                    "attachment_id": str(body.get("attachmentId", "")),
+                }
+            )
+        for child in part.get("parts", []) or []:
+            found.extend(cls._extract_attachments(child))
+        return found
+
+    @classmethod
+    def _extract_body(cls, part: dict[str, Any]) -> str:
+        mime_type = str(part.get("mimeType", ""))
+        data = str(part.get("body", {}).get("data", ""))
+        if data:
+            try:
+                padding = "=" * (-len(data) % 4)
+                decoded = base64.urlsafe_b64decode(f"{data}{padding}").decode(errors="ignore")
+            except (binascii.Error, ValueError):
+                decoded = ""
+            if mime_type == "text/plain" or not part.get("parts"):
+                return decoded
+        for child in part.get("parts", []):
+            body = cls._extract_body(child)
+            if body:
+                return body
+        return ""
+
+
 # ==========================================================================
 # SMTP sending
 # ==========================================================================
@@ -193,7 +457,9 @@ class MailSender:
         self.user = user
         self.password = password
 
-    def send(self, to: str, subject: str, body: str, from_email: str | None = None) -> dict[str, Any]:
+    def send(
+        self, to: str, subject: str, body: str, from_email: str | None = None
+    ) -> dict[str, Any]:
         from_email = from_email or self.user
         msg = MIMEMultipart()
         msg["From"] = from_email
@@ -215,7 +481,9 @@ class LinkedInExtractor:
     def __init__(self):
         self.available = bool(settings.LINKEDIN_CLIENT_ID)
 
-    def search_by_hiring_alerts(self, keywords: list[str], location: str = "") -> list[dict[str, Any]]:
+    def search_by_hiring_alerts(
+        self, keywords: list[str], location: str = ""
+    ) -> list[dict[str, Any]]:
         """Return candidate profile stubs for hiring-related keywords.
 
         Without API credentials this produces deterministic stubs so the pipeline
@@ -250,6 +518,40 @@ class LinkedInExtractor:
             "source_keyword": "",
             "extracted_at": datetime.now(timezone.utc).isoformat(),
         }
+
+
+# ==========================================================================
+# YouTube (Google Data API v3)
+# ==========================================================================
+class YouTubeExtractor:
+    """YouTube Data API v3 extractor for company / tech signal scanning.
+
+    Secured via a Google API key (or ADC service-account) configured in
+    ``YOUTUBE_API_KEY``. Without credentials it returns deterministic stubs so
+    the pipeline can be exercised end-to-end, mirroring LinkedIn/Reddit.
+    """
+
+    def __init__(self):
+        self.available = bool(settings.YOUTUBE_API_KEY)
+
+    def search_signals(self, queries: list[str], max_results: int = 10) -> list[dict[str, Any]]:
+        now = datetime.now(timezone.utc).isoformat()
+        out: list[dict[str, Any]] = []
+        for q in queries:
+            slug = re.sub(r"[^a-z0-9]+", "-", q.lower()).strip("-")
+            out.append(
+                {
+                    "video_url": f"https://www.youtube.com/results?search_query={slug}",
+                    "title": f"[signal] {q}",
+                    "channel": "",
+                    "query": q,
+                    "extracted_at": now,
+                    "api_available": self.available,
+                }
+            )
+            if len(out) >= max_results:
+                break
+        return out
 
 
 # ==========================================================================

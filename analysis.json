@@ -1,0 +1,1292 @@
+{
+  "contacts": {
+    "marketing_list_kalika": {
+      "dedup_list": {
+        "total_rows": 517,
+        "names": 514,
+        "phones": 266,
+        "emails": 239,
+        "addresses": 167,
+        "categories": {
+          "Trading / general business (name-based estimate)": 7,
+          "Industrial / engineering / components (name-based estimate)": 3,
+          "Construction / building materials (inferred from name)": 2,
+          "Electrical panel boards, instrument panels and distribution panels": 2,
+          "Packaging solutions / B2B packaging": 1,
+          "Housekeeping, hygiene and cleaning products": 1,
+          "B2B ingredient manufacturer and supplier": 1,
+          "Automation solutions, equipment and controls": 1,
+          "Chemical manufacturing / industrial coatings": 1,
+          "OEM equipment manufacturer and fabrication solutions provider": 1,
+          "Electrical and power electronics manufacturing": 1,
+          "designing and manufacturing a wide range of products for process controls and industrial automation": 1,
+          "Electrical Equipment / Solar Inverters": 1,
+          "Safety Equipment": 1,
+          "E-commerce / Trading — to be confirmed": 1,
+          "Furniture": 1,
+          "Kitchen Equipment / Manufacturing — to be confirmed": 1,
+          "Packaging Solutions": 1,
+          "Organic Products / Manufacturing": 1,
+          "Bioengineering / Industrial Equipment": 1,
+          "Industrial Engineering / Hydraulic Equipment": 1,
+          "Engineering / Testing Services": 1,
+          "Automation — to be confirmed": 1,
+          "Engineering / Industrial Solutions": 1,
+          "Industrial Packaging — exact business to be confirmed": 1,
+          "Sales / Trading — to be confirmed": 1,
+          "Construction Materials / Waterproofing": 1,
+          "Automotive — to be confirmed": 1,
+          "Interior Solutions / Manufacturing": 1,
+          "Precision Engineering / Machining": 1,
+          "Industrial Engineering / Thermal Equipment": 1,
+          "Industrial Manufacturing — to be confirmed": 1,
+          "Stationery / Printing — to be confirmed": 1,
+          "Heating Elements / Industrial Furnaces": 1,
+          "Furniture / Industrial Adhesives / Window Hardware": 1,
+          "Industrial Automation Products": 1,
+          "Engineering / Industrial Services": 1,
+          "Engineering / Industrial Equipment": 1,
+          "Architecture / Construction / Project Management": 1,
+          "Packaging activities / Manufacturing of corrugated boxes and packaging solutions": 1,
+          "rivate Limited Company": 1,
+          "Interior Decorators, Furniture Store, Kitchen Trolley Manufacturers, Sofa Manufacturers, and Dining Table Manufacturers": 1,
+          "Manufacturer of Control Panels, DG Panels, Bus Ducts, Rising Mains, and AMF Panels": 1,
+          "Industrial Raw Materials / Manufacturing & Business Services": 1,
+          "Manufacturer and supplier of industrial covers, bellows, and apron covers. [1, 2, 3]": 1,
+          "Local business / services": 1,
+          "Precast Concrete Slab / Precast Manufacturing": 1,
+          "Industrial Supplies, MRO": 1,
+          "Mattress Manufacturers, Sofa Manufacturers, Foam Dealers, PU Foam Dealers, Furniture Repair & Services, Wholesaler": 1,
+          "Manufacturer / Die Casting & Precision Machined Components": 1,
+          "Packaging, Industrial Packaging Solutions, Business Services, and Craft/Masking Paper Tape Distributor": 1,
+          "Manufacturer and Supplier of HDPE & MDPE Pipes, Sprinkler Irrigation Systems, and accessories": 1,
+          "General enterprise / business services (unverified)": 1,
+          "Electronics / electrical manufacturing": 1,
+          "Construction equipment / chemicals / services": 1,
+          "Electrical / electronics manufacturing": 1,
+          "Packaging materials / tapes / stretch film": 1,
+          "Industrial equipment / tools (identity may be ambiguous)": 1,
+          "Multiple names in one row — needs separation / identification": 1,
+          "Temperature sensors / thermocouples / industrial instruments": 1,
+          "Packaging products / packing sleeves / dunnage bags": 1,
+          "Architectural glazing / glass systems": 1,
+          "Packaging / plastics / paper (inferred from name)": 1,
+          "Furniture manufacturing": 1,
+          "Precast concrete products / construction materials": 1,
+          "Industrial automation / packaging automation": 1,
+          "Industrial stockist: stainless-steel fasteners, instrumentation fittings, pipes, tubes, flanges and valves": 1,
+          "Industrial machinery manufacturing: automatic buffing, polishing and metal-finishing machines": 1,
+          "Packaging solutions (exact product range needs confirmation)": 1,
+          "Custom packaging: corrugated boxes, rigid boxes, duplex cartons and retail packaging": 1,
+          "Packaging activities (company registry listing)": 1,
+          "Industrial machinery / fabricated metal products (directory classifications; exact match needs confirmation)": 1,
+          "Electrical panels, cable trays, earthing materials and fabrication": 1,
+          "Wooden packaging: wooden boxes, barrels, packing cases (registry classification)": 1,
+          "Industrial tools and accessories; power tools, drilling tools, hand tools": 1,
+          "EPE foam products, plastic granules, PP/HDPE/LDPE granules and foam rolls": 1,
+          "Industrial steam boilers, thermic-fluid heaters and process-heat equipment": 1,
+          "Steel profiles / steel and metal stockist (directory classifications; confirm product range)": 1,
+          "Paper, plastic, jute, cotton, cloth and non-woven bags; promotional packaging": 1,
+          "BOPP/adhesive tapes, masking tape, stretch film, wrapping film and packaging materials": 1,
+          "Industry not verified": 1,
+          "Protective packaging and insulation: EPE foam, PP boxes/crates, foam bags and insulation products": 1,
+          "Paper products and stationery": 1,
+          "Apparel/clothing manufacturing (possible match: Quality Apparel and Industries)": 1,
+          "Industrial fasteners and tools (name-based estimate)": 1,
+          "Plastic products / plastic processing (name-based estimate)": 1,
+          "Packaging machinery: pouch packing, powder packing and filling machines": 1,
+          "Manufacturing; exact products not confirmed for this registration": 1,
+          "Packaging solutions (name-based estimate)": 1,
+          "Industrial hardware, fasteners, cutting tools, PPE, lubricants and maintenance supplies": 1,
+          "Construction / furniture / interiors (name-based estimate)": 1,
+          "Packaging business; product range not confirmed for this Pune listing": 1,
+          "Packaging machinery and end-of-line automation: strapping, carton sealing, stretch wrapping, conveyors, labelling and packaging consumables": 1,
+          "Industrial supplies: packing materials, safety equipment/PPE, finishing chemicals, housekeeping and cleaning supplies.": 1,
+          "Industrial and engineering tools, cutting/precision tools, hand and power tools, bench vices, and Karcher vacuum cleaners/cleaning equipment.": 1,
+          "Timber merchant; wooden crates, packing cases and industrial/machinery packaging": 1,
+          "The business name appears as a Pune location/contact on Winix's website; the exact product/business relationship should be confirmed directly.": 1,
+          "Industrial packaging, LDPE/HDPE films and VCI/corrosion-retardant bags": 1,
+          "Plasma and laser profile-cutting machines, gas profile-cutting machines, plasma consumables and related spares/service; listed as an authorised Messer Cutting Systems dealer.": 1,
+          "Facility management and manpower services, including skilled/semi-skilled/unskilled staffing, maintenance and work contracts.": 1,
+          "Polymer trading/distribution: PE, PP, PVC, HDPE, LLDPE and LDPE granules": 1,
+          "Electrical enclosures, LV/MV switchboards, modular panels, bus ducts, junction boxes, EV charging enclosures": 1,
+          "General business listing; activity not confirmed for this exact contact": 1,
+          "Knitted apparel and garments; export manufacturer": 1,
+          "Automation and material-handling systems; floor/overhead conveyors and turnkey solutions.": 1,
+          "Machined components for forging and heavy-metal industries; oil & gas parts, gearboxes, earth-moving equipment, wind energy, valves/pumps and heavy fabrication.": 1,
+          "Manufacturer/supplier of gold-plated statues, plastic medical boxes and plastic automobile spare-part storage boxes.": 1,
+          "Conveyor systems and packaging machinery/equipment": 1,
+          "Manufacturer of industrial/electrical metal enclosures, control-panel cabinets, junction boxes, control desks, operator pendants, computer/server enclosures and related products.": 1,
+          "Industrial supplies, safety products/PPE, abrasives for cutting/grinding/finishing and adhesive/tape supplies.": 1,
+          "EPE foam sheets/rolls, PP corrugated boxes, air-bubble packaging, PET strapping and VCI packaging": 1,
+          "Packaging materials including wrap/shrink rolls (based on public product document)": 1,
+          "Industrial drill, cutters, tools, reamers, shafts and milling products; listed as manufacturer/exporter/wholesaler/trader.": 1,
+          "Industrial manpower, technical staffing, labour contracting, facility management, security, logistics and transport services.": 1,
+          "Heat-treatment furnaces, plasma ion nitriding furnaces, vacuum furnaces and furnace control panels. The located business is named Magnus Industries, not exactly Magnus Industrial Solutions.": 1,
+          "Possible match: industrial/production manpower and placement services. Other Pune S.K. Enterprises are listed for fabrication, engineering, moulds/dies, lighting poles or tender consultancy.": 1,
+          "Industrial and construction safety products, PPE, safety nets, shade nets, ropes, debris chutes, installation and labour services.": 1,
+          "Manufacturer of corrugated boxes, printed cartons and paper packaging": 1,
+          "Contract packing / packaging services": 1,
+          "Manufacture and repair of plastic injection-moulding machines, barrels, screws, toggle sets, PLC cards, hydraulic motors/pumps": 1,
+          "General trading; exact products unverified": 1,
+          "Packaging machinery, including carton sealing and customized carton sealer machines": 1,
+          "Industrial powder coating, multicolour coating, sand blasting, automotive and architectural finishing": 1,
+          "Air compressors, air dryers, compressed-air piping and industrial maintenance": 1,
+          "Office supplies, calculators, printer supplies and cleaning products": 1,
+          "CCTV, biometrics, cybersecurity, attendance systems, access control and web development": 1,
+          "Rubber and plastic moulded/extruded components and industrial polymer products; this may not be a packaging company despite the supplied name": 1,
+          "Business products not clearly specified on the contact page": 1,
+          "Same-name listings include biotechnology/lab culture media and testing services, and industrial electrical control/PLC/SCADA panels.": 1,
+          "Mining equipment and tools, drilling equipment, DTH hammers/bits, maintenance and repair services.": 1,
+          "Industrial furnaces, heat-treatment and metal-melting furnaces, industrial heaters, ovens and heating elements.": 1,
+          "Industrial components and consumables, knitted hand gloves, tapes, safety gear, abrasives and mechanical/electrical/hydraulic/pneumatic items.": 1,
+          "Office supplies and stationery; notice boards, whiteboards, projection screens and related display products.": 1,
+          "Trading / General Business": 1,
+          "Industrial polymer/PTFE products manufacturer and supplier": 1,
+          "Manufacturing; company states it operates four manufacturing plants": 1,
+          "Engineering services": 1,
+          "Plastic Recycling & Waste Management": 1,
+          "Shot-blasting machine parts and maintenance, shot peening, vibro finishing, metal-component finishing, fabrication job work": 1,
+          "Industrial packaging: PP boxes/trays/bins, corrugated boxes, EPE foam, air-bubble packaging, wooden pallets/boxes, stretch film and BOPP tape": 1,
+          "Packaging machinery and materials: strapping machines/tools and rolls, BOPP tape, air-bubble rolls, floor-marking tapes, EPE foam rolls, stretch film and sealing equipment.": 1,
+          "Metal shearing, precision cutting, batch processing and custom metal-cutting services.": 1,
+          "Corrugated boxes, corrugated rolls/sheets, printed cartons and industrial packaging": 1,
+          "Hardware & Electrical Goods Retailer": 1,
+          "Packaging Materials Wholesaler / Distributor": 1,
+          "Packaging Materials Manufacturer & Supplier — BOPP Tape, Printed Tape, Stretch Film, Bubble Roll": 1,
+          "Retail Business": 1,
+          "Trading / Wholesale Business": 1,
+          "Printing, Photocopying & Document Services": 1,
+          "Industrial Tapes, Adhesives, Sealants, Spray Paints & Waterproofing Products": 1,
+          "Office stationery wholesaler, printer cartridges, toner supplies and office consumables": 1,
+          "Office Supplies / Retail & Wholesale Trade (exact products unconfirmed)": 1,
+          "Industrial Rubber Components Manufacturer": 1,
+          "Packaging Materials Manufacturer": 1,
+          "Iron Foundry, Cast Iron & Ductile Iron Casting, Machined Components": 1,
+          "Engineering Services / Industrial Engineering": 1,
+          "Industrial Engineering / Manufacturing": 1,
+          "Purchase Manager": 1
+        },
+        "call_status": {
+          "invalid number": 62,
+          "not answered": 59,
+          "busy now": 19,
+          "call later": 6,
+          "switched off": 4,
+          "not interested": 3,
+          "called": 3,
+          "Details sent call if required": 2,
+          "out of service": 2,
+          "Busy now": 1,
+          "Not answered": 1,
+          "Switched off": 1,
+          "Invalid number": 1,
+          "purchasepune1@prabha-engg.com": 1,
+          "busy now call later": 1,
+          "mail sent": 1,
+          "unavailable": 1,
+          "details sent": 1,
+          "500 kg stretch film rate required": 1,
+          "call if required": 1,
+          "invalid": 1,
+          "SWITCH OFF": 1,
+          "call not received": 1
+        },
+        "requirements_logged": 91
+      },
+      "main_list": {
+        "total_rows": 152,
+        "companies": 152,
+        "contacts": 110,
+        "purchase_dept_contacts": 24,
+        "emails": 56,
+        "purchase_dept_emails": 77,
+        "websites": 81,
+        "categories": {
+          "Manufacturer": 5,
+          "Corporate office": 4,
+          "info@msmemart.com": 2,
+          "Busy now": 1,
+          "Cleaning products supplier": 1,
+          "Food Processing Company": 1,
+          "Automation company": 1,
+          "Chemical Manufacturer": 1,
+          "Electronics Company": 1,
+          "Warehouse": 1,
+          "Machining manufacturer": 1,
+          "Dairy": 1,
+          "Steel distributor": 1,
+          "Electrical engineer": 1,
+          "Plastic Products Supplier": 1,
+          "Industrial equipment supplier": 1,
+          "Transportation service": 1,
+          "Electrical equipment supplier": 1,
+          "Material handling equipment supplier": 1,
+          "Packaging company in Pimpri-Chinchwad, Maharashtra": 1,
+          "calibrechem@vsnl.com; 724365@avanttec.net": 1,
+          "Heavy engineering / fabrication / process equipment": 1,
+          "Industrial burners / combustion systems": 1,
+          "rajeev_kshl@yahoo.co.in": 1,
+          "care@curetoursindia.com; info@regnesisltd.com; jsmith@whoindia.org": 1,
+          "Printing / services related to printing (company registry classification)": 1,
+          "contact@procurpal.in": 1,
+          "Automated parking systems / parking equipment": 1,
+          "parimal@amitgroup.org; pi_shoes@yahoo.com": 1,
+          "geeta.gujar@vpel.in; gujar@vpel.in": 1,
+          "ipc_enge@yahoo.co.in": 1,
+          "xxxxxxx@xxx.in; jaytech_81@yahoo.com; contact@procurpal.in": 1,
+          "Engineering fabrication / material handling / pollution-control equipment": 1,
+          "Process equipment manufacturing": 1,
+          "acmechennai@yahoo.com": 1,
+          "Imports / wholesale trading (registry classification)": 1,
+          "qc@baluntek.com": 1,
+          "Modular kitchens / kitchen interiors": 1,
+          "Packaging solutions": 1,
+          "Retail / organics (registry activity)": 1,
+          "Bioengineering / industrial engineering": 1,
+          "Composites / industrial products (needs confirmation)": 1,
+          "Engineering / testing services": 1,
+          "Automation / technology services": 1,
+          "Industrial automation products / distributor": 1,
+          "Engineering": 1,
+          "Conveyors / material-handling equipment manufacturing": 1,
+          "Retail (registry classification)": 1,
+          "Industrial engineering tools / industrial products": 1,
+          "paresh.rathod@relianceada.com": 1,
+          "Mobility equipment / assistive technology": 1,
+          "Industrial agitators / food-processing plants / tanks / heat exchangers": 1,
+          "office@figmentglobal.com": 1,
+          "Packaging materials: stretch film, BOPP tape, PVC film, foam and protective packaging": 1,
+          "Automation and robotics": 1,
+          "info@msmemart.com; email@sitename.com; support@sitename.com": 1
+        },
+        "call_status": {
+          "Invalid number": 17,
+          "invalid no": 9,
+          "Not answered": 7,
+          "switch off": 7,
+          "invalid number": 6,
+          "not answered": 5,
+          "busy now": 5,
+          "switched off": 4,
+          "unavailable": 3,
+          "Busy now": 2,
+          "Call for 22 october": 1,
+          "swiched off": 1,
+          "Wrong number": 1,
+          "Switched off": 1,
+          "wrong no": 1,
+          "not available": 1,
+          "wrong number": 1,
+          "call later": 1,
+          "Multi-Task work space": 1
+        },
+        "requirements_logged": 29,
+        "sources": {
+          "https://stores.ozone.in/ozone-india-navbharat-trading-company-st-nashik-maharashtra-osdlr14736": 2,
+          "DCG Tech Ltd.": 1,
+          "Star Hygiene Solutions True - Office Stationary & Cleaning Products Wholesaler In Gurgaon": 1,
+          "Döehler India Private Limited": 1,
+          "Devanshi Electronics Pvt Ltd": 1,
+          "Demech Chemical Products Pvt. Ltd": 1,
+          "Dynaxcel Engineers Pvt Ltd": 1,
+          "General Industrial Controls Private Limited (GIC)": 1,
+          "Monga Strayfield Pvt. Ltd.": 1,
+          "Prabha Engineering Pvt. Ltd.": 1,
+          "Motwane Manufacturing Co. Pvt. Ltd.": 1,
+          "Western India Electromedical Systems Private Limited": 1,
+          "ZEUZER ENGINEERS INDIA PVT. LTD.": 1,
+          "Bharat Iron Syndicate": 1,
+          "Trimurti Engineers (India)": 1,
+          "Mega Fiber Private Limited": 1,
+          "SCOPE T&M Pvt Ltd": 1,
+          "Standard Capacitors (Pvt) Ltd.": 1,
+          "Engineering Approach": 1,
+          "Dinesh Roadlines": 1,
+          "Havells Authorised Partner - Kunal Traders": 1,
+          "Elite Global Business Services Pvt. Ltd.": 1,
+          "Rohit Press Comp. Pvt. Ltd. Unit 2 (Vasant Group)": 1,
+          "Spectrum Automation and Controls Pvt. Ltd.": 1,
+          "Technovision Engineers Pvt. Ltd - Best Material Handling Equipment Manufacturer in Pune, India": 1,
+          "WOODLARK PACKAGING PVT LTD": 1,
+          "https://www.jalaramtimber.net/": 1,
+          "http://www.enzazaden.com/this-is-enza-zaden/enza-zaden-worldwide/IN?country=IN": 1,
+          "http://www.fibertech.net/": 1,
+          "http://fidelisengg.com/": 1,
+          "https://www.kismatmachines.com/": 1,
+          "https://uniquepackagings.co.in/": 1,
+          "https://hove-as.com/": 1,
+          "http://www.mithilapacker.com/": 1,
+          "http://www.pronkmultiservice.com/": 1,
+          "https://www.vpel.in/": 1,
+          "https://safestorage.in/storage-facility-in-bangalore": 1,
+          "http://www.vintajeflow.com/": 1,
+          "https://www.vjtl.in/": 1,
+          "https://www.vevrapackaging.com/": 1,
+          "http://www.kamakshathermocol.com/": 1,
+          "http://www.apextechnopolymer.com/": 1,
+          "http://www.acmetools.in/": 1,
+          "https://printingpune.com/": 1,
+          "https://www.deyeindia.in/crm/qr-complaint/": 1,
+          "http://www.prosafesafety.com/": 1,
+          "http://www.estilofurniture.in/": 1,
+          "http://www.cognatecomposites.com/": 1,
+          "https://www.ddentp.com/": 1,
+          "https://askgroupindia.com/": 1,
+          "http://industrial-packers.com/": 1,
+          "http://www.thermotech.one/": 1,
+          "https://www.shreeengg.co.in/": 1,
+          "https://www.anupengg.com/": 1,
+          "http://www.parulengg.com/": 1,
+          "https://www.premier-global.com/contact-us.php": 1,
+          "https://my.mbgcard.com/GURUDEVPAVARPRODUCT": 1,
+          "http://sheetalenterprises1998.wordpress.com/": 1,
+          "http://www.abhishekindustriesauto.com/": 1,
+          "http://cargoxpert.in/": 1,
+          "http://www.phenixcorporation.co.in/": 1,
+          "https://galconsindia.in/": 1,
+          "http://www.hitechpolymersindia.com/": 1,
+          "https://www.ratnatechnology.com/": 1,
+          "https://www.multitasksols.com/": 1
+        }
+      },
+      "sheet1": {
+        "total_rows": 1126,
+        "names": 1126,
+        "phones": 106,
+        "emails": 96
+      },
+      "calling_log": {
+        "days_logged": 10,
+        "rows": [
+          [
+            "21/10 /2026 ",
+            "51 calls",
+            "31.0",
+            "10.0",
+            "1.0",
+            ""
+          ],
+          [
+            "2026-10-22 00:00:00",
+            "64",
+            "46.0",
+            "29.0",
+            "1.0",
+            "17.0"
+          ],
+          [
+            "2026-10-23 00:00:00",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          [
+            "2026-10-24 00:00:00",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          [
+            "2026-10-25 00:00:00",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          [
+            "2026-10-26 00:00:00",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          [
+            "2026-10-27 00:00:00",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          [
+            "2026-10-28 00:00:00",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          [
+            "2026-10-29 00:00:00",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          [
+            "2026-10-30 00:00:00",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ]
+        ],
+        "columns": [
+          "Date",
+          "Calls",
+          "Call answered",
+          "Requirements  and details sent",
+          "Quotation sent",
+          "Unnamed: 5"
+        ]
+      },
+      "unique_phones_overall": 376,
+      "unique_emails_overall": 287
+    },
+    "pune_region_contacts": {
+      "products_rate_list": [
+        [
+          "VCI Bags",
+          "50 microns",
+          "₹182 per kg"
+        ],
+        [
+          "Regular Polybags",
+          "—",
+          "₹170–172 per kg"
+        ],
+        [
+          "Stretch Film",
+          "23 microns–51 microns",
+          "₹168 per kg"
+        ],
+        [
+          "BOPP Tape",
+          "2 inch",
+          "₹30–32 per piece"
+        ],
+        [
+          "Blue Hand Gloves",
+          "40 gm",
+          "₹6.50 per piece"
+        ],
+        [
+          "Blue Hand Gloves",
+          "60 gm",
+          "₹8 per piece"
+        ],
+        [
+          "Blue Hand Gloves",
+          "80 gm",
+          "₹9–9.50 per piece"
+        ],
+        [
+          "Transparent Tape",
+          "2 inch × 85 m",
+          "100 boxes required"
+        ],
+        [
+          "Polybags",
+          "50 microns and above",
+          "—"
+        ],
+        [
+          "Polybags",
+          "10 × 14 inches — 105 pieces",
+          "₹172 per kg"
+        ],
+        [
+          "Polybags",
+          "16 × 20 inches — 45 pieces",
+          "₹172 per kg"
+        ],
+        [
+          "Printed Polybags",
+          "10 × 14 inches — 105 pieces\n16 × 20 inches — 45 pieces",
+          "₹182 per kg"
+        ],
+        [
+          "BOPP Tape",
+          "Sizes",
+          "—"
+        ]
+      ],
+      "sheet1": {
+        "companies": 78,
+        "phones": 77,
+        "emails": 77,
+        "industry_categories": {
+          "Food Products": 8,
+          "Healthcare": 5,
+          "Legal Services": 5,
+          "Professional Services": 5,
+          "Manufacturing": 3,
+          "Marketing Services": 3,
+          "Health & Social Care": 3,
+          "Media Services": 2,
+          "Chartered Accountancy": 2,
+          "Education": 2,
+          "Education Services": 1,
+          "HR Consulting": 1,
+          "Marketing": 1,
+          "Food Trading": 1,
+          "Finance Consulting": 1,
+          "Media & Content": 1,
+          "Recruitment & IT": 1,
+          "Catering": 1,
+          "Agri-Tech": 1,
+          "Insurance": 1,
+          "HR Services": 1,
+          "Chemical Manufacturing": 1,
+          "Financial Consulting": 1,
+          "Logistics": 1,
+          "Marketing Consulting": 1,
+          "Engineering": 1,
+          "Web Development": 1,
+          "Jewellery": 1,
+          "Exhibitions & Events": 1,
+          "IT Services": 1,
+          "Biotechnology Solutions": 1,
+          "Green Economy": 1,
+          "Corporate Training & Development": 1,
+          "Retail": 1,
+          "Textile": 1,
+          "Manufacturing (Agriculture)": 1,
+          "Travel & Tourism": 1,
+          "Medical & Psychology": 1,
+          "Architecture": 1,
+          "Food Production": 1,
+          "Automobile": 1,
+          "Manufacturing (Food)": 1,
+          "Manufacturing (Equipment)": 1,
+          "Business & Financial Advisory": 1,
+          "IT & Software": 1,
+          "Gifting & Home Decor": 1,
+          "Gifting & Custom Apparel Printing": 1,
+          "Industrial Technology": 1,
+          "Sustainable Fashion & Waste Management": 1,
+          "Textile / Uniform Manufacturing": 1
+        },
+        "business_categories": {
+          "Healthcare": 6,
+          "Manufacturing": 4,
+          "Legal Consultancy": 4,
+          "Food & Beverage": 4,
+          "Food Products": 4,
+          "Consulting": 3,
+          "Training": 2,
+          "Educational Services": 2,
+          "Retail": 2,
+          "Marketing Agency": 2,
+          "HR Services": 1,
+          "Wellness": 1,
+          "Legal": 1,
+          "Marketing": 1,
+          "Wholesale": 1,
+          "Photography": 1,
+          "Content Services": 1,
+          "Professional Services": 1,
+          "Accounting": 1,
+          "Restaurant": 1,
+          "Technology": 1,
+          "Insurance": 1,
+          "Recruitment": 1,
+          "Logistics": 1,
+          "Engineering Services": 1,
+          "IT Services": 1,
+          "Creative Services": 1,
+          "Media & Advertising": 1,
+          "Event Management": 1,
+          "Software Solutions": 1,
+          "Industrial Products": 1,
+          "Biotechnology": 1,
+          "NGO": 1,
+          "Financial Services": 1,
+          "Textile Products": 1,
+          "Agriculture": 1,
+          "Tourism": 1,
+          "Architectural Services": 1,
+          "Ready-to-Cook Foods": 1,
+          "Food Manufacturing": 1,
+          "Financial Advisory": 1,
+          "Equipment Manufacturing": 1,
+          "Food Compliance Consulting": 1,
+          "Business Consulting": 1,
+          "Content Writing & Crafts": 1,
+          "Furniture Solutions": 1,
+          "Health Products": 1,
+          "Home Decor & Gifts": 1,
+          "Corporate Gifting": 1,
+          "Vision Inspection Systems": 1,
+          "Legal Services": 1,
+          "Sustainability": 1,
+          "Pediatric Therapy": 1,
+          "Branding & Marketing": 1,
+          "Uniform Manufacturing": 1
+        },
+        "sectors": {
+          "Food Products": 9,
+          "Health & Social Care": 6,
+          "Professional Services": 6,
+          "Legal Services": 5,
+          "Marketing Services": 5,
+          "Education": 3,
+          "Media Services": 2,
+          "Chartered Accountancy": 2,
+          "Food Production": 2,
+          "Manufacturing": 2,
+          "Textile": 2,
+          "HR Solutions": 1,
+          "Psychology, Health & Social Care": 1,
+          "Financial Consulting": 1,
+          "Health & Psychology": 1,
+          "Media & Content": 1,
+          "Catering Services": 1,
+          "IT & Software, Agriculture": 1,
+          "Insurance": 1,
+          "HR Services": 1,
+          "Manufacturing (Chemical)": 1,
+          "Financial Consultancy": 1,
+          "Logistics": 1,
+          "Engineering": 1,
+          "Web Development": 1,
+          "Jewellery": 1,
+          "Exhibitions/Events": 1,
+          "IT Services": 1,
+          "Biotechnology Solutions": 1,
+          "Green Economy": 1,
+          "Corporate Training & Development": 1,
+          "Retail": 1,
+          "Manufacturing (Agriculture)": 1,
+          "Travel & Tourism": 1,
+          "Medical & Psychology": 1,
+          "Architecture": 1,
+          "Automobile": 1,
+          "Manufacturing (Food)": 1,
+          "Manufacturing (Equipment)": 1,
+          "Business & Financial Advisory": 1,
+          "IT & Software": 1,
+          "Gifting & Home Decor": 1,
+          "Gifting & Custom Apparel Printing": 1,
+          "Industrial Technology": 1,
+          "Sustainable Fashion & Waste Management": 1
+        },
+        "call_status": {
+          "Not answered": 17,
+          "Busy now": 6,
+          "not answered": 2,
+          "Call later": 2,
+          "Switched off": 2,
+          "call later": 1,
+          "Invalid number": 1,
+          "in meeting call later": 1,
+          "2026-09-21 00:00:00": 1,
+          "Not available": 1
+        },
+        "requirements_logged": 46,
+        "followups_logged": 76
+      },
+      "gadekar_sir": {
+        "contact_names": 36,
+        "phones": 36,
+        "followup_report_rows": 76
+      },
+      "sheet2": {
+        "companies": 33,
+        "call_status": {
+          "Not answered": 10,
+          "Not interested": 2,
+          "Busy now": 1,
+          "Not available": 1,
+          "Call later": 1
+        },
+        "followups_logged": 23
+      },
+      "sheet11_requirements": {
+        "companies": 22,
+        "requirements": [
+          "In meeting",
+          "Details sent",
+          "Details sent",
+          "Not answered",
+          "Details sent",
+          "Not specified",
+          "Not answered",
+          "Details sent",
+          "No requirement",
+          "Not answered",
+          "No requirement",
+          "Details sent",
+          "Details sent",
+          "Details sent",
+          "Details sent",
+          "Details sent",
+          "Details sent",
+          "Details sent",
+          "Not specified",
+          "Details sent",
+          "Details sent",
+          "Not interested"
+        ],
+        "followups": 13
+      }
+    },
+    "sales_data_file": {
+      "out_of_state_rows": 49,
+      "packvision": {
+        "rows": 111,
+        "companies": 83,
+        "names": 87,
+        "phones": 111,
+        "emails": 44,
+        "call_status": {
+          "Not answered": 4,
+          "Not interested": 3,
+          "catalog sent": 2,
+          "details sent": 2,
+          "No requirement": 2,
+          "No reqirement": 1,
+          "22 aug after 12pm": 1,
+          "2026-08-22 13:00:00": 1,
+          "2026-08-21 12:00:00": 1,
+          "switched off": 1,
+          "2026-08-21 16:00:00": 1
+        }
+      },
+      "sales_person1": {
+        "contact_names": 36,
+        "phones": 36,
+        "followup_report_rows": 76,
+        "followup_samples": [
+          "Total Companies Contacted: 38",
+          "0. Jabil electronics\nPravin — 9156031472",
+          "1. office Q H Talbros Pvt. Ltd., Shirwal",
+          "Status: Busy now",
+          "2. chheda Electrical and Electronic Pvt.",
+          "Status: Not answered",
+          "3. Jyoti Metal Solutions – Patole Sir",
+          "Status: Details shared – 9 Oct, 1:00 PM",
+          "5. Ravin Cable Market – Landline",
+          "Status: Busy now",
+          "6. Purchase – Electra Enterprises, Ingale",
+          "Status: Dimension not received / unclear",
+          "7. Purchase – E Co Pro, Markal – Prashant",
+          "Status: No requirement",
+          "8. Southa Ind. Pvt. Ltd. – Khadale Sir"
+        ]
+      }
+    }
+  },
+  "erp_latest": {
+    "report_file": "kalika_report_2026-10-30.xlsx",
+    "sheets": {
+      "Inventory": {
+        "rows": 292,
+        "categories": {
+          "finished": 185,
+          "trading": 99,
+          "raw_material": 8
+        },
+        "plants": {
+          "Main Store": 199,
+          "Dispatch": 92,
+          "Production": 1
+        }
+      },
+      "Production": {
+        "rows": 104,
+        "status": {
+          "Completed": 98,
+          "In Production": 6
+        },
+        "avg_completion_pct": 0.9924235294117648
+      },
+      "Dispatch": {
+        "rows": 117,
+        "status": {
+          "Completed": 73,
+          "Partially Dispatched": 44
+        },
+        "unique_customers": 52,
+        "avg_completion_pct": 0.7666923076923077,
+        "total_scheduled_qty": 69538.0,
+        "total_dispatched_qty": 46405.0,
+        "plants": {
+          "Dispatch": 117
+        }
+      },
+      "Raw Materials": {
+        "rows": 59
+      },
+      "Orders": {
+        "rows": 89,
+        "total_value": 9483164.0,
+        "status": {
+          "Completed": 69,
+          "New": 10,
+          "Dispatched": 7,
+          "Production In Process": 2,
+          "In Production": 1
+        },
+        "unique_customers": 57,
+        "with_required_date": 37
+      },
+      "Purchases": {
+        "rows": 83,
+        "total_amount": 16789784.419999998,
+        "status": {
+          "Ordered": 50,
+          "Received": 30,
+          "Partially Received": 3
+        },
+        "unique_suppliers": 54
+      },
+      "Customers": {
+        "rows": 109
+      },
+      "Suppliers": {
+        "rows": 54
+      },
+      "Plants": {
+        "rows": 2
+      },
+      "Products": {
+        "rows": 238
+      }
+    }
+  },
+  "sales_2026": {
+    "monthly": [
+      {
+        "month": "Jan-26",
+        "invoices": 570,
+        "unique_customers": 67,
+        "taxable_value": 24284459.05,
+        "gross_total": 28414031.33,
+        "line_items": 919
+      },
+      {
+        "month": "Feb-26",
+        "invoices": 552,
+        "unique_customers": 63,
+        "taxable_value": 27154340.9,
+        "gross_total": 31777211.35,
+        "line_items": 891
+      },
+      {
+        "month": "Mar-26",
+        "invoices": 404,
+        "unique_customers": 52,
+        "taxable_value": 18667809.88,
+        "gross_total": 21839001.99,
+        "line_items": 621
+      },
+      {
+        "month": "Apr-26",
+        "invoices": 588,
+        "unique_customers": 63,
+        "taxable_value": 23988449.419999998,
+        "gross_total": 28121146.96,
+        "line_items": 0
+      },
+      {
+        "month": "May-26",
+        "invoices": 594,
+        "unique_customers": 58,
+        "taxable_value": 25118619.65,
+        "gross_total": 29501755.7,
+        "line_items": 0
+      },
+      {
+        "month": "Jun-26",
+        "invoices": 616,
+        "unique_customers": 71,
+        "taxable_value": 28222226.82,
+        "gross_total": 33090076.160000004,
+        "line_items": 0
+      },
+      {
+        "month": "Jul-26",
+        "invoices": 686,
+        "unique_customers": 67,
+        "taxable_value": 26587524.61,
+        "gross_total": 31128507.669999998,
+        "line_items": 0
+      },
+      {
+        "month": "Aug-26",
+        "invoices": 633,
+        "unique_customers": 69,
+        "taxable_value": 34800282.04,
+        "gross_total": 40181894.74,
+        "line_items": 0
+      },
+      {
+        "month": "Sep-26",
+        "invoices": 506,
+        "unique_customers": 62,
+        "taxable_value": 27039819.04,
+        "gross_total": 31706489.97,
+        "line_items": 0
+      }
+    ],
+    "total_invoices": 5149,
+    "total_gross": 275760115.87,
+    "total_taxable": 235863531.40999997,
+    "unique_customers": 124,
+    "top_customers": [
+      {
+        "customer": "CUMMINS TECHNOLOGIES INDIA PVT.LTD - PHP PLANT",
+        "gross": 31975438.73
+      },
+      {
+        "customer": "Cummins Technologies India Private Limited (CFS/CES Div)",
+        "gross": 30858665.7
+      },
+      {
+        "customer": "TATA CUMMINS PRIVATE LIMITED (TCP)2",
+        "gross": 27848795.99
+      },
+      {
+        "customer": "CUMMINS GENERATOR TECH INDIA PVT.LTD",
+        "gross": 18315643.68
+      },
+      {
+        "customer": "Cummins Generator Tech (I)Pvt Ltd.(Ahmednagar)",
+        "gross": 18213282.63
+      },
+      {
+        "customer": "TATA CUMMINS PRIVATE LIMITED (TC3)",
+        "gross": 16662458.42
+      },
+      {
+        "customer": "Cummins India Limitted:CIL EBU 085",
+        "gross": 15309377.66
+      },
+      {
+        "customer": "CUMMINS INDIA LIMITED (PHALTAN)",
+        "gross": 11471086.56
+      },
+      {
+        "customer": "Jakson Limited",
+        "gross": 10135498.61
+      },
+      {
+        "customer": "CUMMINS TECHNOLOGIES INDIA PVT.LTD.(KOTHRUD)",
+        "gross": 8935232.29
+      },
+      {
+        "customer": "CUMMINS INDIA LIMITED (CPG)",
+        "gross": 6910674.63
+      },
+      {
+        "customer": "TATA CUMMINS PRIVATE LIMITED(JMD)",
+        "gross": 5526730.89
+      },
+      {
+        "customer": "White Polychem",
+        "gross": 5336506.94
+      },
+      {
+        "customer": "CUMMINS GENERATOR TECHNOLOGIES INDIA PRIVATE LIMITED",
+        "gross": 5116637.85
+      },
+      {
+        "customer": "Eaton Industrial System Pvt. Ltd",
+        "gross": 4961419.62
+      }
+    ],
+    "payment_terms": {
+      "nan": 3469,
+      "45 Days": 859,
+      "60 Days": 384,
+      "40 Days": 308,
+      "30 Days": 80,
+      "15 Days": 37,
+      "1": 2,
+      "To Pay": 2,
+      "30": 1,
+      "1 Days": 1
+    },
+    "top_products": [
+      {
+        "item": "STRETCH FILM 500MM x 51 (Hand Grade)",
+        "value": 4616480.1
+      },
+      {
+        "item": "CONSUMABLE.FASTENERS MS HEX BOLT, M18 X 1.5 X 50MM (GRADE: 10.9) FULL THREAD. MAKE- STANDARD",
+        "value": 2990304.0
+      },
+      {
+        "item": "STRETCH FILM",
+        "value": 2815907.3
+      },
+      {
+        "item": "HAND GLOVES CUT LEVEL 3 NITRILE COATING , (GST 5%)",
+        "value": 2011200.0
+      },
+      {
+        "item": "TV402 HANGING SYSTEM 402(600X400X160MM) TOP VISION",
+        "value": 1873570.0
+      },
+      {
+        "item": "CONSUMABLE.SAFETY.MISC.SARAN HOOD DOUBLE BIB.MAINTENANCE FREE TYVEK HOOD MODEL  - 9911-29, MAKE -ALLEGRO.",
+        "value": 1812800.0
+      },
+      {
+        "item": "Make Atom Precision Tail stock female half center CFS import from USA",
+        "value": 1531000.0
+      },
+      {
+        "item": "Motor unit MU200 3HAC040656-002",
+        "value": 1365320.0
+      },
+      {
+        "item": "CONSUMABLE.SAFETY.HIGH CUT RESISTANT GLOVE POWERFIT AS PER EN388, 4343 CE. CUT LEVEL-3 GLOVES PU COATED SIZE- MEDIUM. MAKE - MARVEL.MODEL-CPU3",
+        "value": 1324800.0
+      },
+      {
+        "item": "CONSUMABLE.SAFETY.HIGH CUT RESISTANT GLOVE POWERFIT AS PER EN388, 4343 CE. CUT LEVEL-3 GLOVES PU COATED SIZE- LARGE. MAKE - MARVEL.MODEL-CPU3",
+        "value": 1296000.0
+      },
+      {
+        "item": "CONSUMABLE.PACKAG ING.PLASTIC.STRETCH FILM 500MM X 51 MICRON(HAND GRADE) UNDER EPR NORMS.",
+        "value": 1267536.6
+      },
+      {
+        "item": "DYMAX-6621-T ADHESIVE",
+        "value": 1175000.0
+      },
+      {
+        "item": "LOADING PAD Dia 100mm height 80mm Bolt M16,_x000D_\nPart noA063D591",
+        "value": 1161535.2
+      },
+      {
+        "item": "BROWN TAPE/ Transparent 72x65 mtr,55 micron recycle symbol printed on tape as per norm",
+        "value": 971678.4
+      },
+      {
+        "item": "CONSUMABLE.SAFETY.HAND_x000D_\nGLOVES. NITRILE HAND_x000D_\nGLOVES MAKE RUBBEREX,_x000D_\nCIP CATALOG -_x000D_\nN69GLOVESVWR001",
+        "value": 879250.0
+      }
+    ]
+  },
+  "whatsapp": {
+    "chat_zip_count": 48,
+    "files": [
+      {
+        "file": "Accounting Voucher Display JM PROSEF 1.pdf",
+        "size_bytes": 40334
+      },
+      {
+        "file": "KALIKA.pdf",
+        "size_bytes": 190661
+      },
+      {
+        "file": "WhatsApp Chat with +91 72497 90153.zip",
+        "size_bytes": 2922124
+      },
+      {
+        "file": "WhatsApp Chat with +91 83789 72779.zip",
+        "size_bytes": 314300
+      },
+      {
+        "file": "WhatsApp Chat with +91 84849 88406.zip",
+        "size_bytes": 226793
+      },
+      {
+        "file": "WhatsApp Chat with +91 87660 25842.zip",
+        "size_bytes": 119075
+      },
+      {
+        "file": "WhatsApp Chat with +91 90119 43100.zip",
+        "size_bytes": 2699001
+      },
+      {
+        "file": "WhatsApp Chat with +91 92848 34009.zip",
+        "size_bytes": 42153
+      },
+      {
+        "file": "WhatsApp Chat with +91 93590 09551.zip",
+        "size_bytes": 27571
+      },
+      {
+        "file": "WhatsApp Chat with A P Electricals A 45.zip",
+        "size_bytes": 571814
+      },
+      {
+        "file": "WhatsApp Chat with ACPL Mashke Booking_Kalika.zip",
+        "size_bytes": 2021076
+      },
+      {
+        "file": "WhatsApp Chat with Abhishek Chaudhari Industrial Packers.zip",
+        "size_bytes": 664
+      },
+      {
+        "file": "WhatsApp Chat with Amol M Pophale.zip",
+        "size_bytes": 841
+      },
+      {
+        "file": "WhatsApp Chat with Anand Stationery. Nagar. Suraj.zip",
+        "size_bytes": 449
+      },
+      {
+        "file": "WhatsApp Chat with Ashish Chavan Ke.zip",
+        "size_bytes": 5253960
+      },
+      {
+        "file": "WhatsApp Chat with Ashok Zade S S Enterprises.zip",
+        "size_bytes": 1585513
+      },
+      {
+        "file": "WhatsApp Chat with Bhushan Lunkad Jeur Bhushan GEn Store.zip",
+        "size_bytes": 843368
+      },
+      {
+        "file": "WhatsApp Chat with Chandrabhan Dairy Ahmednagar.zip",
+        "size_bytes": 63037
+      },
+      {
+        "file": "WhatsApp Chat with Dawange Enterprises Nasik D.zip",
+        "size_bytes": 3762680
+      },
+      {
+        "file": "WhatsApp Chat with Dilip Sarode Spandan Enterprises.zip",
+        "size_bytes": 42082806
+      },
+      {
+        "file": "WhatsApp Chat with Fursungi Suyash Packaging Pawar Ajit.zip",
+        "size_bytes": 1702977
+      },
+      {
+        "file": "WhatsApp Chat with Gorakh Tambe Sir Purches Crafted Solutions Ralegansidhi.zip",
+        "size_bytes": 149173
+      },
+      {
+        "file": "WhatsApp Chat with Harshad Hajare Kalika.zip",
+        "size_bytes": 1050191
+      },
+      {
+        "file": "WhatsApp Chat with Jagtap Siddarth.zip",
+        "size_bytes": 557
+      },
+      {
+        "file": "WhatsApp Chat with Kalika And Brosliness corporation .zip",
+        "size_bytes": 11175305
+      },
+      {
+        "file": "WhatsApp Chat with Kalika Order's .zip",
+        "size_bytes": 2050579
+      },
+      {
+        "file": "WhatsApp Chat with Karad Nana Mahesh Treaders.zip",
+        "size_bytes": 143660
+      },
+      {
+        "file": "WhatsApp Chat with Khandare It6wachman.zip",
+        "size_bytes": 459
+      },
+      {
+        "file": "WhatsApp Chat with Kunal Todmal Egalpolex.zip",
+        "size_bytes": 3233
+      },
+      {
+        "file": "WhatsApp Chat with Nashik Man Engi. Aluminium Sandip Aher (1).zip",
+        "size_bytes": 428581
+      },
+      {
+        "file": "WhatsApp Chat with Nashik Man Engi. Aluminium Sandip Aher.zip",
+        "size_bytes": 428581
+      },
+      {
+        "file": "WhatsApp Chat with Prachi_jadhav ≡ƒÆ½ Kalika.zip",
+        "size_bytes": 43350560
+      },
+      {
+        "file": "WhatsApp Chat with Pradip Dadabhau Thube Pragati Hardware.zip",
+        "size_bytes": 736177
+      },
+      {
+        "file": "WhatsApp Chat with Priyanka Ware Brosliness.zip",
+        "size_bytes": 281627
+      },
+      {
+        "file": "WhatsApp Chat with Purchase Vikrant SirKaizen Ngr G44.zip",
+        "size_bytes": 877194
+      },
+      {
+        "file": "WhatsApp Chat with Ravindra Gole Classic Ss Tools.zip",
+        "size_bytes": 197869
+      },
+      {
+        "file": "WhatsApp Chat with Rutuja Patil Instore.zip",
+        "size_bytes": 423
+      },
+      {
+        "file": "WhatsApp Chat with S M KAREGAON Mahesh Ghegade Ranjangaion.zip",
+        "size_bytes": 8773877
+      },
+      {
+        "file": "WhatsApp Chat with S S Courier Service Shree Mahavir Courier Pvt Ltd.zip",
+        "size_bytes": 1820996
+      },
+      {
+        "file": "WhatsApp Chat with Sachin Vapi Rajmudra.zip",
+        "size_bytes": 3626
+      },
+      {
+        "file": "WhatsApp Chat with Sai Umrella.zip",
+        "size_bytes": 374
+      },
+      {
+        "file": "WhatsApp Chat with Sandeep Madav Automatic Eng Work Mumbai.zip",
+        "size_bytes": 56917
+      },
+      {
+        "file": "WhatsApp Chat with Sangeeta Desai Lipap.zip",
+        "size_bytes": 625
+      },
+      {
+        "file": "WhatsApp Chat with Shantanu Jagtap Siddharth Enterprises.zip",
+        "size_bytes": 176447
+      },
+      {
+        "file": "WhatsApp Chat with Shrikant Tupe Santosh Trading.zip",
+        "size_bytes": 262284
+      },
+      {
+        "file": "WhatsApp Chat with Shubham Shinde Shital Industries.zip",
+        "size_bytes": 282814
+      },
+      {
+        "file": "WhatsApp Chat with Sunrise Enterprises.zip",
+        "size_bytes": 461708
+      },
+      {
+        "file": "WhatsApp Chat with VVR Polyfilm.zip",
+        "size_bytes": 168879
+      },
+      {
+        "file": "WhatsApp Chat with Vikas Tupe.zip",
+        "size_bytes": 264376
+      },
+      {
+        "file": "WhatsApp Chat with Vivek Poly Product Mahananda.zip",
+        "size_bytes": 73376
+      },
+      {
+        "file": "WhatsApp Image 2026-10-30 at 12.00.12.jpeg",
+        "size_bytes": 109767
+      }
+    ]
+  }
+}

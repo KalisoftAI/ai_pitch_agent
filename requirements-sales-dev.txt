@@ -1,0 +1,13 @@
+# Development, testing and CI tooling (not installed in the production image)
+-r requirements-sales.txt
+
+pytest>=8.0
+pytest-cov>=5.0
+coverage>=7.5
+ruff>=0.5
+bandit>=1.7
+pip-audit>=2.7
+
+# Ops / data migration (Cloud SQL connector uses ADC, pg8000 is the driver)
+cloud-sql-python-connector>=1.7
+pg8000>=1.30

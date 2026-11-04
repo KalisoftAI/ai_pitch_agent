@@ -1,0 +1,61 @@
+{
+  "nodes": 9123,
+  "edges": 9419,
+  "nodes_by_kind": {
+    "contact": 8795,
+    "domain": 222,
+    "intent": 6,
+    "chat_thread": 85,
+    "erp_customer": 15
+  },
+  "edges_by_kind": {
+    "CONTACT_IN_DOMAIN": 611,
+    "CONTACT_HAS_INTENT": 8795,
+    "ORDER_BY_CONTACT": 13
+  },
+  "density": 0.000113,
+  "connected_components": 88,
+  "top_connected": [
+    {
+      "node": "intent:general",
+      "degree": 8574
+    },
+    {
+      "node": "domain:gmail.com",
+      "degree": 307
+    },
+    {
+      "node": "intent:procurement",
+      "degree": 68
+    },
+    {
+      "node": "intent:sales",
+      "degree": 65
+    },
+    {
+      "node": "intent:support",
+      "degree": 55
+    },
+    {
+      "node": "intent:hiring",
+      "degree": 28
+    },
+    {
+      "node": "domain:cummins.com",
+      "degree": 21
+    },
+    {
+      "node": "domain:yahoo.com",
+      "degree": 14
+    },
+    {
+      "node": "domain:rediffmail.com",
+      "degree": 13
+    },
+    {
+      "node": "contact:1567",
+      "degree": 10
+    }
+  ],
+  "generated_at": "2026-10-30T14:45:07.963229+00:00"
+}

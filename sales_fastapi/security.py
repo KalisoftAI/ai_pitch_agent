@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -59,6 +60,29 @@ def decrypt_secret(token: str) -> str:
 
 
 # --------------------------------------------------------------------------
+# Username / password (PBKDF2 — no extra dependency)
+# --------------------------------------------------------------------------
+_PBKDF2_ITERATIONS = 120_000
+
+
+def hash_password(plain: str) -> str:
+    salt = secrets.token_hex(16)
+    digest = hashlib.pbkdf2_hmac("sha256", plain.encode(), salt.encode(), _PBKDF2_ITERATIONS)
+    return f"pbkdf2${_PBKDF2_ITERATIONS}${salt}${digest.hex()}"
+
+
+def verify_password(plain: str, stored: str) -> bool:
+    try:
+        scheme, iterations, salt, hex_digest = stored.split("$")
+        if scheme != "pbkdf2":
+            return False
+        digest = hashlib.pbkdf2_hmac("sha256", plain.encode(), salt.encode(), int(iterations))
+        return secrets.compare_digest(digest.hex(), hex_digest)
+    except (ValueError, AttributeError):
+        return False
+
+
+# --------------------------------------------------------------------------
 # JWT session tokens
 # --------------------------------------------------------------------------
 def create_access_token(user: User) -> tuple[str, int]:
@@ -89,6 +113,34 @@ def decode_access_token(token: str) -> dict:
 # --------------------------------------------------------------------------
 # Google ID token verification
 # --------------------------------------------------------------------------
+def create_oauth_state(user_id: int, purpose: str) -> str:
+    now = datetime.now(timezone.utc)
+    return jwt.encode(
+        {
+            "sub": str(user_id),
+            "purpose": purpose,
+            "nonce": secrets.token_urlsafe(18),
+            "iat": int(now.timestamp()),
+            "exp": int((now + timedelta(minutes=10)).timestamp()),
+        },
+        settings.SECRET_KEY,
+        algorithm=settings.ALGORITHM,
+    )
+
+
+def decode_oauth_state(token: str, purpose: str) -> int:
+    try:
+        claims = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    except jwt.PyJWTError as exc:
+        raise HTTPException(status_code=400, detail="Invalid or expired OAuth state") from exc
+    if claims.get("purpose") != purpose:
+        raise HTTPException(status_code=400, detail="Invalid OAuth state purpose")
+    try:
+        return int(claims["sub"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail="Invalid OAuth state subject") from exc
+
+
 def verify_google_id_token(token: str) -> dict:
     """Return the Google profile claims for a valid ID token.
 
@@ -99,6 +151,12 @@ def verify_google_id_token(token: str) -> dict:
         email = token[4:].strip().lower()
         if not email:
             raise HTTPException(status_code=400, detail="dev token needs an email")
+        allowed = settings.auth_dev_allowed_list
+        if allowed and email not in allowed:
+            raise HTTPException(
+                status_code=403,
+                detail="dev sign-in is restricted to approved emails",
+            )
         return {
             "sub": f"dev-{email}",
             "email": email,
@@ -120,12 +178,29 @@ def verify_google_id_token(token: str) -> dict:
     except ValueError as exc:
         raise HTTPException(status_code=401, detail=f"Invalid Google token: {exc}") from exc
 
+    # Normalise the verified email before any authorisation decision. The email
+    # is taken only from the verified ID token claims, never from the client.
+    email = (claims.get("email") or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=401, detail="Google token has no email claim")
+    claims["email"] = email
+
     if not claims.get("email_verified", False):
         raise HTTPException(status_code=403, detail="Google email is not verified")
 
+    # Strict per-email allowlist (takes precedence over the domain check).
+    allowed_emails = settings.google_allowed_emails
+    if allowed_emails:
+        if email not in allowed_emails:
+            raise HTTPException(
+                status_code=403,
+                detail="This Google account is not authorized for this workspace",
+            )
+        return claims
+
     allowed = [d.strip().lower() for d in settings.GOOGLE_ALLOWED_DOMAINS.split(",") if d.strip()]
     if allowed:
-        email_domain = claims.get("email", "").split("@")[-1].lower()
+        email_domain = email.split("@")[-1].lower()
         if email_domain not in allowed:
             raise HTTPException(status_code=403, detail="Email domain not allowed")
     return claims
@@ -145,7 +220,47 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     claims = decode_access_token(authorization.split(" ", 1)[1])
-    user = db.get(User, int(claims["sub"]))
+    try:
+        user_id = int(claims["sub"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise HTTPException(status_code=401, detail="Invalid session subject") from exc
+    user = db.get(User, user_id)
     if user is None or not user.is_active:
         raise HTTPException(status_code=401, detail="User not found or inactive")
     return user
+
+
+def require_admin(user: User = Depends(get_current_user)) -> User:
+    """Admin-only access (report upload, sync triggers, integration settings).
+
+    Admins are configured via ADMIN_EMAILS; the default is the Kalika operations
+    account (ai.solutions@kalisoftai.in). Non-admin users keep read-only dashboards.
+    """
+    email = (user.email or "").strip().lower()
+    if email not in settings.admin_emails and (user.role or "").lower() != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required for this action",
+        )
+    return user
+
+
+def is_admin_user(user: User) -> bool:
+    email = (user.email or "").strip().lower()
+    return email in settings.admin_emails or (user.role or "").lower() == "admin"
+
+
+def require_roles(*roles: str):
+    allowed = {role.lower() for role in roles}
+
+    def dependency(user: User = Depends(get_current_user)) -> User:
+        if is_admin_user(user):
+            return user
+        if (user.role or "sales").lower() not in allowed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Role access required: {', '.join(sorted(allowed))}",
+            )
+        return user
+
+    return dependency

@@ -1,0 +1,424 @@
+[
+  {
+    "id": "mail:interaction_dump:9",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "order"
+  },
+  {
+    "id": "sender:919260760760",
+    "kind": "sender",
+    "label": "unknown"
+  },
+  {
+    "id": "intent:order",
+    "kind": "intent",
+    "label": "order"
+  },
+  {
+    "id": "contact:3469",
+    "kind": "contact",
+    "label": "Ca"
+  },
+  {
+    "id": "entity:LOC-20261014-001",
+    "kind": "entity",
+    "label": "LOC-20261014-001"
+  },
+  {
+    "id": "mail:interaction_dump:8",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "order"
+  },
+  {
+    "id": "sender:918800742406",
+    "kind": "sender",
+    "label": "unknown"
+  },
+  {
+    "id": "contact:65",
+    "kind": "contact",
+    "label": "no"
+  },
+  {
+    "id": "entity:LOC-20261001-025",
+    "kind": "entity",
+    "label": "LOC-20261001-025"
+  },
+  {
+    "id": "mail:interaction_dump:7",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "order"
+  },
+  {
+    "id": "sender:918550900028",
+    "kind": "sender",
+    "label": "unknown"
+  },
+  {
+    "id": "contact:4245",
+    "kind": "contact",
+    "label": "@mit"
+  },
+  {
+    "id": "entity:LOC-012",
+    "kind": "entity",
+    "label": "LOC-012"
+  },
+  {
+    "id": "mail:interaction_dump:6",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "order"
+  },
+  {
+    "id": "sender:919960078343",
+    "kind": "sender",
+    "label": "unknown"
+  },
+  {
+    "id": "contact:6167",
+    "kind": "contact",
+    "label": "Th"
+  },
+  {
+    "id": "entity:thermometer",
+    "kind": "entity",
+    "label": "thermometer"
+  },
+  {
+    "id": "entity:LOC-20261004-013",
+    "kind": "entity",
+    "label": "LOC-20261004-013"
+  },
+  {
+    "id": "mail:interaction_dump:27",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "order"
+  },
+  {
+    "id": "entity:LOC-011",
+    "kind": "entity",
+    "label": "LOC-011"
+  },
+  {
+    "id": "mail:interaction_dump:26",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "order"
+  },
+  {
+    "id": "sender:919860433996",
+    "kind": "sender",
+    "label": "unknown"
+  },
+  {
+    "id": "contact:5334",
+    "kind": "contact",
+    "label": "Nagar"
+  },
+  {
+    "id": "entity:LOC-20261016-001",
+    "kind": "entity",
+    "label": "LOC-20261016-001"
+  },
+  {
+    "id": "mail:interaction_dump:25",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "order"
+  },
+  {
+    "id": "sender:918600805201",
+    "kind": "sender",
+    "label": "unknown"
+  },
+  {
+    "id": "contact:8569",
+    "kind": "contact",
+    "label": "Rajlaxmi Gruha Udyog"
+  },
+  {
+    "id": "entity:LOC-017",
+    "kind": "entity",
+    "label": "LOC-017"
+  },
+  {
+    "id": "mail:interaction_dump:24",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "order"
+  },
+  {
+    "id": "entity:LOC-20261004-006",
+    "kind": "entity",
+    "label": "LOC-20261004-006"
+  },
+  {
+    "id": "mail:interaction_dump:23",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "order"
+  },
+  {
+    "id": "entity:LOC-20261004-007",
+    "kind": "entity",
+    "label": "LOC-20261004-007"
+  },
+  {
+    "id": "mail:interaction_dump:22",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "order"
+  },
+  {
+    "id": "entity:LOC-20261005-002",
+    "kind": "entity",
+    "label": "LOC-20261005-002"
+  },
+  {
+    "id": "mail:interaction_dump:21",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "order"
+  },
+  {
+    "id": "entity:LOC-20261004-005",
+    "kind": "entity",
+    "label": "LOC-20261004-005"
+  },
+  {
+    "id": "mail:interaction_dump:20",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "order"
+  },
+  {
+    "id": "sender:919552533137",
+    "kind": "sender",
+    "label": "unknown"
+  },
+  {
+    "id": "contact:1161",
+    "kind": "contact",
+    "label": "Electrical"
+  },
+  {
+    "id": "entity:LOC-20261001-013",
+    "kind": "entity",
+    "label": "LOC-20261001-013"
+  },
+  {
+    "id": "mail:interaction_dump:19",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "order"
+  },
+  {
+    "id": "sender:919823125529",
+    "kind": "sender",
+    "label": "unknown"
+  },
+  {
+    "id": "contact:233",
+    "kind": "contact",
+    "label": "Pune"
+  },
+  {
+    "id": "entity:LOC-20261014-002",
+    "kind": "entity",
+    "label": "LOC-20261014-002"
+  },
+  {
+    "id": "mail:interaction_dump:18",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "order"
+  },
+  {
+    "id": "entity:LOC-20261005-001",
+    "kind": "entity",
+    "label": "LOC-20261005-001"
+  },
+  {
+    "id": "mail:interaction_dump:17",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "order"
+  },
+  {
+    "id": "entity:LOC-010",
+    "kind": "entity",
+    "label": "LOC-010"
+  },
+  {
+    "id": "mail:interaction_dump:16",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "order"
+  },
+  {
+    "id": "entity:LOC-20261018-001",
+    "kind": "entity",
+    "label": "LOC-20261018-001"
+  },
+  {
+    "id": "mail:interaction_dump:15",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "order"
+  },
+  {
+    "id": "entity:LOC-20261012-001",
+    "kind": "entity",
+    "label": "LOC-20261012-001"
+  },
+  {
+    "id": "mail:interaction_dump:14",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "order"
+  },
+  {
+    "id": "entity:LOC-20261011-005",
+    "kind": "entity",
+    "label": "LOC-20261011-005"
+  },
+  {
+    "id": "mail:interaction_dump:13",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "order"
+  },
+  {
+    "id": "entity:LOC-015",
+    "kind": "entity",
+    "label": "LOC-015"
+  },
+  {
+    "id": "mail:interaction_dump:12",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "order"
+  },
+  {
+    "id": "entity:LOC-20261001-006",
+    "kind": "entity",
+    "label": "LOC-20261001-006"
+  },
+  {
+    "id": "mail:interaction_dump:11",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "order"
+  },
+  {
+    "id": "sender:919833221233",
+    "kind": "sender",
+    "label": "unknown"
+  },
+  {
+    "id": "contact:7907",
+    "kind": "contact",
+    "label": "Refman Engineering Equipments Pvt. Ltd."
+  },
+  {
+    "id": "entity:LOC-20261009-007",
+    "kind": "entity",
+    "label": "LOC-20261009-007"
+  },
+  {
+    "id": "mail:interaction_dump:10",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "order"
+  },
+  {
+    "id": "entity:LOC-006",
+    "kind": "entity",
+    "label": "LOC-006"
+  },
+  {
+    "id": "mail:interaction_dump:5",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "general"
+  },
+  {
+    "id": "sender:914024340143",
+    "kind": "sender",
+    "label": "unknown"
+  },
+  {
+    "id": "intent:general",
+    "kind": "intent",
+    "label": "general"
+  },
+  {
+    "id": "contact:8759",
+    "kind": "contact",
+    "label": "8759"
+  },
+  {
+    "id": "entity:stretch film",
+    "kind": "entity",
+    "label": "stretch film"
+  },
+  {
+    "id": "mail:interaction_dump:4",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "general"
+  },
+  {
+    "id": "sender:914023456173",
+    "kind": "sender",
+    "label": "unknown"
+  },
+  {
+    "id": "contact:8757",
+    "kind": "contact",
+    "label": "8757"
+  },
+  {
+    "id": "mail:interaction_dump:3",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "general"
+  },
+  {
+    "id": "sender:914023456138",
+    "kind": "sender",
+    "label": "unknown"
+  },
+  {
+    "id": "contact:8756",
+    "kind": "contact",
+    "label": "8756"
+  },
+  {
+    "id": "mail:interaction_dump:2",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "general"
+  },
+  {
+    "id": "sender:918067859929",
+    "kind": "sender",
+    "label": "unknown"
+  },
+  {
+    "id": "contact:8752",
+    "kind": "contact",
+    "label": "Tata Advanced Systems (TASL)"
+  },
+  {
+    "id": "mail:interaction_dump:1",
+    "kind": "mail",
+    "label": "whatsapp_outbound",
+    "intent": "general"
+  }
+]
