@@ -213,6 +213,57 @@ nav { display: grid; gap: 4px; }
     padding: 20px 16px;
   }
 }
+
+/* Greeting banner for visits/field pages */
+.greeting-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #fff8eb 0%, #fff 70%);
+  border: 1px solid #f2d49b;
+  border-radius: 18px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 2px rgba(15,23,42,.05);
+}
+
+.greeting-emoji {
+  font-size: 32px;
+  animation: wave 2s ease-in-out infinite;
+}
+
+.greeting-banner h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #17352d;
+}
+
+.greeting-banner p {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+
+@keyframes wave {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(20deg); }
+  75% { transform: rotate(-15deg); }
+}
+
+@media (max-width: 768px) {
+  .greeting-banner {
+    padding: 16px 18px;
+    gap: 12px;
+  }
+  
+  .greeting-banner h3 {
+    font-size: 18px;
+  }
+  
+  .greeting-emoji {
+    font-size: 28px;
+  }
+}
 .email-source-panel, .email-inspector { margin-bottom: 16px; }
 .mailbox-source-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 20px 0 14px; }
 .mailbox-source { display: flex; align-items: center; gap: 10px; width: 100%; padding: 13px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: #fbfcf8; text-align: left; }

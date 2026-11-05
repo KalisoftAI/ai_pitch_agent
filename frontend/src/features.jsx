@@ -373,13 +373,14 @@ export function Catalogue({ onNotice }) {
 }
 
 // ---------------------------------------------------------------- Company visits
-export function CompanyVisits({ onNotice }) {
+export function CompanyVisits({ onNotice, user }) {
   const today = new Date().toISOString().slice(0, 10);
   const [visits, setVisits] = useState([]);
   const [stats, setStats] = useState(null);
   const emptyVisit = { company: "", contact_name: "", contact_phone: "", visit_date: today, outcome: "", follow_up_date: "", notes: "", next_action: "", meet_person: "", meet_home_location: "", previous_discussion: "", mail_chat_details: "", map_location: "" };
   const [form, setForm] = useState(emptyVisit);
   const [uploading, setUploading] = useState(0);
+  const userName = user?.name || user?.email?.split("@")[0] || "there";
   const load = async () => {
     try {
       const [nextVisits, nextStats] = await Promise.all([request("/visits"), request("/visits/stats")]);
@@ -434,6 +435,13 @@ export function CompanyVisits({ onNotice }) {
   };
   return (
     <div className="content dash">
+      <div className="greeting-banner">
+        <span className="greeting-emoji">👋</span>
+        <div>
+          <h3>Hola!! {userName} 🎉</h3>
+          <p className="muted">Welcome to your field dashboard. Keep up the great work! ✨</p>
+        </div>
+      </div>
       <div className="page-heading">
         <div><div className="section-kicker">FIELD / COMPANY HISTORY</div><h2>Company visits</h2>
           <p className="muted">Log visits, outcomes, follow-ups and attach photo/video evidence in GCS.</p></div>

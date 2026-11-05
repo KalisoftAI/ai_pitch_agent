@@ -119,10 +119,14 @@ function App() {
   if (!user) return <SignInPage config={config} onLogin={setUser} onNotice={setNotice} />;
 
   const logout = () => { sessionStorage.removeItem("sales_token"); setUser(null); };
+  const isKalikaUser = user.email === "kalikaenterprises@gmail.com";
+  const brandLogo = isKalikaUser ? KALIKA_LOGO : KALISOFT_LOGO;
+  const brandName = isKalikaUser ? "Kalika" : "Kalisoft";
+  const brandSubtext = isKalikaUser ? "Enterprises" : <b>AI</b>;
   return (
     <div className="shell">
       <aside className={`sidebar ${mobileNav ? "open" : ""}`}>
-        <div className="brand"><img src={KALISOFT_LOGO} alt="Kalisoft AI" className="brand-logo" /><span>Kalisoft <b>AI</b></span></div>
+        <div className="brand"><img src={brandLogo} alt={brandName} className="brand-logo" /><span>{brandName} <b>{brandSubtext}</b></span></div>
         <div className="workspace-label">Revenue workspace</div>
         <nav>
           {NAV_GROUPS.map((group) => (
@@ -147,7 +151,7 @@ function App() {
       </aside>
       {mobileNav && <button className="scrim" aria-label="Close menu" onClick={() => setMobileNav(false)} />}
       <main className="main">
-        <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open menu"><Menu size={20} /></button><div><div className="eyebrow">KALISOFT AI / SALES PIPELINE</div><h1>{TAB_TITLES[tab] || "Outreach"}</h1></div><div className="topbar-actions"><button className="assistant-launch" onClick={() => setAssistantOpen(true)}><img src={KALIKA_LOGO} alt="" /><Bot size={16} /><span>Kalika AI</span></button><EnvBadge env={health?.env} /><button className="text-button" onClick={() => setTour(true)}><Sparkles size={15} /> Take the tour</button><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Settings"><Settings2 size={18} /></button></div></header>
+        <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open menu"><Menu size={20} /></button><div><div className="eyebrow">{isKalikaUser ? "KALIKA ENTERPRISES" : "KALISOFT AI"} / SALES PIPELINE</div><h1>{TAB_TITLES[tab] || "Outreach"}</h1></div><div className="topbar-actions"><button className="assistant-launch" onClick={() => setAssistantOpen(true)}><img src={KALIKA_LOGO} alt="" /><Bot size={16} /><span>Kalika AI</span></button><EnvBadge env={health?.env} /><button className="text-button" onClick={() => setTour(true)}><Sparkles size={15} /> Take the tour</button><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Settings"><Settings2 size={18} /></button></div></header>
         {tab === "dash" && <KalikaDash onNavigate={setTab} onNotice={setNotice} />}
         {tab === "instore" && <InstoreMails onNotice={setNotice} />}
         {tab === "field" && <FieldDesk onNotice={setNotice} user={user} onNavigate={setTab} />}
@@ -165,7 +169,7 @@ function App() {
         {tab === "erp" && <ErpDashboard onNotice={setNotice} />}
         {tab === "salesbi" && <SalesBi onNotice={setNotice} />}
         {tab === "catalog" && <Catalogue onNotice={setNotice} />}
-        {tab === "visits" && <CompanyVisits onNotice={setNotice} />}
+        {tab === "visits" && <CompanyVisits onNotice={setNotice} user={user} />}
         {tab === "socialai" && <SocialAi onNotice={setNotice} />}
         {tab === "access" && <Access onNotice={setNotice} user={user} />}
         {tab === "uat" && <UatOps onNotice={setNotice} />}
