@@ -176,6 +176,24 @@ def test_endpoint():
     return {"status": "ok", "message": "Auth router is working"}
 
 
+@router.post("/setup/set-user-password")
+def set_user_password(
+    email: str,
+    password: str,
+    db: Session = Depends(get_db),
+):
+    """Set password for a specific user (for setup purposes)."""
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    from .security import hash_password
+    user.password_hash = hash_password(password)
+    db.commit()
+    
+    return {"ok": True, "email": email, "message": "Password updated"}
+
+
 @router.get("/setup/list-users")
 def list_users(db: Session = Depends(get_db)):
     """List users in database (for debugging)."""
