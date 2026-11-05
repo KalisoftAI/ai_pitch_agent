@@ -225,7 +225,7 @@ def set_user_password(
         if not user:
             raise HTTPException(status_code=404, detail=f"User not found: {email}")
         
-        from .security import hash_password
+        from ..security import hash_password
         user.password_hash = hash_password(password)
         db.commit()
         
