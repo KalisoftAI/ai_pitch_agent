@@ -49,6 +49,8 @@ STATIC_DIR = Path(__file__).parent / "static"
 async def lifespan(app: FastAPI):
     try:
         init_db()
+        from sales_fastapi.seed import seed
+        seed()
         app.state.db_ready = True
     except Exception:  # pragma: no cover - depends on DB availability
         app.state.db_ready = False
