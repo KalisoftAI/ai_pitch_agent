@@ -28,6 +28,7 @@ from ..erp_sync import (
 )
 from ..models import ErpDispatch, ErpOrder, IntegrationSetting, SyncRun, User
 from ..security import get_current_user, require_admin
+from ..services import GCSStorage
 
 router = APIRouter(prefix="/erp", tags=["erp"])
 
@@ -105,6 +106,54 @@ def erp_status(user: User = Depends(get_current_user), db: Session = Depends(get
             "channel_id": _youtube_channel(db),
         },
     }
+
+
+@router.get("/gcs/list")
+def gcs_list(
+    prefix: str = Query(default="docs/"),
+    admin: User = Depends(require_admin),
+):
+    """Admin-only: list objects under a bucket prefix for data discovery."""
+    gcs = GCSStorage(bucket_name="kalika_enterprises")
+    if not gcs.available:
+        raise HTTPException(status_code=503, detail="GCS is not available")
+    blobs = gcs.list_blobs(prefix=prefix)
+    return {"prefix": prefix, "count": len(blobs), "blobs": blobs}
+
+
+@router.get("/gcs/preview")
+def gcs_preview(
+    path: str = Query(...),
+    rows: int = Query(default=5, ge=1, le=50),
+    admin: User = Depends(require_admin),
+):
+    """Admin-only: inspect the shape of a GCS file (sheets/headers/sample rows)."""
+    import io
+
+    raw = GCSStorage(bucket_name="kalika_enterprises").download_blob(path)
+    if raw is None:
+        raise HTTPException(status_code=404, detail=f"not found: {path}")
+    lower = path.lower()
+    if lower.endswith((".xlsx", ".xls")):
+        import pandas as pd
+
+        xl = pd.ExcelFile(io.BytesIO(raw))
+        return {
+            "path": path,
+            "size": len(raw),
+            "sheets": xl.sheet_names,
+            "preview": {
+                sheet: xl.parse(sheet, nrows=rows).fillna("").to_dict("records")
+                for sheet in xl.sheet_names
+            },
+        }
+    text = raw.decode("utf-8", errors="ignore")
+    if lower.endswith(".json"):
+        try:
+            return {"path": path, "size": len(raw), "json": json.loads(text)}
+        except json.JSONDecodeError:
+            pass
+    return {"path": path, "size": len(raw), "text": text[:4000]}
 
 
 @router.post("/sync")

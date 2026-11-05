@@ -15,6 +15,7 @@ Endpoints
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import func
@@ -22,6 +23,7 @@ from sqlalchemy.orm import Session
 
 from ..analytics import load_ga4_snapshot
 from ..database import get_db
+from ..erp_sync import sync_erp_report
 from ..models import (
     Campaign,
     CampaignMessage,
@@ -52,10 +54,16 @@ def run_scheduler(
 ):
     """Enqueue the standard pipeline tasks for this user (manual cron sweep)."""
     task_ids = scheduler_service.enqueue_standard_tasks(user_id=user.id)
+    executed: dict[str, Any] = {}
+    try:
+        executed["erp_dispatch_sync"] = sync_erp_report(db)
+    except Exception as exc:  # noqa: BLE001 - surface the failure to the UI
+        executed["erp_dispatch_sync"] = {"ok": False, "error": str(exc)[:400]}
     result = {
         "enqueued": len(task_ids),
         "task_ids": task_ids,
         "backend": scheduler_service.backend_status(),
+        "executed": executed,
         "notification": {"status": "disabled" if not payload.notify_email else "not_configured"},
     }
     if not payload.notify_email:

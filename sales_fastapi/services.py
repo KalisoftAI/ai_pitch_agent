@@ -108,6 +108,28 @@ class GCSStorage:
             return out
         return out
 
+    def list_blobs(self, prefix: str = "", suffixes: tuple[str, ...] | None = None) -> list[dict[str, Any]]:
+        if not self.available or self._client is None:
+            return []
+        out: list[dict[str, Any]] = []
+        try:
+            for blob in self._client.list_blobs(self.bucket_name, prefix=prefix):
+                if blob.name.endswith("/"):
+                    continue
+                if suffixes and not blob.name.lower().endswith(suffixes):
+                    continue
+                out.append(
+                    {
+                        "name": blob.name,
+                        "size": blob.size,
+                        "updated": str(blob.updated or ""),
+                        "content_type": blob.content_type,
+                    }
+                )
+        except Exception:
+            return out
+        return out
+
     def download_blob(self, blob_name: str) -> Optional[bytes]:
         if not self.available or self._client is None:
             return None
