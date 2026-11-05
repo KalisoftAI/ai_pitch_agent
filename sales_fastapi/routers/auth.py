@@ -176,6 +176,24 @@ def test_endpoint():
     return {"status": "ok", "message": "Auth router is working"}
 
 
+@router.get("/setup/list-users")
+def list_users(db: Session = Depends(get_db)):
+    """List users in database (for debugging)."""
+    users = db.query(User).all()
+    return {
+        "users": [
+            {
+                "id": u.id,
+                "email": u.email,
+                "name": u.name,
+                "role": u.role,
+                "has_password": bool(u.password_hash),
+            }
+            for u in users
+        ]
+    }
+
+
 @router.get("/setup/count-users")
 def count_users(db: Session = Depends(get_db)):
     """Count users in database."""
