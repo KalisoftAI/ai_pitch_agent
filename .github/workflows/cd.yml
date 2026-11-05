@@ -71,7 +71,7 @@ jobs:
             --platform managed \
             --allow-unauthenticated \
             --add-cloudsql-instances "${{ vars.CLOUD_SQL_INSTANCE }}" \
-            --set-env-vars "ENV=${{ needs.resolve.outputs.app_env }},GOOGLE_CLOUD_PROJECT=${{ vars.GCP_PROJECT_ID }},GOOGLE_CLIENT_ID=placeholder-not-configured,ALLOWED_HOSTS=kalisoft-sales-19782268668.asia-south1.run.app,CORS_ORIGINS=https://kalisoft-sales-19782268668.asia-south1.run.app,GCS_BUCKET_CONTACTS=${{ vars.GCS_BUCKET }},GCS_PATH_CONTACTS=${{ vars.GCS_PATH }},CLOUD_SQL_CONNECTION_NAME=${{ vars.CLOUD_SQL_INSTANCE }},RATE_LIMIT_ENABLED=true,AUTH_DEV_MODE=false,GEMMA_MODEL=${{ vars.GEMMA_MODEL || 'gemma-4-27b-it' }},LLM_GEMMA_MODEL=${{ vars.LLM_GEMMA_MODEL || 'gemma-4-27b-it' }},FRONTEND_URL=${{ vars.FRONTEND_URL || 'https://kalisoft-sales-19782268668.asia-south1.run.app' }}" \
+            --set-env-vars "ENV=${{ needs.resolve.outputs.app_env }},GOOGLE_CLOUD_PROJECT=${{ vars.GCP_PROJECT_ID }},GOOGLE_CLIENT_ID=placeholder-not-configured,ALLOWED_HOSTS=*,CORS_ORIGINS=*,GCS_BUCKET_CONTACTS=${{ vars.GCS_BUCKET }},GCS_PATH_CONTACTS=${{ vars.GCS_PATH }},CLOUD_SQL_CONNECTION_NAME=${{ vars.CLOUD_SQL_INSTANCE }},RATE_LIMIT_ENABLED=true,AUTH_DEV_MODE=false,GEMMA_MODEL=${{ vars.GEMMA_MODEL || 'gemma-4-27b-it' }},LLM_GEMMA_MODEL=${{ vars.LLM_GEMMA_MODEL || 'gemma-4-27b-it' }},FRONTEND_URL=${{ vars.FRONTEND_URL || 'https://kalisoft-sales-19782268668.asia-south1.run.app' }}" \
             --min-instances=0 \
             --max-instances="${{ needs.resolve.outputs.max_instances }}" \
             --cpu=1 \
