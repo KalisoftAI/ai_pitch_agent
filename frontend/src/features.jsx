@@ -233,6 +233,7 @@ export function SalesBi({ onNotice }) {
           <button className="secondary-button" onClick={() => download("companies", "pdf")}><FileDown size={15} /> PDF</button>
         </div>
       </div>
+      <TallySalesPanel onNotice={onNotice} />
       {!overview.data_available && <div className="empty-state"><Database size={22} /><p>No ERP report synced yet.</p><small>Run ERP sync from the ERP tab to populate real analytics.</small></div>}
       <div className="metric-grid dash-grid">
         <Metric icon={BriefcaseBusiness} label="Orders" value={fmtNum(totals.orders)} detail={`${fmtNum(totals.customers)} companies`} accent />
@@ -255,7 +256,6 @@ export function SalesBi({ onNotice }) {
           {!(delivery.pending || []).length && <div className="empty-state"><Check size={22} /><p>No pending dispatch lines.</p></div>}
         </section>
       </div>
-      <TallySalesPanel onNotice={onNotice} />
     </div>
   );
 }
@@ -763,6 +763,7 @@ export function MarketingCompanies({ onNotice }) {
   const [statusFilter, setStatusFilter] = useState("");
   const [editing, setEditing] = useState({});
   const [busy, setBusy] = useState(false);
+  const fileInputRef = React.useRef(null);
 
   const load = async () => {
     const params = new URLSearchParams();
@@ -799,6 +800,42 @@ export function MarketingCompanies({ onNotice }) {
       setEditing((previous) => ({ ...previous, [id]: { ...(previous[id] || {}), [field]: undefined } }));
     } catch (error) {
       onNotice({ type: "error", text: error.message });
+    }
+  };
+
+  const uploadFile = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    setBusy(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      const response = await fetch("/api/marketing-companies/upload", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${sessionStorage.getItem("sales_token")}`,
+        },
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || "Upload failed");
+      }
+      
+      const result = await response.json();
+      onNotice({
+        type: "success",
+        text: `File uploaded successfully! Imported ${result.imported}, updated ${result.updated}, skipped ${result.skipped}.`,
+      });
+      await load();
+    } catch (error) {
+      onNotice({ type: "error", text: error.message });
+    } finally {
+      setBusy(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -843,15 +880,26 @@ export function MarketingCompanies({ onNotice }) {
         <div>
           <div className="section-kicker">KALIKA MARKETING LIST</div>
           <h2>Marketing companies</h2>
-          <p className="muted">A clean view of the marketing workbook. Edit requirements directly on each row.</p>
+          <p className="muted">Upload and manage marketing data. Edit requirements directly on each row.</p>
         </div>
         <div className="button-row">
           <button className="secondary-button" onClick={load}><RefreshCw size={16} /> Refresh</button>
+          <label className="secondary-button" style={{ cursor: busy ? "wait" : "pointer" }}>
+            <UploadCloud size={16} />{busy ? "Uploading..." : "Upload File"}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={uploadFile}
+              disabled={busy}
+              style={{ display: "none" }}
+            />
+          </label>
           <button className="secondary-button" onClick={syncFromGCS} disabled={busy}>
-            <UploadCloud size={16} />{busy ? "Syncing..." : "Sync from GCS"}
+            <Database size={16} />{busy ? "Syncing..." : "Sync from GCS"}
           </button>
           <button className="primary-button" onClick={runImport} disabled={busy}>
-            <Database size={16} />{busy ? "Importing..." : "Import workbook"}
+            <Database size={16} />{busy ? "Importing..." : "Import Default"}
           </button>
         </div>
       </div>
