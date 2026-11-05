@@ -244,7 +244,7 @@ def sync_templates_from_gcs(
                 user_id=user.id,
                 name=metadata["name"],
                 channel=metadata["category"],
-                strategy="cold_outreach",
+                strategy="festive",
                 funnel_stage="awareness",
                 subject=metadata["subject"],
                 body=metadata["body"],
@@ -271,4 +271,75 @@ def sync_templates_from_gcs(
         "updated": updated,
         "total": len(html_blobs),
         "message": f"Synced {synced} new templates, updated {updated} existing templates",
+    }
+
+
+@router.post("/sync-specific")
+def sync_specific_templates(
+    gcs_paths: list[str],
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Sync specific HTML templates from GCS by path."""
+    gcs = GCSStorage(bucket_name=GCS_BUCKET)
+    if not gcs.available:
+        raise HTTPException(status_code=503, detail="GCS is not available")
+    
+    synced = 0
+    updated = 0
+    
+    for gcs_path in gcs_paths:
+        # Download HTML content
+        html_bytes = gcs.download_blob(gcs_path)
+        if not html_bytes:
+            continue
+        
+        filename = gcs_path.split("/")[-1]
+        
+        try:
+            html_content = html_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            html_content = html_bytes.decode("latin-1")
+        
+        # Parse metadata
+        metadata = _parse_html_metadata(html_content, filename)
+        
+        # Check if template already exists
+        existing = (
+            db.query(MessageTemplate)
+            .filter(
+                MessageTemplate.user_id == user.id,
+                MessageTemplate.name == metadata["name"],
+            )
+            .first()
+        )
+        
+        if existing:
+            # Update existing template
+            existing.body = metadata["body"]
+            existing.subject = metadata["subject"]
+            existing.channel = metadata["category"]
+            db.commit()
+            updated += 1
+        else:
+            # Create new template
+            template = MessageTemplate(
+                user_id=user.id,
+                name=metadata["name"],
+                channel=metadata["category"],
+                strategy="festive",
+                funnel_stage="awareness",
+                subject=metadata["subject"],
+                body=metadata["body"],
+                variables=variables_used(metadata["subject"] + " " + metadata["body"]),
+                is_active=True,
+            )
+            db.add(template)
+            db.commit()
+            synced += 1
+    
+    return {
+        "synced": synced,
+        "updated": updated,
+        "message": f"Synced {synced} templates, updated {updated} templates",
     }

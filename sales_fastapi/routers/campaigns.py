@@ -1,345 +1,325 @@
-"""Bulk outreach campaigns with human-in-the-loop review.
-
-Flow: create (render + optional Gemma personalisation) -> pending_review ->
-approve / edit -> send (email / WhatsApp / WeChat) -> status updates.
-"""
+"""Lightweight campaign system for category-wise email sending."""
 
 from __future__ import annotations
 
-from datetime import datetime
-from functools import lru_cache
+import csv
+from io import BytesIO, StringIO
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from ..config import settings
 from ..database import get_db
-from ..governance.audit import log_event
-from ..llm.router import ModelRouter
-from ..models import (
-    Campaign,
-    CampaignMessage,
-    Contact,
-    EmailConnection,
-    MessageTemplate,
-    User,
-)
-from ..schemas import (
-    CampaignCreate,
-    CampaignDetail,
-    CampaignMessageOut,
-    CampaignMessageUpdate,
-    CampaignOut,
-    CampaignSendResult,
-)
+from ..models import Campaign, CampaignMessage, Contact, MessageTemplate, User
+from ..schemas import CampaignCreate, CampaignMessageOut, CampaignOut
 from ..security import get_current_user
-from ..services import MailSender
-from ..templating import contact_context, render
-from ..wechaty import WechatyGateway
+from ..services import GCSStorage
 
 router = APIRouter(prefix="/campaigns", tags=["campaigns"])
 
-SENDER_CONTEXT = {
-    "sender_name": "Kalisoft AI",
-    "sender_email": "ai.solutions@kalisoftai.in",
-    "product": "Kalisoft AI Sales Automation",
-    "calendar_link": "https://kalisoftai.in/demo",
-}
+MARKETING_GCS_PATH = "sales-contacts/RECENT_marketing_list_kalika.xlsx"
+ERP_GCS_PATH = "sales-contacts/customers.csv"
 
 
-@lru_cache
-def _llm_router() -> ModelRouter:
-    return ModelRouter()
+class ContactList(BaseModel):
+    contacts: list[dict[str, Any]]
+    total: int
+    by_category: dict[str, int] = Field(default_factory=dict)
 
 
-def _ai_personalise(template: MessageTemplate, contact: Contact, channel: str) -> tuple[str, str]:
-    """Return (model_name, body). Falls back to the template render on any failure."""
-    base_body = render(template.body, {**SENDER_CONTEXT, **contact_context(contact)})
-    if not settings.LLM_ENABLED:
-        return ("template", base_body)
-    prompt = (
-        f"Write a concise {channel} outreach message for a B2B sales campaign.\n"
-        f"Strategy: {template.strategy}. Funnel stage: {template.funnel_stage}.\n"
-        f"Recipient: {contact.name or 'decision maker'} at {contact.company or 'the company'}.\n"
-        f"Intent: {contact.intent or 'general'}. Context: {contact.context or ''}.\n"
-        f"Product: {SENDER_CONTEXT['product']}. Sender: {SENDER_CONTEXT['sender_name']}.\n\n"
-        f"Base draft to personalise (keep under 120 words):\n{base_body}\n\n"
-        "Return only the final message body."
+class CampaignStart(BaseModel):
+    template_id: int
+    contact_source: str  # "marketing" or "erp"
+    categories: list[str] = []  # Empty means all categories
+
+
+@router.post("/load-contacts")
+def load_contacts_from_gcs(
+    source: str,
+    user: User = Depends(get_current_user),
+):
+    """Load contacts from GCS sources (marketing or ERP)."""
+    gcs = GCSStorage(bucket_name="kalika_enterprises")
+    if not gcs.available:
+        raise HTTPException(status_code=503, detail="GCS is not available")
+    
+    contacts = []
+    by_category = {}
+    
+    if source == "marketing":
+        # Load from Excel file
+        xlsx_bytes = gcs.download_blob(MARKETING_GCS_PATH)
+        if not xlsx_bytes:
+            raise HTTPException(status_code=404, detail="Marketing contacts file not found")
+        
+        try:
+            import openpyxl
+            wb = openpyxl.load_workbook(BytesIO(xlsx_bytes))
+            ws = wb.active
+            
+            # Get headers from first row
+            headers = [str(cell.value).strip().lower() if cell.value else "" for cell in ws[1]]
+            
+            # Map columns
+            email_idx = next((i for i, h in enumerate(headers) if "email" in h), -1)
+            category_idx = next((i for i, h in enumerate(headers) if "category" in h), -1)
+            name_idx = next((i for i, h in enumerate(headers) if "name" in h), -1)
+            
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                if email_idx >= 0 and row[email_idx]:
+                    email = str(row[email_idx]).strip()
+                    if "@" in email:
+                        category = str(row[category_idx]).strip() if category_idx >= 0 and row[category_idx] else "uncategorized"
+                        name = str(row[name_idx]).strip() if name_idx >= 0 and row[name_idx] else ""
+                        
+                        contacts.append({
+                            "email": email,
+                            "category": category,
+                            "name": name,
+                            "source": "marketing",
+                        })
+                        
+                        by_category[category] = by_category.get(category, 0) + 1
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to parse Excel: {str(e)}")
+    
+    elif source == "erp":
+        # Load from CSV file
+        csv_bytes = gcs.download_blob(ERP_GCS_PATH)
+        if not csv_bytes:
+            raise HTTPException(status_code=404, detail="ERP customers file not found")
+        
+        try:
+            csv_text = csv_bytes.decode("utf-8")
+            reader = csv.DictReader(StringIO(csv_text))
+            
+            for row in reader:
+                email = row.get("email", "").strip()
+                if email and "@" in email:
+                    category = row.get("category", "uncategorized").strip() or "uncategorized"
+                    name = row.get("name", "").strip()
+                    
+                    contacts.append({
+                        "email": email,
+                        "category": category,
+                        "name": name,
+                        "source": "erp",
+                    })
+                    
+                    by_category[category] = by_category.get(category, 0) + 1
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to parse CSV: {str(e)}")
+    
+    else:
+        raise HTTPException(status_code=400, detail="Invalid source. Use 'marketing' or 'erp'")
+    
+    return ContactList(
+        contacts=contacts,
+        total=len(contacts),
+        by_category=by_category,
     )
-    try:
-        route = _llm_router().run(
-            "generate_outreach_message", prompt, system="You are a precise B2B sales copywriter."
-        )
-        text = route.result.text.strip()
-        if route.result.provider == "echo" or not text:
-            return ("template", base_body)
-        return (route.result.model, text)
-    except Exception:  # noqa: BLE001 - fall back to the template
-        return ("template", base_body)
 
 
-@router.post("", response_model=CampaignDetail, status_code=201)
+@router.post("/create")
 def create_campaign(
-    payload: CampaignCreate,
-    request: Request,
+    payload: CampaignStart,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    template = (
-        db.query(MessageTemplate)
-        .filter(
-            MessageTemplate.id == payload.template_id, MessageTemplate.user_id.in_([user.id, 0])
-        )
-        .first()
-    )
-    if template is None:
+    """Create a campaign with selected template and contacts."""
+    # Get template
+    template = db.query(MessageTemplate).filter(
+        MessageTemplate.id == payload.template_id,
+        MessageTemplate.user_id == user.id,
+    ).first()
+    
+    if not template:
         raise HTTPException(status_code=404, detail="Template not found")
-
-    query = db.query(Contact).filter(Contact.user_id == user.id)
-    if payload.filter.intent:
-        query = query.filter(Contact.intent == payload.filter.intent)
-    if payload.filter.source:
-        query = query.filter(Contact.source == payload.filter.source)
-    if payload.filter.q:
-        like = f"%{payload.filter.q}%"
-        query = query.filter(
-            Contact.company.ilike(like) | Contact.name.ilike(like) | Contact.email.ilike(like)
-        )
-    contacts = query.order_by(Contact.created_at.desc()).limit(payload.filter.limit).all()
+    
+    # Load contacts
+    gcs = GCSStorage(bucket_name="kalika_enterprises")
+    if not gcs.available:
+        raise HTTPException(status_code=503, detail="GCS is not available")
+    
+    contacts = []
+    if payload.contact_source == "marketing":
+        xlsx_bytes = gcs.download_blob(MARKETING_GCS_PATH)
+        if xlsx_bytes:
+            import openpyxl
+            wb = openpyxl.load_workbook(BytesIO(xlsx_bytes))
+            ws = wb.active
+            headers = [str(cell.value).strip().lower() if cell.value else "" for cell in ws[1]]
+            email_idx = next((i for i, h in enumerate(headers) if "email" in h), -1)
+            category_idx = next((i for i, h in enumerate(headers) if "category" in h), -1)
+            name_idx = next((i for i, h in enumerate(headers) if "name" in h), -1)
+            
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                if email_idx >= 0 and row[email_idx]:
+                    email = str(row[email_idx]).strip()
+                    if "@" in email:
+                        category = str(row[category_idx]).strip() if category_idx >= 0 and row[category_idx] else "uncategorized"
+                        if not payload.categories or category in payload.categories:
+                            name = str(row[name_idx]).strip() if name_idx >= 0 and row[name_idx] else ""
+                            contacts.append({"email": email, "name": name, "category": category})
+    
+    elif payload.contact_source == "erp":
+        csv_bytes = gcs.download_blob(ERP_GCS_PATH)
+        if csv_bytes:
+            csv_text = csv_bytes.decode("utf-8")
+            reader = csv.DictReader(StringIO(csv_text))
+            for row in reader:
+                email = row.get("email", "").strip()
+                if email and "@" in email:
+                    category = row.get("category", "uncategorized").strip() or "uncategorized"
+                    if not payload.categories or category in payload.categories:
+                        name = row.get("name", "").strip()
+                        contacts.append({"email": email, "name": name, "category": category})
+    
     if not contacts:
-        raise HTTPException(status_code=400, detail="No contacts matched the campaign filter")
-
+        raise HTTPException(status_code=400, detail="No contacts found for selected categories")
+    
+    # Create campaign
     campaign = Campaign(
         user_id=user.id,
-        name=payload.name,
-        channel=payload.channel,
-        strategy=payload.strategy,
+        name=f"{template.name} - {payload.contact_source}",
+        channel=template.channel,
         template_id=template.id,
-        status="pending_review",
         total=len(contacts),
+        status="pending_review",
     )
     db.add(campaign)
-    db.commit()
-    db.refresh(campaign)
-
-    model_used = "template"
+    db.flush()
+    
+    # Create campaign messages
     for contact in contacts:
-        subject = render(template.subject, {**SENDER_CONTEXT, **contact_context(contact)})
-        model_name, body = _ai_personalise(template, contact, payload.channel)
-        if model_name != "template":
-            model_used = model_name
-        db.add(
-            CampaignMessage(
-                campaign_id=campaign.id,
-                user_id=user.id,
-                contact_id=contact.id,
-                to_address=contact.phone
-                if payload.channel in {"whatsapp", "wechat"}
-                else contact.email,
-                rendered_subject=subject,
-                rendered_body=body,
-                status="pending_review",
-            )
+        # Render template
+        rendered_subject = template.subject
+        rendered_body = template.body
+        
+        # Replace variables
+        for var in template.variables:
+            var_name = var.strip("{{}}").strip()
+            value = contact.get(var_name, "")
+            rendered_subject = rendered_subject.replace(f"{{{{{var_name}}}}}", value)
+            rendered_body = rendered_body.replace(f"{{{{{var_name}}}}}", value)
+        
+        message = CampaignMessage(
+            campaign_id=campaign.id,
+            user_id=user.id,
+            to_address=contact["email"],
+            rendered_subject=rendered_subject,
+            rendered_body=rendered_body,
+            status="pending_review",
         )
-    campaign.ai_model = model_used if payload.use_ai else "template"
+        db.add(message)
+    
     db.commit()
-    db.refresh(campaign)
-
-    log_event(
-        db,
-        action="campaign.create",
-        actor_user_id=user.id,
-        resource_type="campaign",
-        resource_id=str(campaign.id),
-        tenant_id=user.domain,
-        ip_address=request.client.host if request.client else "",
-        detail={"channel": payload.channel, "total": campaign.total, "ai_model": campaign.ai_model},
-        commit=True,
-    )
-    return _detail(db, campaign)
+    
+    return {
+        "campaign_id": campaign.id,
+        "total_messages": len(contacts),
+        "status": "pending_review",
+        "message": f"Campaign created with {len(contacts)} messages",
+    }
 
 
-def _detail(db: Session, campaign: Campaign) -> CampaignDetail:
-    messages = (
-        db.query(CampaignMessage)
-        .filter(CampaignMessage.campaign_id == campaign.id)
-        .order_by(CampaignMessage.id.asc())
-        .limit(500)
-        .all()
-    )
-    return CampaignDetail(
-        **CampaignOut.model_validate(campaign).model_dump(),
-        messages=[CampaignMessageOut.model_validate(message) for message in messages],
-    )
-
-
-@router.get("", response_model=list[CampaignOut])
-def list_campaigns(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    return (
-        db.query(Campaign)
-        .filter(Campaign.user_id == user.id)
-        .order_by(Campaign.created_at.desc())
-        .all()
-    )
-
-
-@router.get("/{campaign_id}", response_model=CampaignDetail)
-def get_campaign(
-    campaign_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)
-):
-    campaign = (
-        db.query(Campaign).filter(Campaign.id == campaign_id, Campaign.user_id == user.id).first()
-    )
-    if campaign is None:
-        raise HTTPException(status_code=404, detail="Campaign not found")
-    return _detail(db, campaign)
-
-
-@router.patch("/{campaign_id}/messages/{message_id}", response_model=CampaignMessageOut)
-def edit_message(
-    campaign_id: int,
-    message_id: int,
-    payload: CampaignMessageUpdate,
+@router.get("/list")
+def list_campaigns(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    message = (
-        db.query(CampaignMessage)
-        .filter(
-            CampaignMessage.id == message_id,
-            CampaignMessage.campaign_id == campaign_id,
-            CampaignMessage.user_id == user.id,
-        )
-        .first()
-    )
-    if message is None:
-        raise HTTPException(status_code=404, detail="Campaign message not found")
-    if payload.rendered_subject is not None:
-        message.rendered_subject = payload.rendered_subject
-    if payload.rendered_body is not None:
-        message.rendered_body = payload.rendered_body
-    if payload.approve:
-        message.status = "approved"
-    db.commit()
-    db.refresh(message)
-    return message
+    """List all campaigns for the user."""
+    campaigns = db.query(Campaign).filter(
+        Campaign.user_id == user.id
+    ).order_by(Campaign.created_at.desc()).all()
+    
+    return [
+        {
+            "id": c.id,
+            "name": c.name,
+            "channel": c.channel,
+            "total": c.total,
+            "sent": c.sent_count,
+            "status": c.status,
+            "created_at": str(c.created_at),
+        }
+        for c in campaigns
+    ]
 
 
-@router.post("/{campaign_id}/approve", response_model=CampaignDetail)
-def approve_campaign(
-    campaign_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+@router.get("/{campaign_id}/messages")
+def get_campaign_messages(
+    campaign_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    campaign = (
-        db.query(Campaign).filter(Campaign.id == campaign_id, Campaign.user_id == user.id).first()
-    )
-    if campaign is None:
+    """Get all messages for a campaign."""
+    campaign = db.query(Campaign).filter(
+        Campaign.id == campaign_id,
+        Campaign.user_id == user.id,
+    ).first()
+    
+    if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
-    db.query(CampaignMessage).filter(
-        CampaignMessage.campaign_id == campaign_id, CampaignMessage.status == "pending_review"
-    ).update({"status": "approved"}, synchronize_session=False)
+    
+    messages = db.query(CampaignMessage).filter(
+        CampaignMessage.campaign_id == campaign_id
+    ).all()
+    
+    return [
+        {
+            "id": m.id,
+            "to": m.to_address,
+            "subject": m.rendered_subject,
+            "body_preview": m.rendered_body[:100] + "..." if len(m.rendered_body) > 100 else m.rendered_body,
+            "status": m.status,
+        }
+        for m in messages
+    ]
+
+
+@router.post("/{campaign_id}/approve")
+def approve_campaign(
+    campaign_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Approve campaign for sending."""
+    campaign = db.query(Campaign).filter(
+        Campaign.id == campaign_id,
+        Campaign.user_id == user.id,
+    ).first()
+    
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    
     campaign.status = "approved"
     db.commit()
-    db.refresh(campaign)
-    log_event(
-        db,
-        action="campaign.approve",
-        actor_user_id=user.id,
-        resource_type="campaign",
-        resource_id=str(campaign.id),
-        tenant_id=user.domain,
-        detail={},
-        commit=True,
-    )
-    return _detail(db, campaign)
+    
+    return {"message": "Campaign approved", "status": "approved"}
 
 
-@router.post("/{campaign_id}/send", response_model=CampaignSendResult)
-def send_campaign(
-    campaign_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)
-):
-    campaign = (
-        db.query(Campaign).filter(Campaign.id == campaign_id, Campaign.user_id == user.id).first()
-    )
-    if campaign is None:
-        raise HTTPException(status_code=404, detail="Campaign not found")
-
-    messages = (
-        db.query(CampaignMessage)
-        .filter(CampaignMessage.campaign_id == campaign_id, CampaignMessage.status == "approved")
-        .all()
-    )
-    sent = failed = skipped = 0
-    email_connection = db.query(EmailConnection).filter(EmailConnection.user_id == user.id).first()
-    gateway = WechatyGateway()
-
-    for message in messages:
-        try:
-            if campaign.channel == "email":
-                if email_connection is None:
-                    raise RuntimeError("no email connection configured")
-                from ..security import decrypt_secret
-
-                MailSender(
-                    email_connection.smtp_host,
-                    email_connection.smtp_port,
-                    email_connection.email_address,
-                    decrypt_secret(email_connection.secret_encrypted),
-                ).send(
-                    message.to_address,
-                    message.rendered_subject or campaign.name,
-                    message.rendered_body,
-                )
-                message.status = "sent"
-                sent += 1
-            elif campaign.channel in {"whatsapp", "wechat"}:
-                if not settings.WHATSAPP_ENABLED:
-                    raise RuntimeError("WhatsApp/WeChat channel is disabled")
-                result = gateway.send_text(message.to_address, message.rendered_body)
-                message.status = "sent"
-                message.provider_id = str(result.get("id", ""))
-                sent += 1
-            else:  # linkedin -> manual queue
-                message.status = "queued"
-                skipped += 1
-            message.sent_at = datetime.utcnow()
-        except Exception as exc:  # noqa: BLE001 - record per-message failure
-            message.status = "failed"
-            message.error = str(exc)[:500]
-            failed += 1
-
-    campaign.sent_count += sent
-    campaign.failed_count += failed
-    campaign.status = "completed" if failed == 0 else "failed"
-    db.commit()
-    db.refresh(campaign)
-
-    log_event(
-        db,
-        action="campaign.send",
-        actor_user_id=user.id,
-        resource_type="campaign",
-        resource_id=str(campaign.id),
-        status=campaign.status,
-        tenant_id=user.domain,
-        detail={"sent": sent, "failed": failed, "skipped": skipped},
-        commit=True,
-    )
-    return CampaignSendResult(
-        campaign_id=campaign.id, status=campaign.status, sent=sent, failed=failed, skipped=skipped
-    )
-
-
-@router.delete("/{campaign_id}", status_code=204)
+@router.delete("/{campaign_id}")
 def delete_campaign(
-    campaign_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+    campaign_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    campaign = (
-        db.query(Campaign).filter(Campaign.id == campaign_id, Campaign.user_id == user.id).first()
-    )
-    if campaign is None:
+    """Delete a campaign and its messages."""
+    campaign = db.query(Campaign).filter(
+        Campaign.id == campaign_id,
+        Campaign.user_id == user.id,
+    ).first()
+    
+    if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
-    db.query(CampaignMessage).filter(CampaignMessage.campaign_id == campaign_id).delete(
-        synchronize_session=False
-    )
+    
+    # Delete messages
+    db.query(CampaignMessage).filter(CampaignMessage.campaign_id == campaign_id).delete()
+    
+    # Delete campaign
     db.delete(campaign)
     db.commit()
+    
+    return {"message": "Campaign deleted"}

@@ -7,7 +7,7 @@ import {
   Truck, TrendingUp, Calculator, Save, Package, FileDown, Bot, Paperclip,
 } from "lucide-react";
 import "./styles.css";
-import { SalesBi, Catalogue, CompanyVisits, InstoreMails, SocialAi, Access, TallySalesPanel, MarketingCompanies, Templates } from "./features";
+import { SalesBi, Catalogue, CompanyVisits, InstoreMails, SocialAi, Access, TallySalesPanel, MarketingCompanies, Templates, CampaignManager } from "./features";
 import { KALISOFT_LOGO, KALIKA_LOGO } from "./branding";
 
 const API = "/api";
@@ -40,6 +40,7 @@ const TAB_TITLES = {
   uat: "UAT & operations", changelog: "Recent changes", outreach: "Outreach",
   marketing: "Marketing companies",
   templates: "Message templates",
+  campaigns: "Email campaigns",
 };
 
 const NAV_GROUPS = [
@@ -61,6 +62,7 @@ const NAV_GROUPS = [
       { tab: "contacts", label: "Contacts", icon: Users },
       { tab: "marketing", label: "Marketing companies", icon: BriefcaseBusiness },
       { tab: "templates", label: "Templates", icon: FileDown },
+      { tab: "campaigns", label: "Campaigns", icon: Send },
       { tab: "events", label: "Events", icon: CalendarDays },
       { tab: "signals", label: "Signal desk", icon: BriefcaseBusiness },
       { tab: "outreach", label: "Outreach", icon: Send },
@@ -161,6 +163,7 @@ function App() {
         {tab === "contacts" && <Contacts onNotice={setNotice} />}
         {tab === "marketing" && <MarketingCompanies onNotice={setNotice} />}
         {tab === "templates" && <Templates onNotice={setNotice} />}
+        {tab === "campaigns" && <CampaignManager onNotice={setNotice} />}
         {tab === "email" && <EmailConnections onNotice={setNotice} config={config} />}
         {tab === "events" && <Events onNotice={setNotice} />}
         {tab === "signals" && <Signals onNotice={setNotice} />}

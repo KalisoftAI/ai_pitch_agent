@@ -4,6 +4,7 @@ import {
   Copy, Database, Edit2, Eye, FileDown, FileText, Link2, Mail, MapPin, Mic, Package, Plus, RefreshCw, Save, Search, Send, ShieldCheck,
   Sparkles, Trash2, TrendingUp, Truck, UploadCloud, Users, Video, X,
 } from "lucide-react";
+import { CampaignManager } from "./features/CampaignManager";
 
 const API = "/api";
 const readToken = () => sessionStorage.getItem("sales_token") || "";
@@ -1190,7 +1191,8 @@ export function Templates({ onNotice }) {
                 <iframe
                   srcDoc={previewTemplate.body}
                   title="Template Preview"
-                  style={{ width: "100%", height: "500px", border: "1px solid #ddd", borderRadius: "8px" }}
+                  sandbox="allow-same-origin"
+                  style={{ width: "100%", height: "500px", border: "1px solid #ddd", borderRadius: "8px", background: "white" }}
                 />
               </div>
             </div>
@@ -1266,3 +1268,5 @@ export function Templates({ onNotice }) {
     </div>
   );
 }
+
+export { CampaignManager };
