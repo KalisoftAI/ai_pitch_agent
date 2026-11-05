@@ -56,6 +56,66 @@ def test_campaign_requires_matching_contacts(client, auth_headers):
     assert response.status_code == 400
 
 
+def test_campaign_can_attach_user_marketing_companies(client, auth_headers):
+    from sales_fastapi.database import SessionLocal
+    from sales_fastapi.models import MarketingCompany, User
+
+    user = SessionLocal().query(User).filter(User.email == "tester@kalisoftai.com").one()
+    company = MarketingCompany(
+        user_id=user.id,
+        company="Aakaar Industries",
+        company_key="aakaar-industries",
+        contact_name="Ravi Shah",
+        email="ravi@aakaar.example",
+        category="Manufacturing",
+        call_status="Not called",
+        requirements="Flexible packaging quote",
+    )
+    db = SessionLocal()
+    try:
+        db.add(company)
+        db.commit()
+        db.refresh(company)
+        company_id = company.id
+    finally:
+        db.close()
+
+    template = client.post(
+        "/api/templates",
+        headers=auth_headers,
+        json={
+            "name": "Marketing company intro",
+            "channel": "email",
+            "strategy": "cold_outreach",
+            "subject": "Hello {{name}}",
+            "body": "We can help {{company}} with {{context}}.",
+        },
+    ).json()
+    response = client.post(
+        "/api/campaigns",
+        headers=auth_headers,
+        json={
+            "name": "Marketing list email",
+            "template_id": template["id"],
+            "filter": {
+                "contact_type": "marketing_companies",
+                "q": "Aakaar",
+                "category": "Manufacturing",
+                "call_status": "Not called",
+                "limit": 1000,
+            },
+        },
+    )
+
+    assert response.status_code == 201, response.text
+    campaign = response.json()
+    assert campaign["total"] == 1
+    assert campaign["messages"][0]["contact_id"] == company_id
+    assert campaign["messages"][0]["to_address"] == "ravi@aakaar.example"
+    assert "Aakaar Industries" in campaign["messages"][0]["rendered_body"]
+    assert "Flexible packaging quote" in campaign["messages"][0]["rendered_body"]
+
+
 def test_campaign_review_approve_and_linkedin_queue(client, auth_headers):
     client.post(
         "/api/contacts",

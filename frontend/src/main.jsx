@@ -1,21 +1,18 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  Activity, ArrowUpRight, BarChart3, Bell, BriefcaseBusiness, CalendarDays, Check, ChevronDown, ChevronUp,
-  CircleAlert, Clock, Database, Eye, Gauge, Link2, LogOut, Mail, MapPin, Menu, MessageSquarePlus, Mic, Plus, RefreshCw,
-  Search, Send, Settings2, ShieldCheck, Sparkles, Square, Star, Trash2, UploadCloud, Users, Video, X, Zap,
-  Truck, TrendingUp, Calculator, Save, Package, FileDown, Bot, Paperclip,
+  Activity, ArrowUpRight, BarChart3, Bell, BriefcaseBusiness, CalendarDays, Check, ChevronDown,
+  CircleAlert, Clock, Database, Link2, LogOut, Mail, MapPin, Menu, MessageSquarePlus, Plus, RefreshCw,
+  Search, Send, Settings2, ShieldCheck, Sparkles, Star, Trash2, UploadCloud, Users, Video, X,
 } from "lucide-react";
+import { KnowledgeGraphReview, MarketingCompanies, SalesBi } from "./features.jsx";
 import "./styles.css";
-import { SalesBi, Catalogue, CompanyVisits, InstoreMails, SocialAi, Access, TallySalesPanel, MarketingCompanies, Templates, CampaignManager, ReviewHub } from "./features";
-import { KALISOFT_LOGO, KALIKA_LOGO } from "./branding";
 
 const API = "/api";
 const readToken = () => sessionStorage.getItem("sales_token") || "";
 
 async function request(path, options = {}) {
-  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
-  const headers = { ...(options.body && !isFormData ? { "Content-Type": "application/json" } : {}), ...(options.headers || {}) };
+  const headers = { ...(options.body ? { "Content-Type": "application/json" } : {}), ...(options.headers || {}) };
   const token = readToken();
   if (token) headers.Authorization = `Bearer ${token}`;
   const response = await fetch(`${API}${path}`, { ...options, headers });
@@ -31,75 +28,13 @@ async function request(path, options = {}) {
   return response.status === 204 ? null : response.json();
 }
 
-const TAB_TITLES = {
-  dash: "Kalika command center", field: "Field desk", instore: "Mail desk", overview: "Good work starts with a clear signal.",
-  contacts: "Contacts", email: "Email connections", events: "Events", signals: "Signal desk",
-  scheduler: "Scheduler", kpis: "Business KPIs", feedback: "Feedback", pipeline: "Feedback pipeline",
-  erp: "ERP & sales forecast", salesbi: "Sales analytics & BI", catalog: "Catalogue & rates",
-  visits: "Field / company history", socialai: "Social & AI insights", access: "Users & access",
-  uat: "UAT & operations", changelog: "Recent changes", outreach: "Outreach",
-  future: "Future scope & review",
-  marketing: "Marketing companies",
-  templates: "Message templates",
-  campaigns: "Email campaigns",
-};
-
-const NAV_GROUPS = [
-  {
-    label: "KALIKA DAILY",
-    items: [
-      { tab: "dash", label: "Dashboard", icon: Gauge },
-      { tab: "instore", label: "Mail desk", icon: Mail },
-      { tab: "visits", label: "Company history", icon: MapPin },
-      { tab: "catalog", label: "Catalogue & rates", icon: Package },
-      { tab: "field", label: "Field desk", icon: Mic },
-      { tab: "salesbi", label: "Sales analytics & BI", icon: BarChart3 },
-      { tab: "erp", label: "ERP & forecast", icon: Truck },
-    ],
-  },
-  {
-    label: "OUTREACH",
-    items: [
-      { tab: "contacts", label: "Contacts", icon: Users },
-      { tab: "marketing", label: "Marketing companies", icon: BriefcaseBusiness },
-      { tab: "templates", label: "Templates", icon: FileDown },
-      { tab: "campaigns", label: "Campaigns", icon: Send },
-      { tab: "events", label: "Events", icon: CalendarDays },
-      { tab: "signals", label: "Signal desk", icon: BriefcaseBusiness },
-      { tab: "outreach", label: "Outreach", icon: Send },
-      { tab: "scheduler", label: "Scheduler", icon: Clock },
-      { tab: "email", label: "Email connections", icon: Mail },
-    ],
-  },
-  {
-    label: "FEEDBACK",
-    items: [
-      { tab: "feedback", label: "Feedback", icon: MessageSquarePlus },
-      { tab: "pipeline", label: "Feedback pipeline", icon: Zap },
-    ],
-  },
-  {
-    label: "INSIGHTS & ADMIN",
-    items: [
-      { tab: "overview", label: "Pipeline overview", icon: Activity },
-      { tab: "kpis", label: "Business KPIs", icon: BarChart3 },
-      { tab: "socialai", label: "Social & AI", icon: Bot },
-      { tab: "access", label: "Access", icon: Users },
-      { tab: "future", label: "Future scope", icon: Sparkles, adminOnly: true },
-      { tab: "uat", label: "UAT & ops", icon: ShieldCheck },
-      { tab: "changelog", label: "Recent changes", icon: Star },
-    ],
-  },
-];
-
 function App() {
   const [config, setConfig] = useState(null);
   const [user, setUser] = useState(null);
   const [health, setHealth] = useState(null);
-  const [tab, setTab] = useState("dash");
+  const [tab, setTab] = useState("overview");
   const [notice, setNotice] = useState(null);
   const [mobileNav, setMobileNav] = useState(false);
-  const [assistantOpen, setAssistantOpen] = useState(false);
   const [tour, setTour] = useState(() => !sessionStorage.getItem(TOUR_KEY));
 
   useEffect(() => {
@@ -107,6 +42,17 @@ function App() {
     const expire = () => setUser(null);
     window.addEventListener("auth-expired", expire);
     return () => window.removeEventListener("auth-expired", expire);
+  }, []);
+
+  useEffect(() => {
+    const navigate = (event) => {
+      if (["marketing", "contacts", "graph-review"].includes(event.detail)) {
+        setTab(event.detail);
+        setMobileNav(false);
+      }
+    };
+    window.addEventListener("sales:navigate", navigate);
+    return () => window.removeEventListener("sales:navigate", navigate);
   }, []);
 
   useEffect(() => {
@@ -125,31 +71,29 @@ function App() {
   if (!user) return <SignInPage config={config} onLogin={setUser} onNotice={setNotice} />;
 
   const logout = () => { sessionStorage.removeItem("sales_token"); setUser(null); };
-  const isKalikaUser = user.email === "kalikaenterprises@gmail.com";
-  const isAdmin = (user.email || "").toLowerCase() === "ai.solutions@kalisoftai.in" || (user.role || "").toLowerCase() === "admin";
-  const brandLogo = isKalikaUser ? KALIKA_LOGO : KALISOFT_LOGO;
-  const brandName = isKalikaUser ? "Kalika" : "Kalisoft";
-  const brandSubtext = isKalikaUser ? "Enterprises" : <b>AI</b>;
   return (
     <div className="shell">
       <aside className={`sidebar ${mobileNav ? "open" : ""}`}>
-        <div className="brand"><img src={brandLogo} alt={brandName} className="brand-logo" /><span>{brandName} <b>{brandSubtext}</b></span></div>
+        <div className="sidebar-brand-row">
+          <div className="brand"><img src="/KalisoftAI-logo.png" alt="Kalisoft AI" className="brand-logo" /><span>Kalisoft <b>AI</b></span></div>
+          <button className="icon-button sidebar-close" onClick={() => setMobileNav(false)} aria-label="Close menu"><X size={22} /></button>
+        </div>
         <div className="workspace-label">Revenue workspace</div>
         <nav>
-          {NAV_GROUPS.map((group) => (
-            <div className="nav-group" key={group.label}>
-              <div className="nav-group-label">{group.label}</div>
-              {group.items.filter(({ adminOnly }) => !adminOnly || isAdmin).map(({ tab: itemTab, label, icon }) => (
-                <NavItem
-                  key={itemTab}
-                  icon={icon}
-                  label={label}
-                  active={tab === itemTab}
-                  onClick={() => { setTab(itemTab); setMobileNav(false); }}
-                />
-              ))}
-            </div>
-          ))}
+          <NavItem icon={Activity} label="Overview" active={tab === "overview"} onClick={() => { setTab("overview"); setMobileNav(false); }} />
+          <NavItem icon={BarChart3} label="Sales analytics" active={tab === "sales-bi"} onClick={() => { setTab("sales-bi"); setMobileNav(false); }} />
+          <NavItem icon={BriefcaseBusiness} label="Marketing companies" active={tab === "marketing"} onClick={() => { setTab("marketing"); setMobileNav(false); }} />
+                    {config.knowledge_graph_review_enabled && <NavItem icon={Link2} label="Graph review" active={tab === "graph-review"} onClick={() => { setTab("graph-review"); setMobileNav(false); }} />}
+            <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open navigation menu"><Menu size={25} /><span>Menu</span></button><div className="topbar-title"><div className="eyebrow">KALISOFT AI / SALES PIPELINE</div><h1>{tab === "overview" ? "Good work starts with a clear signal." : tab === "sales-bi" ? "Sales analytics & BI" : tab === "marketing" ? "Marketing companies" : tab === "graph-review" ? "Knowledge graph review" : tab === "contacts" ? "Contacts" : tab === "email" ? "Email connections" : tab === "events" ? "Events" : tab === "signals" ? "Signal desk" : tab === "scheduler" ? "Scheduler" : tab === "kpis" ? "Business KPIs" : tab === "feedback" ? "Feedback" : "Outreach"}</h1></div><div className="topbar-actions"><EnvBadge env={health?.env} /><button className="text-button" onClick={() => setTour(true)}><Sparkles size={15} /> Take the tour</button><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Settings"><Settings2 size={18} /></button></div></header>
+          {config.knowledge_graph_review_enabled && <NavItem icon={Link2} label="Graph review" active={tab === "graph-review"} onClick={() => { setTab("graph-review"); setMobileNav(false); }} />}
+          <NavItem icon={Users} label="Contacts" active={tab === "contacts"} onClick={() => { setTab("contacts"); setMobileNav(false); }} />
+          <NavItem icon={CalendarDays} label="Events" active={tab === "events"} onClick={() => { setTab("events"); setMobileNav(false); }} />
+          <NavItem icon={Mail} label="Email connections" active={tab === "email"} onClick={() => { setTab("email"); setMobileNav(false); }} />
+          <NavItem icon={BriefcaseBusiness} label="Signal desk" active={tab === "signals"} onClick={() => { setTab("signals"); setMobileNav(false); }} />
+          <NavItem icon={Send} label="Outreach" active={tab === "outreach"} onClick={() => { setTab("outreach"); setMobileNav(false); }} />
+          <NavItem icon={Clock} label="Scheduler" active={tab === "scheduler"} onClick={() => { setTab("scheduler"); setMobileNav(false); }} />
+          <NavItem icon={BarChart3} label="KPIs" active={tab === "kpis"} onClick={() => { setTab("kpis"); setMobileNav(false); }} />
+          <NavItem icon={MessageSquarePlus} label="Feedback" active={tab === "feedback"} onClick={() => { setTab("feedback"); setMobileNav(false); }} />
         </nav>
         <div className="sidebar-bottom">
           <div className="security-note"><ShieldCheck size={16} /><span>Private workspace<br /><small>Google verified access</small></span></div>
@@ -158,15 +102,13 @@ function App() {
       </aside>
       {mobileNav && <button className="scrim" aria-label="Close menu" onClick={() => setMobileNav(false)} />}
       <main className="main">
-        <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open menu"><Menu size={20} /></button><div><div className="eyebrow">{isKalikaUser ? "KALIKA ENTERPRISES" : "KALISOFT AI"} / SALES PIPELINE</div><h1>{TAB_TITLES[tab] || "Outreach"}</h1></div><div className="topbar-actions"><button className="assistant-launch" onClick={() => setAssistantOpen(true)}><img src={KALIKA_LOGO} alt="" /><Bot size={16} /><span>Kalika AI</span></button><EnvBadge env={health?.env} /><button className="text-button" onClick={() => setTour(true)}><Sparkles size={15} /> Take the tour</button><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Settings"><Settings2 size={18} /></button></div></header>
-        {tab === "dash" && <KalikaDash onNavigate={setTab} onNotice={setNotice} user={user} />}
-        {tab === "instore" && <InstoreMails onNotice={setNotice} />}
-        {tab === "field" && <FieldDesk onNotice={setNotice} user={user} onNavigate={setTab} />}
+        <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open navigation menu"><Menu size={25} /><span>Menu</span></button><div className="topbar-title"><div className="eyebrow">KALISOFT AI / SALES PIPELINE</div><h1>{tab === "overview" ? "Good work starts with a clear signal." : tab === "sales-bi" ? "Sales analytics & BI" : tab === "marketing" ? "Marketing companies" : tab === "graph-review" ? "Knowledge graph review" : tab === "contacts" ? "Contacts" : tab === "email" ? "Email connections" : tab === "events" ? "Events" : tab === "signals" ? "Signal desk" : tab === "scheduler" ? "Scheduler" : tab === "kpis" ? "Business KPIs" : tab === "feedback" ? "Feedback" : "Outreach"}</h1></div><div className="topbar-actions"><EnvBadge env={health?.env} /><button className="text-button" onClick={() => setTour(true)}><Sparkles size={15} /> Take the tour</button><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Settings"><Settings2 size={18} /></button></div></header>
         {tab === "overview" && <Overview onNavigate={setTab} onNotice={setNotice} health={health} setHealth={setHealth} />}
-        {tab === "contacts" && <Contacts onNotice={setNotice} />}
+        {tab === "sales-bi" && <SalesBi onNotice={setNotice} />}
         {tab === "marketing" && <MarketingCompanies onNotice={setNotice} />}
-        {tab === "templates" && <Templates onNotice={setNotice} />}
-        {tab === "campaigns" && <CampaignManager onNotice={setNotice} />}
+          {tab === "graph-review" && config.knowledge_graph_review_enabled && <KnowledgeGraphReview onNotice={setNotice} user={user} config={config} />}
+        {tab === "graph-review" && config.knowledge_graph_review_enabled && <KnowledgeGraphReview onNotice={setNotice} user={user} config={config} />}
+        {tab === "contacts" && <Contacts onNotice={setNotice} />}
         {tab === "email" && <EmailConnections onNotice={setNotice} config={config} />}
         {tab === "events" && <Events onNotice={setNotice} />}
         {tab === "signals" && <Signals onNotice={setNotice} />}
@@ -174,20 +116,8 @@ function App() {
         {tab === "scheduler" && <Scheduler onNotice={setNotice} />}
         {tab === "kpis" && <Kpis onNotice={setNotice} />}
         {tab === "feedback" && <Feedback onNotice={setNotice} />}
-        {tab === "pipeline" && <FeedbackPipeline onNotice={setNotice} />}
-        {tab === "erp" && <ErpDashboard onNotice={setNotice} />}
-        {tab === "salesbi" && <SalesBi onNotice={setNotice} />}
-        {tab === "catalog" && <Catalogue onNotice={setNotice} />}
-        {tab === "visits" && <CompanyVisits onNotice={setNotice} user={user} />}
-        {tab === "socialai" && <SocialAi onNotice={setNotice} />}
-        {tab === "access" && <Access onNotice={setNotice} user={user} />}
-        {tab === "uat" && <UatOps onNotice={setNotice} />}
-        {tab === "future" && isAdmin && <ReviewHub onNotice={setNotice} user={user} />}
-        {tab === "changelog" && <RecentChanges />}
       </main>
       {tour && <Walkthrough onClose={() => setTour(false)} />}
-      {!assistantOpen && <button className="assistant-fab" onClick={() => setAssistantOpen(true)}><img src={KALIKA_LOGO} alt="" /><span><b>Ask Kalika AI</b><small>Daily rates &amp; sales help</small></span><Bot size={18} /></button>}
-      <AssistantChat open={assistantOpen} onClose={() => setAssistantOpen(false)} user={user} />
       {notice && <div className={`toast ${notice.type === "error" ? "error" : ""}`}><span>{notice.type === "error" ? <CircleAlert size={17} /> : <Check size={17} />}</span>{notice.text}<button onClick={() => setNotice(null)} aria-label="Dismiss"><X size={15} /></button></div>}
     </div>
   );
@@ -195,328 +125,33 @@ function App() {
 
 async function requestPublicConfig() { const response = await fetch(`${API}/config`); if (!response.ok) throw new Error("API configuration unavailable"); return response.json(); }
 
-const roundTo = (value, digits = 2) => {
-  const factor = 10 ** digits;
-  return Math.round((Number(value) + Number.EPSILON) * factor) / factor;
-};
-const money = (value) => `₹${Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const decimal = (value, digits = 2) => Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: digits, maximumFractionDigits: digits });
-
-function filmCosting(input) {
-  const polymer = Number(input.polymer_rate);
-  const micron = Number(input.micron);
-  const widthMm = Number(input.width_mm);
-  const length = Number(input.length_m);
-  const density = Number(input.density) || 0.92;
-  const wastePct = Math.max(0, Number(input.waste_pct) || 0);
-  const conversionRate = Math.max(0, Number(input.conversion_cost_per_kg) || 0);
-  const marginPct = Math.max(0, Number(input.margin_pct) || 0);
-  if (![polymer, micron, widthMm, length, density].every((value) => Number.isFinite(value) && value > 0)) return null;
-  const widthM = widthMm / 1000;
-  const thicknessMm = micron / 1000;
-  const areaM2 = widthM * length;
-  const volumeCm3 = areaM2 * thicknessMm * 1000;
-  const weightKg = areaM2 * thicknessMm * density;
-  const wasteKg = weightKg * (wastePct / 100);
-  const grossKg = weightKg + wasteKg;
-  const netMaterial = weightKg * polymer;
-  const wasteCost = wasteKg * polymer;
-  const material = grossKg * polymer;
-  const conversion = grossKg * conversionRate;
-  const cost = material + conversion;
-  const margin = cost * (marginPct / 100);
-  const price = cost + margin;
-  return {
-    inputs: input,
-    geometry: { width_m: roundTo(widthM, 4), thickness_mm: roundTo(thicknessMm, 4), area_m2: roundTo(areaM2, 4), volume_cm3: roundTo(volumeCm3, 2) },
-    weight_kg: roundTo(weightKg, 3),
-    waste_kg: roundTo(wasteKg, 3),
-    gross_weight_kg: roundTo(grossKg, 3),
-    net_material_cost: roundTo(netMaterial, 2),
-    material_cost: roundTo(material, 2),
-    waste_cost: roundTo(wasteCost, 2),
-    conversion_cost: roundTo(conversion, 2),
-    subtotal: roundTo(cost, 2),
-    total_cost: roundTo(cost, 2),
-    margin_amount: roundTo(margin, 2),
-    price: roundTo(price, 2),
-    price_per_kg: grossKg ? roundTo(price / grossKg, 2) : 0,
-    cost_per_kg: grossKg ? roundTo(cost / grossKg, 2) : 0,
-    price_per_meter: length ? roundTo(price / length, 2) : 0,
-    price_per_sqm: areaM2 ? roundTo(price / areaM2, 2) : 0,
-    cost_share: {
-      material_pct: cost ? roundTo((netMaterial / cost) * 100, 1) : 0,
-      waste_pct: cost ? roundTo((wasteCost / cost) * 100, 1) : 0,
-      conversion_pct: cost ? roundTo((conversion / cost) * 100, 1) : 0,
-      margin_pct: cost ? roundTo((margin / cost) * 100, 1) : 0,
-    },
-    price_share: {
-      material_pct: price ? roundTo((netMaterial / price) * 100, 1) : 0,
-      waste_pct: price ? roundTo((wasteCost / price) * 100, 1) : 0,
-      conversion_pct: price ? roundTo((conversion / price) * 100, 1) : 0,
-      margin_pct: price ? roundTo((margin / price) * 100, 1) : 0,
-    },
-  };
-}
-
-function LoadingScreen() { return <div className="loading-screen"><img src={KALISOFT_LOGO} alt="Kalisoft AI" className="brand-logo" /><span>Preparing your workspace...</span></div>; }
+function LoadingScreen() { return <div className="loading-screen"><img src="/KalisoftAI-logo.png" alt="Kalisoft AI" className="brand-logo" /><span>Preparing your workspace...</span></div>; }
 
 function Login({ config, onLogin, onNotice }) {
   const [email, setEmail] = useState("ai.solutions@kalisoftai.in");
   const [busy, setBusy] = useState(false);
-  const [pwForm, setPwForm] = useState({ username: "", password: "" });
-  const [pwBusy, setPwBusy] = useState(false);
-  const [gisFailed, setGisFailed] = useState(false);
   const login = async (idToken) => {
     setBusy(true);
     try { const result = await request("/auth/google", { method: "POST", body: JSON.stringify({ id_token: idToken }) }); sessionStorage.setItem("sales_token", result.access_token); onLogin(await request("/auth/me")); }
     catch (error) { onNotice({ type: "error", text: error.message }); }
     finally { setBusy(false); }
   };
-  const passwordLogin = async (event) => {
-    event.preventDefault();
-    setPwBusy(true);
-    try {
-      const result = await request("/auth/password", { method: "POST", body: JSON.stringify(pwForm) });
-      sessionStorage.setItem("sales_token", result.access_token);
-      onLogin(await request("/auth/me"));
-    } catch (error) { onNotice({ type: "error", text: error.message }); }
-    finally { setPwBusy(false); }
-  };
   useEffect(() => {
     if (!config.google_client_id) return undefined;
-    // Belt-and-suspenders: load the official GIS script if it is not present.
-    if (!document.querySelector('script[src*="accounts.google.com/gsi/client"]')) {
-      const script = document.createElement("script");
-      script.src = "https://accounts.google.com/gsi/client";
-      script.async = true;
-      script.defer = true;
-      script.onerror = () => setGisFailed(true);
-      document.head.appendChild(script);
-    }
-    let cancelled = false;
-    let attempts = 0;
-    let timer;
-    const tryRender = () => {
-      if (cancelled) return;
-      if (!window.google?.accounts?.id) {
-        attempts += 1;
-        if (attempts > 300) { setGisFailed(true); return; } // ~30s then surface the failure
-        timer = window.setTimeout(tryRender, 100);
-        return;
-      }
-      window.google.accounts.id.initialize({
-        client_id: config.google_client_id,
-        callback: (response) => login(response.credential),
-        ux_mode: "popup",
-      });
-      const el = document.getElementById("google-button");
-      if (el && !el.hasChildNodes()) {
-        // Invisible official button overlays the custom design — width must match
-        // the container so the whole visible button stays clickable.
-        const width = Math.max(200, Math.min(400, el.parentElement?.clientWidth || 320));
-        window.google.accounts.id.renderButton(el, { theme: "outline", size: "large", width, shape: "pill", text: "signin_with", logo_alignment: "center" });
-      }
+    const renderGoogleButton = () => {
+      if (!window.google?.accounts?.id) return;
+      window.google.accounts.id.initialize({ client_id: config.google_client_id, callback: (response) => login(response.credential) });
+      window.google.accounts.id.renderButton(document.getElementById("google-button"), { theme: "outline", size: "large", width: 320, shape: "rectangular" });
     };
-    tryRender();
-    return () => { cancelled = true; if (timer) window.clearTimeout(timer); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    renderGoogleButton();
+    const poll = window.setInterval(renderGoogleButton, 100);
+    const stop = window.setTimeout(() => window.clearInterval(poll), 10000);
+    return () => { window.clearInterval(poll); window.clearTimeout(stop); };
   }, [config.google_client_id]);
-  return <div className="login-page"><div className="login-art"><div className="art-grid" /><div className="art-copy"><div className="brand"><img src={KALISOFT_LOGO} alt="Kalisoft AI" className="brand-logo" /><span>Kalisoft <b>AI</b></span><span className="brand-divider" /><img src={KALIKA_LOGO} alt="Kalika Enterprises" className="brand-logo kalika-mark" /><span className="kalika-word">Kalika</span></div><h1>Turn scattered signals into your next best conversation.</h1><p>A focused workspace for the people, companies, and market cues that move your pipeline forward.</p><div className="art-stat"><span><b>01</b> verified workspace</span><span><b>02</b> live signal streams</span></div></div></div><section className="login-panel"><div className="panel-inner"><div className="eyebrow">PRIVATE SALES WORKSPACE</div><h2>Welcome back.</h2><p className="muted">Sign in with your verified Google account to continue.</p>{config.google_client_id ? (<><div className={`gsi-wrap${busy ? " busy" : ""}`}><div className="gsi-custom" aria-hidden="true"><svg className="gsi-logo" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.58 2.68-3.9 2.68-6.62z" /><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z" /><path fill="#FBBC05" d="M3.97 10.72a5.41 5.41 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33z" /><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.42 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z" /></svg><span>{busy ? "Signing in..." : "Sign in with Google"}</span></div><div id="google-button" className="gsi-native" /></div>{gisFailed && <div className="config-warning"><CircleAlert size={18} /><span>Google Sign-In script could not load (check network/ad-blocker), then refresh the page.</span></div>}</>) : (<div className="config-warning"><CircleAlert size={18} /><span>Google Sign-In is not configured on this environment.</span></div>)}<form className="pw-login" onSubmit={passwordLogin}><label>Kalika username &amp; password</label><input value={pwForm.username} onChange={(e) => setPwForm({ ...pwForm, username: e.target.value })} placeholder="username" autoComplete="username" required /><input type="password" value={pwForm.password} onChange={(e) => setPwForm({ ...pwForm, password: e.target.value })} placeholder="password" autoComplete="current-password" required /><button className="primary-button" type="submit" disabled={pwBusy}>{pwBusy ? "Signing in..." : "Sign in"}</button><small>Demo: kalika / kalika123 (admin) · field / field123 (field executive)</small></form>{config.dev_mode && <div className="dev-login"><label>Local development access</label><div className="input-action"><input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" /><button onClick={() => login(`dev:${email}`)} disabled={busy}>{busy ? "Checking..." : "Enter"}<ArrowUpRight size={16} /></button></div><small>Enabled only when AUTH_DEV_MODE is true.</small></div>}<div className="login-footer"><ShieldCheck size={16} /> Your session is protected with short-lived tokens.</div></div></section></div>;
+  return <div className="login-page"><div className="login-art"><div className="art-grid" /><div className="art-copy"><div className="brand"><img src="/KalisoftAI-logo.png" alt="Kalisoft AI" className="brand-logo" /><span>Kalisoft <b>AI</b></span></div><h1>Turn scattered signals into your next best conversation.</h1><p>A focused workspace for the people, companies, and market cues that move your pipeline forward.</p><div className="art-stat"><span><b>01</b> verified workspace</span><span><b>02</b> live signal streams</span></div></div></div><section className="login-panel"><div className="panel-inner"><div className="eyebrow">PRIVATE SALES WORKSPACE</div><h2>Welcome back.</h2><p className="muted">Sign in with your verified Google account to continue.</p><div id="google-button" className={config.google_client_id ? "google-button" : "hidden"} />{!config.google_client_id && <div className="config-warning"><CircleAlert size={18} /><span>Google Sign-In is not configured on this environment.</span></div>}{config.dev_mode && <div className="dev-login"><label>Local development access</label><div className="input-action"><input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" /><button onClick={() => login(`dev:${email}`)} disabled={busy}>{busy ? "Checking..." : "Enter"}<ArrowUpRight size={16} /></button></div><small>Enabled only when AUTH_DEV_MODE is true.</small></div>}<div className="login-footer"><ShieldCheck size={16} /> Your session is protected with short-lived tokens.</div></div></section></div>;
 }
 
 function NavItem({ icon: Icon, label, active, onClick }) { return <button className={`nav-item ${active ? "active" : ""}`} onClick={onClick}><Icon size={18} /><span>{label}</span>{active && <ChevronDown size={15} className="nav-caret" />}</button>; }
-
-function AssistantChat({ open, onClose, user }) {
-  const [models, setModels] = useState(null);
-  const [model, setModel] = useState("");
-  const [messages, setMessages] = useState([]);
-  const [body, setBody] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [attachment, setAttachment] = useState(null);
-  const [error, setError] = useState("");
-  const endRef = React.useRef(null);
-  const fileRef = React.useRef(null);
-
-  useEffect(() => {
-    if (!open || models) return;
-    request("/ops/models")
-      .then((data) => {
-        setModels(data);
-        setModel((cur) => cur || data.chat_default || data.default || "");
-      })
-      .catch((err) => setError(err.message));
-  }, [open, models]);
-
-  useEffect(() => {
-    if (open) endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, busy, open]);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (event) => { if (event.key === "Escape") onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
-  const defaultModel = models?.chat_default || models?.default || "";
-  const modelOptions = [...(models?.models || [])].sort(
-    (a, b) => Number(b.id === defaultModel) - Number(a.id === defaultModel),
-  );
-  const liveModel = models?.providers?.gemma
-    ? "Gemma ready"
-    : models?.providers?.ollama
-      ? defaultModel.startsWith("gemma")
-        ? "Gemma SLM ready"
-        : "Local SLM ready"
-      : "Offline rate fallback";
-
-  const chooseFile = (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setError("Attach a logo or image file (PNG, JPG, WEBP).");
-      return;
-    }
-    if (file.size > 2_000_000) {
-      setError("Keep attachments under 2 MB.");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      setAttachment({ name: file.name, type: file.type, size: file.size, preview: reader.result });
-      setError("");
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const send = async (event) => {
-    event?.preventDefault?.();
-    if (busy || (!body.trim() && !attachment)) return;
-    const text = body.trim() || "Please review the attached logo or image.";
-    const history = messages.slice(-10).map((m) => ({ role: m.role, content: m.content }));
-    const sentAttachment = attachment;
-    setMessages((prev) => [...prev, { role: "user", content: text, attachment: sentAttachment, at: new Date().toISOString() }]);
-    setBody("");
-    setAttachment(null);
-    setError("");
-    setBusy(true);
-    try {
-      const result = await request("/ops/chat", {
-        method: "POST",
-        body: JSON.stringify({
-          message: text,
-          model,
-          history,
-          attachment: sentAttachment
-            ? { name: sentAttachment.name, content_type: sentAttachment.type, size: sentAttachment.size }
-            : null,
-        }),
-      });
-      setMessages((prev) => [...prev, { role: "assistant", content: result.reply, meta: result, at: new Date().toISOString() }]);
-    } catch (err) {
-      setMessages((prev) => [...prev, { role: "assistant", content: `Could not answer: ${err.message}`, meta: { error: true }, at: new Date().toISOString() }]);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (!open) return null;
-  return (
-    <aside className="assistant-drawer" aria-label="Kalika AI assistant">
-      <div className="assistant-head">
-        <div className="assistant-brand">
-          <img src={KALIKA_LOGO} alt="Kalika Enterprises" />
-          <div>
-            <div className="section-kicker">KALIKA DAILY RATE COPILOT</div>
-            <h3>Ask Kalika AI</h3>
-            <small>Gemma local SLM · optional cloud models</small>
-          </div>
-        </div>
-        <div className="assistant-head-actions">
-          <button className="text-button" onClick={() => setMessages([])} disabled={busy || !messages.length}>Clear</button>
-          <button className="icon-button" onClick={onClose} aria-label="Close assistant"><X size={18} /></button>
-        </div>
-      </div>
-
-      <div className="assistant-controls">
-        <label>Model
-          <select value={model} onChange={(event) => setModel(event.target.value)} disabled={busy}>
-            {!modelOptions.length && <option value={model}>{model || "Default local SLM"}</option>}
-            {modelOptions.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.label}{item.id === defaultModel ? " · default" : ""}{item.available ? "" : " · unavailable"}
-              </option>
-            ))}
-          </select>
-        </label>
-        <span className={`assistant-live ${models?.providers?.gemma || models?.providers?.ollama ? "ok" : "warn"}`}><i />{liveModel}</span>
-      </div>
-
-      <div className="assistant-thread">
-        {!messages.length && (
-          <div className="assistant-welcome">
-            <img src={KALIKA_LOGO} alt="" />
-            <b>Daily rate help, without leaving the page.</b>
-            <p>Ask about film costing, catalogue rates, dispatch or a customer update. Attach a logo or reference image when needed.</p>
-            <div className="assistant-prompts">
-              {["Today's rate review", "Calculate 23 micron × 500 mm film", "Pending dispatch summary", "Draft a rate update message"].map((prompt) => (
-                <button key={prompt} type="button" onClick={() => setBody(prompt)}>{prompt}</button>
-              ))}
-            </div>
-          </div>
-        )}
-        {messages.map((message, index) => (
-          <div className={`assistant-msg ${message.role}`} key={`${message.at}-${index}`}>
-            <span className={`assistant-avatar ${message.role}`}>
-              {message.role === "assistant" ? <img src={KALIKA_LOGO} alt="Kalika AI" /> : (user?.name?.[0] || user?.email?.[0] || "You")}
-            </span>
-            <div className="assistant-bubble">
-              {message.attachment?.preview && <img className="assistant-attachment" src={message.attachment.preview} alt={message.attachment.name} />}
-              {message.attachment && !message.attachment.preview && <span className="assistant-file"><Paperclip size={13} /> {message.attachment.name}</span>}
-              <p>{message.content}</p>
-              {message.role === "assistant" && message.meta && !message.meta.error && (
-                <small className="assistant-meta">
-                  {message.meta.model || "assistant"} · {message.meta.latency_ms || 0} ms
-                  {message.meta.fallback_used ? " · fallback" : ""}
-                  {message.meta.notice ? ` · ${message.meta.notice}` : ""}
-                </small>
-              )}
-            </div>
-          </div>
-        ))}
-        {busy && <div className="assistant-msg assistant"><span className="assistant-avatar assistant"><img src={KALIKA_LOGO} alt="Kalika AI" /></span><div className="assistant-bubble typing"><i /><i /><i /></div></div>}
-        <div ref={endRef} />
-      </div>
-
-      {error && <div className="assistant-error"><CircleAlert size={14} /> {error}</div>}
-      <form className="assistant-input" onSubmit={send}>
-        {attachment && (
-          <div className="assistant-attach-chip">
-            {attachment.preview ? <img src={attachment.preview} alt="" /> : <Paperclip size={13} />}
-            <span>{attachment.name}</span>
-            <button type="button" onClick={() => setAttachment(null)} aria-label="Remove attachment"><X size={13} /></button>
-          </div>
-        )}
-        <div className="assistant-input-row">
-          <button type="button" className="icon-button" onClick={() => fileRef.current?.click()} title="Attach logo or image" aria-label="Attach logo or image"><Paperclip size={18} /></button>
-          <input ref={fileRef} type="file" accept="image/*" hidden onChange={chooseFile} />
-          <textarea
-            rows={1}
-            value={body}
-            onChange={(event) => setBody(event.target.value)}
-            onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); send(event); } }}
-            placeholder="Ask about a rate, film costing, dispatch..."
-            disabled={busy}
-          />
-          <button className="primary-button" disabled={busy || (!body.trim() && !attachment)} aria-label="Send message"><Send size={16} /></button>
-        </div>
-        <small>Enter to send · Shift+Enter for a new line · images stay in this chat</small>
-      </form>
-    </aside>
-  );
-}
 
 function EnvBadge({ env }) {
   const normalized = (env || "development").toLowerCase();
@@ -525,68 +160,12 @@ function EnvBadge({ env }) {
   return <span title={`Environment: ${normalized}`} style={{ ...style, border: "1px solid", borderRadius: 999, padding: "2px 10px", fontSize: 11, fontWeight: 700, letterSpacing: 0.5 }}>{label}</span>;
 }
 
-const RECENT_CHANGES_SAMPLE = [
-  { module: "Quotation Management", area: "Sales", status: "shipped", progress: 100, date: "Oct 2026", detail: "Draft -> Sent -> Accepted / Rejected / Expired, revisions, PDF generation and email delivery." },
-  { module: "Purchase GST & Discount", area: "Purchase", status: "shipped", progress: 100, date: "Oct 2026", detail: "Line total = qty x rate, less discount %, plus GST %; applied on create, update and import." },
-  { module: "Production Auto-Status", area: "Production", status: "shipped", progress: 100, date: "Oct 2026", detail: "PLANNED -> IN PRODUCTION -> COMPLETED with completion_pct, balance_qty and completion_date." },
-  { module: "Sample-Data Onboarding", area: "Packaging", status: "in_progress", progress: 60, date: "Q4 2026", detail: "Read-only Jabil / Amber quote sample, packaging leads and GCS KPI inventory for new users." },
-  { module: "Update-Progress UI", area: "Platform", status: "in_progress", progress: 35, date: "Q4 2026", detail: "Timeline and per-module progress bars kept in sync with the recent-changes document." },
-  { module: "MCP Polymer Price Calculator", area: "MCP", status: "planned", progress: 0, date: "TBD", detail: "Local-only MCP tool for polymer price calculation; not part of the deployed service." },
-];
-
-const CHANGE_STATUS_STYLE = {
-  shipped: { label: "Shipped", background: "#e5f6e5", color: "#187a2f", borderColor: "#187a2f" },
-  in_progress: { label: "In progress", background: "#fff4d6", color: "#8a5a00", borderColor: "#8a5a00" },
-  planned: { label: "Planned", background: "#e0ecff", color: "#1d4fa3", borderColor: "#1d4fa3" },
-};
-
-function RecentChanges() {
-  const total = RECENT_CHANGES_SAMPLE.length;
-  const shipped = RECENT_CHANGES_SAMPLE.filter((item) => item.status === "shipped").length;
-  const overall = total ? Math.round(RECENT_CHANGES_SAMPLE.reduce((sum, item) => sum + item.progress, 0) / total) : 0;
-  return (
-    <div className="content">
-      <div className="welcome-row">
-        <div>
-          <div className="section-kicker">LATEST UPDATE PROGRESS</div>
-          <h2>Recent changes</h2>
-          <p className="muted">{shipped} of {total} modules shipped · {overall}% overall complete (sample data).</p>
-        </div>
-        <span className="section-kicker">{overall}% overall</span>
-      </div>
-      <div className="panel" style={{ padding: "12px 16px", marginBottom: 16 }}>
-        <div className="section-kicker" style={{ marginBottom: 8 }}>OVERALL PROGRESS</div>
-        <div style={{ height: 10, borderRadius: 999, background: "#e6ece9", overflow: "hidden" }}>
-          <div style={{ width: `${overall}%`, height: "100%", background: "#187a2f" }} />
-        </div>
-      </div>
-      <div className="two-column">
-        {RECENT_CHANGES_SAMPLE.map((item) => {
-          const badge = CHANGE_STATUS_STYLE[item.status] || CHANGE_STATUS_STYLE.planned;
-          return (
-            <section className="panel" key={item.module}>
-              <div className="panel-heading">
-                <div>
-                  <div className="section-kicker">{item.area} · {item.date}</div>
-                  <h3>{item.module}</h3>
-                </div>
-                <span style={{ ...badge, border: "1px solid", borderRadius: 999, padding: "2px 10px", fontSize: 11, fontWeight: 700 }}>{badge.label}</span>
-              </div>
-              <p className="muted">{item.detail}</p>
-              <div style={{ height: 8, borderRadius: 999, background: "#e6ece9", overflow: "hidden", marginTop: 10 }}>
-                <div style={{ width: `${item.progress}%`, height: "100%", background: badge.color }} />
-              </div>
-              <small className="muted">{item.progress}%</small>
-            </section>
-          );
-        })}
-      </div>
-      <p className="muted" style={{ marginTop: 12 }}>Sample data for the latest update progress view; edit <b>RECENT_CHANGES_SAMPLE</b> to refresh.</p>
-    </div>
-  );
-}
-
-function HowItWorks({ stats }) {
+function HowItWorks({ stats, onNavigate }) {
+  const [marketing, setMarketing] = useState(null);
+  const navigate = onNavigate || ((target) => window.dispatchEvent(new CustomEvent("sales:navigate", { detail: target })));
+  useEffect(() => {
+    request("/marketing-companies/stats").then(setMarketing).catch(() => {});
+  }, []);
   const steps = [
     { icon: UploadCloud, label: "Import", value: stats ? `${stats.total ?? 0} contacts` : "—", tab: "contacts" },
     { icon: Sparkles, label: "Classified", value: stats ? `${Object.keys(stats.by_intent || {}).length} intents` : "—", tab: "contacts" },
@@ -606,6 +185,19 @@ function HowItWorks({ stats }) {
           </span>
         ))}
       </div>
+      {marketing && <div className="overview-pipeline">
+        <div><b>Marketing funnel</b><small>{marketing.total} companies · {marketing.follow_up_due} follow-ups due</small></div>
+        <div className="overview-stage-list">
+          {["awareness", "interest", "decision", "action"].map((stage) => (
+            <button key={stage} onClick={() => { sessionStorage.setItem("marketing_funnel_filter", stage); navigate("marketing"); }}>
+              <span>{stage}</span><b>{marketing.by_funnel_stage?.[stage] || 0}</b>
+            </button>
+          ))}
+        </div>
+        <button className="overview-followups" onClick={() => { sessionStorage.setItem("marketing_due_follow_up", "true"); navigate("marketing"); }}>
+          Review due follow-ups <ArrowUpRight size={14} />
+        </button>
+      </div>}
     </div>
   );
 }
@@ -1273,7 +865,7 @@ function Outreach({ onNotice }) {
   const [selected, setSelected] = useState(null);
   const [detail, setDetail] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [form, setForm] = useState({ name: "Outreach campaign", channel: "email", strategy: "cold_outreach", limit: 10, intent: "" });
+  const [form, setForm] = useState({ name: "Outreach campaign", channel: "email", strategy: "cold_outreach", limit: 10, intent: "", contact_type: "contacts", q: "", category: "", call_status: "", funnel_stage: "" });
 
   const load = async () => {
     try {
@@ -1290,14 +882,40 @@ function Outreach({ onNotice }) {
     if (!selected) return onNotice({ type: "error", text: "Select a template first." });
     setBusy(true);
     try {
-      const body = { name: form.name, channel: form.channel, strategy: form.strategy, template_id: selected.id, use_ai: true, filter: { limit: Number(form.limit) || 10, intent: form.intent } };
+      const body = {
+        name: form.name,
+        channel: form.channel,
+        strategy: form.strategy,
+        template_id: selected.id,
+        use_ai: true,
+        filter: {
+          limit: Number(form.limit) || 10,
+          intent: form.intent,
+          contact_type: form.contact_type,
+          q: form.q,
+          category: form.category,
+          call_status: form.call_status,
+          funnel_stage: form.funnel_stage,
+        },
+      };
       const campaign = await request("/campaigns", { method: "POST", body: JSON.stringify(body) });
       setDetail(campaign); onNotice({ type: "success", text: `Generated ${campaign.total} messages for review.` }); load();
     } catch (error) { onNotice({ type: "error", text: error.message }); } finally { setBusy(false); }
   };
   const openCampaign = async (id) => { try { setDetail(await request(`/campaigns/${id}`)); } catch (error) { onNotice({ type: "error", text: error.message }); } };
   const approve = async () => { if (!detail) return; setBusy(true); try { setDetail(await request(`/campaigns/${detail.id}/approve`, { method: "POST" })); onNotice({ type: "success", text: "Approved — ready to send." }); } catch (error) { onNotice({ type: "error", text: error.message }); } finally { setBusy(false); } };
-  const send = async () => { if (!detail) return; setBusy(true); try { const result = await request(`/campaigns/${detail.id}/send`, { method: "POST" }); onNotice({ type: "success", text: `Sent ${result.sent}, failed ${result.failed}, queued ${result.skipped}.` }); setDetail(await request(`/campaigns/${detail.id}`)); load(); } catch (error) { onNotice({ type: "error", text: error.message }); } finally { setBusy(false); } };
+  const send = async () => {
+    if (!detail || detail.status !== "approved") return;
+    if (!window.confirm(`Send ${detail.total} approved messages in ${detail.name}?`)) return;
+    setBusy(true);
+    try {
+      const result = await request(`/campaigns/${detail.id}/send`, { method: "POST" });
+      onNotice({ type: "success", text: `Sent ${result.sent}, failed ${result.failed}, queued ${result.skipped}.` });
+      setDetail(await request(`/campaigns/${detail.id}`));
+      load();
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+    finally { setBusy(false); }
+  };
 
   return (
     <div className="content">
@@ -1322,6 +940,14 @@ function Outreach({ onNotice }) {
           ))}
           {!templates.length && <div className="empty-state"><Sparkles size={22} /><p>No templates yet.</p><small>Click "Seed templates" to load Kalisoft defaults.</small></div>}
         </div>
+        {selected && <details className="outreach-template-preview">
+          <summary><span>View selected template</span><b>{selected.name}</b></summary>
+          <div className="template-preview-body">
+            {selected.subject && <p><b>Subject:</b> {selected.subject}</p>}
+            <pre>{selected.body}</pre>
+            {!!selected.variables?.length && <small>Personalization fields: {selected.variables.join(", ")}</small>}
+          </div>
+        </details>}
       </section>
 
       <section className="panel" style={{ marginTop: 16 }} aria-label="Build campaign">
@@ -1338,8 +964,25 @@ function Outreach({ onNotice }) {
               {(meta.strategies.length ? meta.strategies : ["cold_outreach", "follow_up", "nurture"]).map((option) => <option key={option}>{option}</option>)}
             </select>
           </label>
+          <label>Recipient list
+            <select value={form.contact_type} onChange={(event) => update("contact_type", event.target.value)}>
+              <option value="contacts">My contacts</option>
+              <option value="marketing_companies">Marketing companies</option>
+            </select>
+          </label>
+          <label>Search recipients<input placeholder="Company, contact, email, phone or requirement" value={form.q} onChange={(event) => update("q", event.target.value)} /></label>
+          {form.contact_type === "marketing_companies" ? <>
+            <label>Company category<input placeholder="Any category" value={form.category} onChange={(event) => update("category", event.target.value)} /></label>
+            <label>Call status<input placeholder="Any call status" value={form.call_status} onChange={(event) => update("call_status", event.target.value)} /></label>
+            <label>Funnel stage
+              <select value={form.funnel_stage} onChange={(event) => update("funnel_stage", event.target.value)}>
+                <option value="">All stages</option><option value="awareness">Awareness</option><option value="interest">Interest</option><option value="decision">Decision</option><option value="action">Action / purchase</option>
+              </select>
+            </label>
+          </> : <>
           <label>Intent filter<input placeholder="e.g. procurement" value={form.intent} onChange={(event) => update("intent", event.target.value)} /></label>
-          <label>How many contacts<input type="number" min="1" max="500" value={form.limit} onChange={(event) => update("limit", event.target.value)} /></label>
+          </>}
+          <label>Maximum recipients<input type="number" min="1" max="1000" value={form.limit} onChange={(event) => update("limit", event.target.value)} /></label>
           <button className="primary-button" onClick={createCampaign} disabled={busy || !selected}>{busy ? "Working..." : "Generate for review"}</button>
         </div>
         <small className="muted">Messages are generated for human review first. Nothing sends until you approve.</small>
@@ -1351,21 +994,21 @@ function Outreach({ onNotice }) {
             <h3>Review — {detail.name} (#{detail.id})</h3>
             <span className="contact-tag">{detail.status}</span>
           </div>
+          <p className="campaign-recipient-count">{detail.messages.length} of {detail.total} attached recipients loaded for review.</p>
           <div className="button-row" style={{ marginBottom: 10 }}>
-            <button className="secondary-button" onClick={approve} disabled={busy}>Approve all</button>
-            <button className="primary-button" onClick={send} disabled={busy}><Send size={16} /> Send approved</button>
+            <button className="secondary-button" onClick={approve} disabled={busy || detail.status !== "pending_review"}>Approve all</button>
+            <button className="primary-button" onClick={send} disabled={busy || detail.status !== "approved"}><Send size={16} /> Send approved</button>
           </div>
-          <div className="contact-list" role="list">
+          <div className="campaign-recipient-list" role="list">
             {detail.messages.map((message) => (
-              <div className="contact-row" key={message.id} role="listitem">
-                <span className="contact-main">
-                  <b>{message.to_address || "(no address)"}</b>
-                  <small>{message.rendered_subject || "(no subject)"}</small>
-                  <small>{message.rendered_body.slice(0, 160)}</small>
-                </span>
-                <span className="contact-tag">{message.status}</span>
-                {message.error && <span className="contact-tag" title={message.error}>error</span>}
-              </div>
+              <details className="campaign-recipient" key={message.id} role="listitem">
+                <summary><span><b>{message.to_address || "(no address)"}</b><small>Contact #{message.contact_id}</small></span><span className="contact-tag">{message.status}</span></summary>
+                <div className="campaign-message-detail">
+                  <b>{message.rendered_subject || "(no subject)"}</b>
+                  <p>{message.rendered_body}</p>
+                  {message.error && <small className="message-error">{message.error}</small>}
+                </div>
+              </details>
             ))}
           </div>
         </section>
@@ -1378,7 +1021,7 @@ function Outreach({ onNotice }) {
             <button key={campaign.id} role="listitem" className="contact-row" style={{ width: "100%", textAlign: "left", border: 0, background: "transparent" }} onClick={() => openCampaign(campaign.id)}>
               <span className="contact-main"><b>{campaign.name}</b><small>{campaign.channel} · {campaign.strategy} · {campaign.total} messages</small></span>
               <span className="contact-tag">{campaign.status}</span>
-              <span className="contact-tag">sent {campaign.sent_count}/{campaign.failed_count} failed</span>
+              <span className="contact-tag">{campaign.sent_count} sent · {campaign.failed_count} failed</span>
             </button>
           ))}
           {!campaigns.length && <div className="empty-state"><Send size={22} /><p>No campaigns yet.</p><small>Build your first campaign above.</small></div>}
@@ -1656,1189 +1299,6 @@ function WhatsAppCosts() {
       </table>
       <p className="muted">Rates are Meta's published India rate card and may change quarterly; verify before budgeting. Volume tiers discount utility / authentication by up to 30% at scale.</p>
     </section>
-  );
-}
-
-function FeedbackPipeline({ onNotice }) {
-  const [segments, setSegments] = useState([]);
-  const [segment, setSegment] = useState("");
-  const [templates, setTemplates] = useState([]);
-  const [templateId, setTemplateId] = useState("");
-  const [limit, setLimit] = useState(25);
-  const [preview, setPreview] = useState(null);
-  const [busy, setBusy] = useState(false);
-
-  const loadSegments = async () => {
-    try {
-      const rows = await request("/pipeline/segments");
-      setSegments(rows);
-      setSegment((current) => current || rows[0]?.id || "");
-    } catch (error) { onNotice({ type: "error", text: error.message }); }
-  };
-  useEffect(() => { loadSegments(); }, []);
-
-  useEffect(() => {
-    if (!segment) return;
-    setPreview(null);
-    request(`/pipeline/templates?segment=${encodeURIComponent(segment)}`)
-      .then((rows) => { setTemplates(rows); setTemplateId(rows[0]?.id || ""); })
-      .catch((error) => onNotice({ type: "error", text: error.message }));
-  }, [segment]);
-
-  const runPreview = async () => {
-    if (!segment || !templateId) return;
-    setBusy(true);
-    try {
-      const result = await request("/pipeline/preview", { method: "POST", body: JSON.stringify({ segment, template_id: templateId, limit }) });
-      setPreview(result);
-      if (!result.count) onNotice({ type: "error", text: "No audience rows for this segment yet." });
-    } catch (error) { onNotice({ type: "error", text: error.message }); }
-    finally { setBusy(false); }
-  };
-
-  const queueAll = async () => {
-    if (!segment || !templateId) return;
-    if (!window.confirm("Queue personalised WhatsApp messages for every audience row that has a phone number?")) return;
-    setBusy(true);
-    try {
-      const result = await request("/pipeline/queue", { method: "POST", body: JSON.stringify({ segment, template_id: templateId, limit }) });
-      onNotice({ type: "success", text: `Queued ${result.queued} message(s); skipped ${result.skipped_no_phone} without phone.` });
-    } catch (error) { onNotice({ type: "error", text: error.message }); }
-    finally { setBusy(false); }
-  };
-
-  const selectedTemplate = templates.find((t) => t.id === templateId);
-  const activeSegment = segments.find((s) => s.id === segment);
-
-  return (
-    <div className="content">
-      <div className="page-heading">
-        <div>
-          <div className="section-kicker">TRIGGERING PIPELINE</div>
-          <h2>Customer feedback messages</h2>
-          <p className="muted">Pick a segment, choose a template, preview the personalised messages, then send each one through WhatsApp (wa.me opens with the message ready — you tap Send). QR-based sharing comes in the next scope.</p>
-        </div>
-        <button className="icon-button" onClick={loadSegments} aria-label="Refresh segments"><RefreshCw size={17} /></button>
-      </div>
-
-      <div className="metric-grid">
-        {segments.map((s) => (
-          <button key={s.id} className={`metric segment-card ${segment === s.id ? "accent selected" : ""}`} onClick={() => setSegment(s.id)}>
-            <div className="metric-icon"><Zap size={18} /></div>
-            <div className="metric-label">{s.label}</div>
-            <div className="metric-value">{s.with_phone}<small className="metric-sub"> / {s.audience}</small></div>
-            <div className="metric-detail">{s.description}</div>
-            <small className="muted">reachable with phone · {s.source}</small>
-          </button>
-        ))}
-      </div>
-
-      <section className="panel form-panel" style={{ marginBottom: 16 }}>
-        <div className="form-heading">
-          <div><div className="section-kicker">STEP 1 · TEMPLATE</div><h3>Choose message template</h3></div>
-          {selectedTemplate && <span className="contact-tag">{selectedTemplate.intent}</span>}
-        </div>
-        <div className="form-grid">
-          <select value={templateId} onChange={(event) => setTemplateId(event.target.value)}>
-            {templates.map((t) => <option key={t.id} value={t.id}>{t.id} — {t.name}</option>)}
-          </select>
-          <select value={limit} onChange={(event) => setLimit(Number(event.target.value))}>
-            {[10, 25, 50, 100, 200].map((n) => <option key={n} value={n}>Preview {n} rows</option>)}
-          </select>
-        </div>
-        {selectedTemplate && <pre className="message-preview">{selectedTemplate.text}</pre>}
-        <div className="button-row" style={{ marginTop: 10 }}>
-          <button className="primary-button" onClick={runPreview} disabled={busy || !templateId}><Sparkles size={16} /> {busy ? "Working..." : "Personalise & preview"}</button>
-          <button className="secondary-button" onClick={queueAll} disabled={busy || !templateId}><Send size={15} /> Queue all with phone</button>
-        </div>
-      </section>
-
-      {preview && (
-        <section className="panel table-panel">
-          <div className="table-toolbar">
-            <div><div className="section-kicker">STEP 2 · REVIEW & SEND</div><h3>{preview.template_name} — {preview.count} personalised message(s)</h3></div>
-            <span className="muted">{activeSegment?.label}</span>
-          </div>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr><th>Customer / lead</th><th>Context</th><th>Message (personalised)</th><th>Send</th></tr>
-              </thead>
-              <tbody>
-                {preview.items.map((item, index) => (
-                  <tr key={index}>
-                    <td className="table-person"><b>{item.name || item.company || "—"}</b><br /><small className="muted">{item.company && item.name ? item.company : ""} {item.phone || "no phone"}</small></td>
-                    <td><small>{[item.order_no && `Order ${item.order_no}`, item.amount && `Rs. ${item.amount}`, item.status, item.call_status && `call: ${item.call_status}`].filter(Boolean).join(" · ") || "—"}</small></td>
-                    <td><span className="message-snippet">{item.message}</span></td>
-                    <td>
-                      {item.wa_link
-                        ? <a className="text-button wa-send-btn" href={item.wa_link} target="_blank" rel="noreferrer noopener"><Send size={14} /> Open WhatsApp</a>
-                        : <small className="muted">no phone</small>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="muted" style={{ marginTop: 8 }}>Each "Open WhatsApp" opens WhatsApp (app or web) with the personalised message ready in the send box — review and tap Send. Queued messages appear under Outreach / WhatsApp pending for the reviewed send path.</p>
-        </section>
-      )}
-    </div>
-  );
-}
-
-function ErpDashboard({ onNotice }) {
-  const [status, setStatus] = useState(null);
-  const [analytics, setAnalytics] = useState(null);
-  const [dispatch, setDispatch] = useState([]);
-  const [forecast, setForecast] = useState(null);
-  const [forecastMonths, setForecastMonths] = useState(6);
-  const [forecastView, setForecastView] = useState("chart");
-  const [filter, setFilter] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [yt, setYt] = useState(null);
-  const [ytForm, setYtForm] = useState({ youtube_api_key: "", youtube_channel_id: "" });
-  const [calc, setCalc] = useState({ polymer_rate: 92, micron: 23, width_mm: 500, length_m: 1000, waste_pct: 2, conversion_cost_per_kg: 18, margin_pct: 8, density: 0.92 });
-  const [calcOut, setCalcOut] = useState(null);
-  const [calcBusy, setCalcBusy] = useState(false);
-  const [calcError, setCalcError] = useState("");
-  const [calcOpen, setCalcOpen] = useState(() => localStorage.getItem("kalika_calc_open") !== "0");
-  const liveCalc = useMemo(() => filmCosting(calc), [calc]);
-  const toggleCalc = () => setCalcOpen((open) => { localStorage.setItem("kalika_calc_open", open ? "0" : "1"); return !open; });
-  const result = calcOut || liveCalc;
-  const share = result?.price_share || result?.cost_share || {};
-
-  const load = async () => {
-    try {
-      const [s, a, d, f, y] = await Promise.all([
-        request("/erp/status"), request("/erp/analytics"),
-        request(`/erp/dispatch${filter ? `?status=${encodeURIComponent(filter)}` : ""}`),
-        request(`/erp/forecast?months=${forecastMonths}`), request("/erp/youtube/status"),
-      ]);
-      setStatus(s); setAnalytics(a); setDispatch(d); setForecast(f); setYt(y);
-      setYtForm((cur) => ({ ...cur, youtube_channel_id: cur.youtube_channel_id || y.channel_id || "" }));
-    } catch (error) { onNotice({ type: "error", text: error.message }); }
-  };
-  useEffect(() => { load(); }, [filter, forecastMonths]);
-
-  const syncErp = async () => {
-    setBusy(true);
-    try {
-      const r = await request("/erp/sync", { method: "POST" });
-      onNotice({ type: "success", text: `ERP synced (${r.report_date}): ${r.dispatch.created} dispatches, ${r.orders.created} orders.` });
-      load();
-    } catch (error) { onNotice({ type: "error", text: error.message }); }
-    finally { setBusy(false); }
-  };
-
-  const saveYt = async () => {
-    setBusy(true);
-    try {
-      await request("/erp/settings", { method: "PUT", body: JSON.stringify(ytForm) });
-      onNotice({ type: "success", text: "YouTube settings saved." });
-      load();
-    } catch (error) { onNotice({ type: "error", text: error.message }); }
-    finally { setBusy(false); }
-  };
-
-  const syncYt = async () => {
-    setBusy(true);
-    try {
-      const r = await request("/erp/youtube/sync", { method: "POST", body: JSON.stringify({ channel_id: ytForm.youtube_channel_id || null }) });
-      onNotice({ type: "success", text: `YouTube: ${r.title} — ${r.subscribers} subs, ${r.views} views.` });
-      load();
-    } catch (error) { onNotice({ type: "error", text: error.message }); }
-    finally { setBusy(false); }
-  };
-
-  const runCalc = async (event) => {
-    event.preventDefault();
-    if (!liveCalc) {
-      setCalcError("Enter positive values for polymer rate, micron, width, length and density.");
-      return;
-    }
-    setCalcError("");
-    setCalcOut(liveCalc);
-    setCalcBusy(true);
-    try {
-      const payload = Object.fromEntries(Object.entries(calc).map(([key, value]) => [key, Number(value)]));
-      if (!payload.density) payload.density = 0.92;
-      setCalcOut(await request("/erp/rate-calculator", { method: "POST", body: JSON.stringify(payload) }));
-      onNotice({ type: "success", text: "Quote verified against the server costing engine." });
-    } catch (error) {
-      setCalcOut(null);
-      setCalcError(`Live estimate shown. Server verification failed: ${error.message}`);
-    } finally { setCalcBusy(false); }
-  };
-
-  const upd = (k, v) => {
-    setCalc((c) => ({ ...c, [k]: v }));
-    setCalcOut(null);
-    setCalcError("");
-  };
-  const resetCalc = () => {
-    setCalc({ polymer_rate: 92, micron: 23, width_mm: 500, length_m: 1000, waste_pct: 2, conversion_cost_per_kg: 18, margin_pct: 8, density: 0.92 });
-    setCalcOut(null);
-    setCalcError("");
-  };
-
-  const d = status?.dispatch || {};
-  const o = status?.orders || {};
-  const series = forecast?.series || [];
-  const maxVal = Math.max(1, ...series.map((s) => s.value), forecast?.projected_next_month || 0);
-
-  return (
-    <div className="content">
-      <div className="page-heading">
-        <div>
-          <div className="section-kicker">ERP-THROUGH-SALES · DAILY SYNC</div>
-          <h2>ERP & sales forecast</h2>
-          <p className="muted">Dispatch and orders mirrored from the ERP report every morning at 06:00 — read-only for field executives, sync controls for admins.</p>
-        </div>
-        <div className="button-row">
-          <button className="icon-button" onClick={load} aria-label="Refresh"><RefreshCw size={17} /></button>
-          {status?.is_admin && <button className="primary-button" onClick={syncErp} disabled={busy}><Database size={16} /> {busy ? "Syncing..." : "Sync ERP now"}</button>}
-        </div>
-      </div>
-
-      <div className="kpi-strip">
-        <div className="kpi brand"><div className="k-label">Orders value</div><div className="k-value">₹{((o.total_value || 0) / 1e5).toFixed(1)}L</div><div className="k-sub">{o.records || 0} orders · report {status?.report_date || "—"}</div></div>
-        <div className="kpi"><div className="k-label">Dispatch completion</div><div className="k-value">{d.completion_pct || 0}%</div><div className="k-sub">{(d.dispatched_qty || 0).toLocaleString()} / {(d.scheduled_qty || 0).toLocaleString()} qty</div></div>
-        <div className="kpi"><div className="k-label">Pending dispatch</div><div className="k-value">{analytics?.pending_followup ?? 0}</div><div className="k-sub">records to follow up</div></div>
-        <div className="kpi"><div className="k-label">Customers served</div><div className="k-value">{d.customers || 0}</div><div className="k-sub">{Object.entries(d.by_status || {}).map(([k, v]) => `${k}: ${v}`).join(" · ") || "—"}</div></div>
-      </div>
-
-      <div className="funnel">
-        <div className="funnel-step"><small>Orders</small><b>{analytics?.funnel?.orders ?? 0}</b></div>
-        <ArrowUpRight size={14} className="muted" />
-        <div className="funnel-step"><small>Value</small><b>₹{(((analytics?.funnel?.orders_value) || 0) / 1e5).toFixed(1)}L</b></div>
-        <ArrowUpRight size={14} className="muted" />
-        <div className="funnel-step"><small>Scheduled qty</small><b>{(analytics?.funnel?.scheduled_qty || 0).toLocaleString()}</b></div>
-        <ArrowUpRight size={14} className="muted" />
-        <div className="funnel-step hot"><small>Dispatched qty</small><b>{(analytics?.funnel?.dispatched_qty || 0).toLocaleString()}</b></div>
-      </div>
-
-      <div className="two-column">
-        <section className="panel">
-          <div className="panel-heading">
-            <div><div className="section-kicker">FORECAST</div><h3>Monthly orders value &amp; next-month projection</h3></div>
-            <div className="button-row">
-              <select value={forecastMonths} onChange={(e) => setForecastMonths(Number(e.target.value))} aria-label="Forecast window">
-                <option value={3}>3 months</option>
-                <option value={6}>6 months</option>
-                <option value={12}>12 months</option>
-              </select>
-              <button className="secondary-button compact" onClick={() => setForecastView(forecastView === "chart" ? "table" : "chart")}>
-                {forecastView === "chart" ? "Table view" : "Chart view"}
-              </button>
-            </div>
-          </div>
-          {forecastView === "chart" ? (
-            <div className="bars">
-              {series.map((s) => (
-                <div className="bar" key={s.period} title={`${s.period}: ₹${s.value.toLocaleString()}`}>
-                  <i style={{ height: `${Math.max(4, (s.value / maxVal) * 100)}%` }} />
-                  <small>{s.period.slice(5)}</small>
-                </div>
-              ))}
-              <div className="bar" title={`Projected: ₹${(forecast?.projected_next_month || 0).toLocaleString()}`}>
-                <i className="proj" style={{ height: `${Math.max(4, ((forecast?.projected_next_month || 0) / maxVal) * 100)}%` }} />
-                <small>proj.</small>
-              </div>
-            </div>
-          ) : (
-            <div className="table-wrap">
-              <table>
-                <thead><tr><th>Period</th><th>Orders value</th><th>Share of window</th></tr></thead>
-                <tbody>
-                  {series.map((s) => (
-                    <tr key={s.period}><td>{s.period}</td><td>{fmtMoney(s.value)}</td><td>{Math.round((s.value / (series.reduce((sum, row) => sum + row.value, 0) || 1)) * 100)}%</td></tr>
-                  ))}
-                  <tr><td><b>Projected next month</b></td><td><b>{fmtMoney(forecast?.projected_next_month || 0)}</b></td><td>—</td></tr>
-                </tbody>
-              </table>
-            </div>
-          )}
-          <p className="muted" style={{ marginTop: 8, fontSize: 11 }}>{forecast?.method || "Baseline projection"} · projected ₹{(((forecast?.projected_next_month) || 0) / 1e5).toFixed(1)}L next month</p>
-          <div className="section-kicker" style={{ marginTop: 14 }}>TOP CUSTOMERS BY DISPATCHED QTY</div>
-          <div className="contact-list">
-            {(analytics?.top_customers || []).slice(0, 6).map((c) => (
-              <div className="contact-row" key={c.customer}>
-                <span className="contact-avatar">{c.customer.slice(0, 1)}</span>
-                <span className="contact-main"><b>{c.customer}</b><small>{c.dispatched_qty.toLocaleString()} qty dispatched</small></span>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="panel">
-          <div className="panel-heading">
-            <div><div className="section-kicker">CHANNEL SYNC</div><h3><Video size={16} style={{ verticalAlign: "-3px" }} /> YouTube</h3></div>
-            <span className={yt?.data_api_configured ? "pill-ok" : "pill-warn"}>{yt?.data_api_configured ? "Data API ready" : "Not configured"}</span>
-          </div>
-          {status?.is_admin ? (
-            <div className="form-grid" style={{ marginTop: 8 }}>
-              <input placeholder="YouTube Data API key" value={ytForm.youtube_api_key} onChange={(e) => setYtForm({ ...ytForm, youtube_api_key: e.target.value })} />
-              <input placeholder="Channel ID (UC...)" value={ytForm.youtube_channel_id} onChange={(e) => setYtForm({ ...ytForm, youtube_channel_id: e.target.value })} />
-              <button className="secondary-button" onClick={saveYt} disabled={busy}><Save size={15} /> Save keys</button>
-              <button className="primary-button" onClick={syncYt} disabled={busy}><RefreshCw size={15} /> Sync now</button>
-            </div>
-          ) : (
-            <p className="muted" style={{ fontSize: 12 }}>An admin adds the API key and channel in ERP settings; channel stats then refresh daily at 07:00.</p>
-          )}
-          {yt?.cached_stats && (
-            <div className="calc-result" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
-              <div><small>Channel</small><b style={{ fontSize: 13 }}>{yt.cached_stats.title}</b></div>
-              <div><small>Subscribers</small><b>{yt.cached_stats.subscribers.toLocaleString()}</b></div>
-              <div><small>Views</small><b>{yt.cached_stats.views.toLocaleString()}</b></div>
-            </div>
-          )}
-          <p className="muted" style={{ marginTop: 6, fontSize: 11 }}>Analytics API (watch time, traffic sources) requires OAuth — next scope.</p>
-        </section>
-      </div>
-
-      <section className="panel calc-panel" aria-label="Daily rate calculator">
-        <div className="calc-panel-head">
-          <div>
-            <div className="section-kicker">DAILY RATE CALCULATOR</div>
-            <h3>Film &amp; poly bag costing</h3>
-            <p className="muted calc-lede">Enter the film specification and commercial terms. Weight, cost stack and quote update instantly; use <b>Calculate &amp; verify</b> to confirm the numbers with the server costing engine.</p>
-          </div>
-          <div className="calc-panel-actions">
-            <span className="calc-assumption">LDPE · density 0.92 g/cm³</span>
-            {result && <span className="calc-status ok"><Sparkles size={14} /> {money(result.price)} live quote</span>}
-            <a className="secondary-button calc-doc-link" href="https://storage.googleapis.com/kalika_enterprises/docs/official-docs/POLY%20BAG%20CALACULATION%20SHEET.xlsx" target="_blank" rel="noreferrer"><FileDown size={15} /> Official sheet</a>
-            <button type="button" className="secondary-button" onClick={resetCalc}><RefreshCw size={15} /> Reset</button>
-            <button type="button" className="secondary-button" onClick={toggleCalc}>{calcOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />} {calcOpen ? "Collapse" : "Expand"}</button>
-          </div>
-        </div>
-
-        {calcOpen && <div className="calc-layout">
-          <form className="calc-form" onSubmit={runCalc}>
-            <fieldset className="calc-group">
-              <legend><span className="calc-step">1</span><Package size={15} /> Film specification</legend>
-              <div className="calc-grid">
-                <label className="calc-field">
-                  <span>Polymer rate <em>₹/kg</em></span>
-                  <input type="number" min="1" step="0.5" value={calc.polymer_rate} onChange={(e) => upd("polymer_rate", e.target.value)} />
-                  <small>LDPE / LLDPE market rate</small>
-                </label>
-                <label className="calc-field">
-                  <span>Density <em>g/cm³</em></span>
-                  <input type="number" min="0.5" max="1.6" step="0.01" value={calc.density} onChange={(e) => upd("density", e.target.value)} />
-                  <small>0.92 for LDPE</small>
-                </label>
-              </div>
-            </fieldset>
-
-            <fieldset className="calc-group">
-              <legend><span className="calc-step">2</span><Gauge size={15} /> Thickness &amp; size</legend>
-              <div className="calc-grid">
-                <label className="calc-field">
-                  <span>Micron <em>µm</em></span>
-                  <input type="number" min="1" step="1" value={calc.micron} onChange={(e) => upd("micron", e.target.value)} />
-                  <small>Film thickness</small>
-                </label>
-                <label className="calc-field">
-                  <span>Width <em>mm</em></span>
-                  <input type="number" min="50" step="10" value={calc.width_mm} onChange={(e) => upd("width_mm", e.target.value)} />
-                  <small>Web width</small>
-                </label>
-                <label className="calc-field">
-                  <span>Length <em>m</em></span>
-                  <input type="number" min="10" step="50" value={calc.length_m} onChange={(e) => upd("length_m", e.target.value)} />
-                  <small>Roll / run length</small>
-                </label>
-              </div>
-            </fieldset>
-
-            <fieldset className="calc-group">
-              <legend><span className="calc-step">3</span><TrendingUp size={15} /> Cost &amp; margin</legend>
-              <div className="calc-grid">
-                <label className="calc-field">
-                  <span>Waste <em>%</em></span>
-                  <input type="number" min="0" max="30" step="0.5" value={calc.waste_pct} onChange={(e) => upd("waste_pct", e.target.value)} />
-                  <small>Trim + start-up loss</small>
-                </label>
-                <label className="calc-field">
-                  <span>Conversion <em>₹/kg</em></span>
-                  <input type="number" min="0" step="1" value={calc.conversion_cost_per_kg} onChange={(e) => upd("conversion_cost_per_kg", e.target.value)} />
-                  <small>Blowing, printing, packing</small>
-                </label>
-                <label className="calc-field">
-                  <span>Margin <em>%</em></span>
-                  <input type="number" min="0" max="100" step="0.5" value={calc.margin_pct} onChange={(e) => upd("margin_pct", e.target.value)} />
-                  <small>Applied on total cost</small>
-                </label>
-              </div>
-            </fieldset>
-
-            <div className="calc-actions">
-              <button className="primary-button" type="submit" disabled={calcBusy || !liveCalc}><Calculator size={16} /> {calcBusy ? "Verifying..." : "Calculate & verify"}</button>
-              <span className={`calc-status ${calcOut ? "ok" : "live"}`}>{calcOut ? <><Check size={14} /> Server verified</> : <><Sparkles size={14} /> Live estimate</>}</span>
-            </div>
-            {calcError && <p className="calc-error"><CircleAlert size={15} /> {calcError}</p>}
-          </form>
-
-          <aside className="calc-summary" aria-live="polite">
-            {result ? (
-              <>
-                <div className="calc-price-card">
-                  <div>
-                    <span className="calc-eyebrow">QUOTE PRICE</span>
-                    <div className="calc-price">{money(result.price)}</div>
-                    <small>{decimal(calc.length_m, 0)} m × {decimal(calc.width_mm, 0)} mm · {decimal(result.gross_weight_kg, 2)} kg gross</small>
-                  </div>
-                  <div className="calc-price-side">
-                    <b>{money(result.price_per_kg)}</b>
-                    <small>per kg</small>
-                  </div>
-                </div>
-
-                <div className="calc-share-head"><span>Share of quote</span><small>100%</small></div>
-                <div className="calc-stack" aria-hidden="true">
-                  <span className="seg-material" style={{ width: `${share.material_pct}%` }} />
-                  <span className="seg-waste" style={{ width: `${share.waste_pct}%` }} />
-                  <span className="seg-conversion" style={{ width: `${share.conversion_pct}%` }} />
-                  <span className="seg-margin" style={{ width: `${share.margin_pct}%` }} />
-                </div>
-                <div className="calc-legend">
-                  <span><i className="dot material" />Material {share.material_pct}%</span>
-                  <span><i className="dot waste" />Waste {share.waste_pct}%</span>
-                  <span><i className="dot conversion" />Conversion {share.conversion_pct}%</span>
-                  <span><i className="dot margin" />Margin {share.margin_pct}%</span>
-                </div>
-
-                <div className="calc-breakdown">
-                  <div className="calc-line"><span>Net material <small>{decimal(result.weight_kg, 2)} kg × {money(calc.polymer_rate)}</small></span><b>{money(result.net_material_cost)}</b></div>
-                  <div className="calc-line"><span>Waste material <small>{decimal(result.waste_kg, 2)} kg × {money(calc.polymer_rate)}</small></span><b>{money(result.waste_cost)}</b></div>
-                  <div className="calc-line"><span>Conversion <small>{decimal(result.gross_weight_kg, 2)} kg × {money(calc.conversion_cost_per_kg)}</small></span><b>{money(result.conversion_cost)}</b></div>
-                  <div className="calc-line subtotal"><span>Total cost</span><b>{money(result.total_cost)}</b></div>
-                  <div className="calc-line margin"><span>Margin <small>{decimal(calc.margin_pct, 1)}%</small></span><b>{money(result.margin_amount)}</b></div>
-                  <div className="calc-line total"><span>Quote price</span><b>{money(result.price)}</b></div>
-                </div>
-
-                <div className="calc-detail-grid">
-                  <div><small>Net weight</small><b>{decimal(result.weight_kg, 2)} kg</b></div>
-                  <div><small>Gross weight</small><b>{decimal(result.gross_weight_kg, 2)} kg</b></div>
-                  <div><small>Cost / kg</small><b>{money(result.cost_per_kg)}</b></div>
-                  <div><small>Price / m</small><b>{money(result.price_per_meter)}</b></div>
-                  <div><small>Price / m²</small><b>{money(result.price_per_sqm)}</b></div>
-                  <div><small>Film area</small><b>{decimal(result.geometry.area_m2, 2)} m²</b></div>
-                </div>
-
-                <details className="calc-formula">
-                  <summary>How this quote is calculated</summary>
-                  <p>Net weight = width(m) × length(m) × micron ÷ 1000 × density.</p>
-                  <p>Gross weight adds {decimal(calc.waste_pct, 1)}% waste. Material = gross weight × polymer rate; conversion = gross weight × conversion rate.</p>
-                  <p>Quote price = (material + conversion) × (1 + {decimal(calc.margin_pct, 1)}% margin).</p>
-                  <p className="calc-formula-note">Density {decimal(calc.density, 2)} g/cm³ is applied. 0.92 is the LDPE reference; change it for LLDPE or other resins.</p>
-                </details>
-              </>
-            ) : (
-              <div className="calc-empty"><Calculator size={24} /><p>Enter positive film values to see the quote.</p></div>
-            )}
-          </aside>
-        </div>}
-      </section>
-
-      <section className="panel table-panel" style={{ marginTop: 14 }}>
-        <div className="table-toolbar">
-          <div><div className="section-kicker">DISPATCH</div><h3>{dispatch.length} records · {status?.report_date || "—"}</h3></div>
-          <select value={filter} onChange={(e) => setFilter(e.target.value)}>
-            <option value="">All statuses</option>
-            <option value="Completed">Completed</option>
-            <option value="Partially Dispatched">Partially dispatched</option>
-          </select>
-        </div>
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Dispatch</th><th>Customer</th><th>Plant</th><th className="num">Scheduled</th><th className="num">Dispatched</th><th className="num">Balance</th><th>%</th><th>Status</th></tr></thead>
-            <tbody>
-              {dispatch.map((row) => (
-                <tr key={row.dispatch_no}>
-                  <td className="table-person">{row.dispatch_no}</td>
-                  <td>{row.customer}</td>
-                  <td>{row.plant}</td>
-                  <td className="num">{row.schedule_qty.toLocaleString()}</td>
-                  <td className="num">{row.dispatched_qty.toLocaleString()}</td>
-                  <td className="num">{row.balance_qty.toLocaleString()}</td>
-                  <td><span className={row.pct_complete >= 100 ? "pill-ok" : "pill-warn"}>{row.pct_complete}%</span></td>
-                  <td>{row.status}</td>
-                </tr>
-              ))}
-              {!dispatch.length && <tr><td colSpan={8}><div className="empty-state"><Truck size={22} /><p>No dispatch rows yet.</p><small>{status?.is_admin ? "Run “Sync ERP now” to pull the latest report." : "Ask an admin to run the ERP sync."}</small></div></td></tr>}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function UatOps({ onNotice }) {
-  const [uat, setUat] = useState(null);
-  const [models, setModels] = useState(null);
-  const [prompts, setPrompts] = useState(null);
-  const [selectedPrompt, setSelectedPrompt] = useState("");
-  const [stories, setStories] = useState([]);
-  const [beh, setBeh] = useState(null);
-  const [logs, setLogs] = useState(null);
-  const [preflight, setPreflight] = useState(null);
-  const [reviews, setReviews] = useState({ items: [], pending: 0, is_admin: false });
-  const [reviewForm, setReviewForm] = useState({ comment: "", proposed_change: "" });
-  const [reviewBusy, setReviewBusy] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [chatMessages, setChatMessages] = useState([]);
-  const [chatBody, setChatBody] = useState("");
-  const [chatModel, setChatModel] = useState("");
-  const [chatBusy, setChatBusy] = useState(false);
-  const chatEndRef = React.useRef(null);
-
-  const load = async () => {
-    try {
-      const [u, m, p, s, b, l, r] = await Promise.all([
-        request("/ops/uat"), request("/ops/models"), request("/ops/prompt-samples"),
-        request("/journey/stories?limit=8"), request("/journey/behaviours?days=30"),
-        request("/ops/logs?limit=12"), request("/ops/prompt-reviews?limit=20"),
-      ]);
-      setUat(u); setModels(m); setPrompts(p); setStories(s); setBeh(b); setLogs(l); setReviews(r);
-      setSelectedPrompt((cur) => cur || p.prompts?.[0]?.id || "");
-      setChatModel((cur) => cur || m.chat_default || m.default || "");
-    } catch (error) { onNotice({ type: "error", text: error.message }); }
-  };
-  useEffect(() => { load(); }, []);
-  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chatMessages, chatBusy]);
-
-  const sendChat = async (event) => {
-    event.preventDefault();
-    const text = chatBody.trim();
-    if (!text || chatBusy) return;
-    const history = chatMessages.map((m) => ({ role: m.role, content: m.content }));
-    setChatMessages((prev) => [...prev, { role: "user", content: text, at: new Date().toISOString() }]);
-    setChatBody("");
-    setChatBusy(true);
-    try {
-      const r = await request("/ops/chat", { method: "POST", body: JSON.stringify({ message: text, model: chatModel, history }) });
-      setChatMessages((prev) => [...prev, { role: "assistant", content: r.reply, meta: r, at: new Date().toISOString() }]);
-      if (r.notice) onNotice({ type: "error", text: r.notice });
-    } catch (error) {
-      onNotice({ type: "error", text: error.message });
-      setChatMessages((prev) => [...prev, { role: "assistant", content: `Could not answer: ${error.message}`, meta: { error: true }, at: new Date().toISOString() }]);
-    } finally { setChatBusy(false); }
-  };
-
-  const runChecks = async () => {
-    setBusy(true);
-    try {
-      const r = await request("/ops/run-checks", { method: "POST" });
-      setPreflight(r);
-      onNotice({ type: r.summary.ready ? "success" : "error",
-        text: `Checks: ${r.summary.pass} pass · ${r.summary.warn} warn · ${r.summary.fail} fail` });
-      load();
-    } catch (error) { onNotice({ type: "error", text: error.message }); }
-    finally { setBusy(false); }
-  };
-
-  const submitReview = async (event) => {
-    event.preventDefault();
-    if (!selectedPrompt || !reviewForm.comment.trim()) return;
-    setReviewBusy(true);
-    try {
-      await request("/ops/prompt-reviews", {
-        method: "POST",
-        body: JSON.stringify({ prompt_id: selectedPrompt, ...reviewForm }),
-      });
-      setReviewForm({ comment: "", proposed_change: "" });
-      onNotice({ type: "success", text: "Prompt comment sent for human review." });
-      await load();
-    } catch (error) { onNotice({ type: "error", text: error.message }); }
-    finally { setReviewBusy(false); }
-  };
-
-  const decideReview = async (id, status) => {
-    setReviewBusy(true);
-    try {
-      await request(`/ops/prompt-reviews/${id}/review`, {
-        method: "POST",
-        body: JSON.stringify({ status, review_note: status === "approved" ? "Approved in UAT." : "Rejected in UAT." }),
-      });
-      onNotice({ type: "success", text: `Prompt review ${status}.` });
-      await load();
-    } catch (error) { onNotice({ type: "error", text: error.message }); }
-    finally { setReviewBusy(false); }
-  };
-
-  const prompt = prompts?.prompts?.find((p) => p.id === selectedPrompt);
-  const enabledFeatures = uat ? uat.features.filter((f) => f.status === "enabled").length : 0;
-  const totalFeatures = uat?.features?.length || 0;
-  const nextScope = totalFeatures - enabledFeatures;
-  const checksPass = preflight?.summary?.pass;
-
-  return (
-    <div className="content">
-      <div className="page-heading">
-        <div>
-          <div className="section-kicker">PHASE · ERP-UAT</div>
-          <h2>UAT &amp; operations</h2>
-          <p className="muted">One-week UAT window on preprod with ERP master in production (read-only). Guardrail checks, model selection, prompt samples, journey stories and logs.</p>
-        </div>
-        <div className="button-row">
-          <button className="icon-button" onClick={load} aria-label="Refresh"><RefreshCw size={17} /></button>
-          {uat?.is_admin && <button className="primary-button" onClick={runChecks} disabled={busy}><ShieldCheck size={16} /> {busy ? "Checking..." : "Run guardrail checks"}</button>}
-        </div>
-      </div>
-
-      {uat && (
-        <div className="kpi-strip">
-          <div className="kpi brand"><div className="k-label">UAT window</div><div className="k-value">{uat.days_left ?? "—"}<span className="k-unit"> days</span></div><div className="k-sub">until {uat.enabled_until}</div></div>
-          <div className="kpi"><div className="k-label">Features enabled</div><div className="k-value">{enabledFeatures}/{totalFeatures}</div><div className="k-sub">{nextScope} in next scope</div></div>
-          <div className="kpi"><div className="k-label">Catalog models</div><div className="k-value">{models?.models?.length ?? "—"}</div><div className="k-sub">default SLM {models?.chat_default || "—"}</div></div>
-          <div className="kpi"><div className="k-label">Guardrail checks</div><div className="k-value">{checksPass != null ? `${checksPass}/${preflight?.checks?.length ?? 0}` : "not run"}</div><div className="k-sub">{preflight ? (preflight.summary.ready ? "ready to deploy" : "needs attention") : "run to verify"}</div></div>
-        </div>
-      )}
-
-      {uat && (
-        <div className="panel" style={{ marginBottom: 14 }}>
-          <div className="panel-heading">
-            <div>
-              <div className="section-kicker">ROLLOUT</div>
-              <h3>{uat.uat_active ? "UAT active" : "UAT closed"} · {uat.deploy_env} · {uat.erp_master}</h3>
-              <p className="muted" style={{ margin: "4px 0 0" }}>{uat.features.filter((f) => f.status === "enabled").length} of {uat.features.length} features enabled · window ends {uat.enabled_until}</p>
-            </div>
-            <span className={uat.uat_active ? "pill-ok" : "pill-warn"}>{uat.days_left ?? "?"} day(s) left · until {uat.enabled_until}</span>
-          </div>
-          <div className="uat-progress">
-            <div className="bar-track"><div className="bar-fill" style={{ width: `${Math.max(0, Math.min(100, ((uat.days_left ?? 0) / 7) * 100))}%` }} /></div>
-            <small>{uat.days_left ?? 0} of 7 days remaining</small>
-          </div>
-          <div className="funnel" style={{ marginTop: 10 }}>
-            {uat.features.map((f) => (
-              <div className={`funnel-step feature-chip ${f.status === "enabled" ? "on" : "next"}`} key={f.name}>
-                <small>{f.status}</small><b style={{ fontSize: 12.5 }}>{f.name}</b>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="two-column">
-        <section className="panel">
-          <div className="panel-heading"><div><div className="section-kicker">MODEL SELECTION</div><h3>Models &amp; human review</h3></div><Sparkles size={16} className="muted" /></div>
-          <p className="muted" style={{ fontSize: 11, marginTop: -4 }}>Default: <b>{models?.default}</b> · human review {models?.human_review_required ? "required" : "optional"}</p>
-          <div className="contact-list">
-            {(models?.models || []).map((m) => (
-              <div className="contact-row" key={m.id}>
-                <span className="contact-avatar">{m.provider.slice(0, 1).toUpperCase()}</span>
-                <span className="contact-main">
-                  <b>{m.label}{m.id === models?.default && <span className="default-badge">default</span>}</b>
-                  <small>{m.tier} · {m.context} context · {m.best_for.join(" · ")}</small>
-                  <small>₹{m.cost_inr_per_1k[0]}/₹{m.cost_inr_per_1k[1]} per 1K in/out · PII {m.pii_allowed ? "allowed" : "blocked"}</small>
-                </span>
-                <span className={m.human_review ? "pill-warn" : "pill-ok"}>{m.human_review ? "review" : "auto"}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="panel">
-          <div className="panel-heading"><div><div className="section-kicker">PROMPT SAMPLES · {prompts?.version}</div><h3>Weekly prompts (20:00–22:00 IST)</h3></div><Database size={16} className="muted" /></div>
-          <select value={selectedPrompt} onChange={(e) => setSelectedPrompt(e.target.value)}>
-            {(prompts?.prompts || []).map((p) => <option key={p.id} value={p.id}>{p.id} — {p.task}</option>)}
-          </select>
-          {prompts?.schedule && (
-            <p className="muted prompt-meta">
-              Schedule <b>{prompts.schedule.window}</b> ({prompts.schedule.timezone}) · default <b>{prompts.models?.default}</b> · fallback {prompts.models?.fallback_chain?.join(" → ")}
-            </p>
-          )}
-          {prompt && (
-            <>
-              <div className="muted" style={{ fontSize: 11, margin: "8px 0 4px" }}>
-                model <b>{prompt.model}</b> · {prompt.tier} · json {prompt.json_mode ? "yes" : "no"} · human review {prompt.human_review ? "yes" : "no"}
-              </div>
-              <pre className="message-preview" style={{ maxHeight: 140, overflow: "auto" }}>{prompt.template}</pre>
-              <div className="section-kicker" style={{ marginTop: 8 }}>SAMPLE INPUT</div>
-              <pre className="message-preview" style={{ maxHeight: 110, overflow: "auto", fontSize: 11 }}>{JSON.stringify(prompt.sample_input, null, 1)}</pre>
-              <div className="section-kicker" style={{ marginTop: 8 }}>EXPECTED OUTPUT</div>
-              <pre className="message-preview" style={{ maxHeight: 130, overflow: "auto", fontSize: 11 }}>{JSON.stringify(prompt.expected_output, null, 1)}</pre>
-              <div className="section-kicker" style={{ marginTop: 12 }}>HUMAN REVIEW / REFINEMENT</div>
-              <form onSubmit={submitReview}>
-                <textarea className="voice-text" rows={2} placeholder="What should change in this prompt?" value={reviewForm.comment} onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })} />
-                <input placeholder="Proposed change (optional)" value={reviewForm.proposed_change} onChange={(e) => setReviewForm({ ...reviewForm, proposed_change: e.target.value })} />
-                <button className="secondary-button" disabled={reviewBusy || !reviewForm.comment.trim()}><Send size={14} /> {reviewBusy ? "Sending..." : "Send comment"}</button>
-              </form>
-              <div className="section-kicker" style={{ marginTop: 12 }}>REVIEW QUEUE ({reviews.pending || 0} pending)</div>
-              {(reviews.items || []).slice(0, 4).map((item) => (
-                <div className="review-card" key={item.id}>
-                  <div className="chat-head"><b>{item.prompt_id} / {item.status}</b><small>{String(item.created_at).slice(0, 16)}</small></div>
-                  <p>{item.comment}</p>
-                  {item.proposed_change && <small className="muted">{item.proposed_change}</small>}
-                  <small className="muted">by {item.submitted_by}{item.reviewed_by ? ` / reviewed by ${item.reviewed_by}` : ""}</small>
-                  {uat?.is_admin && item.status === "pending" && (
-                    <div className="button-row" style={{ marginTop: 8 }}>
-                      <button className="primary-button" onClick={() => decideReview(item.id, "approved")} disabled={reviewBusy}><Check size={14} /> Approve</button>
-                      <button className="secondary-button danger-button" onClick={() => decideReview(item.id, "rejected")} disabled={reviewBusy}><X size={14} /> Reject</button>
-                    </div>
-                  )}
-                </div>
-              ))}
-              {!(reviews.items || []).length && <small className="muted">No prompt comments yet.</small>}
-            </>
-          )}
-        </section>
-      </div>
-
-      {uat?.is_admin && (
-        <section className="panel chat-panel" style={{ marginTop: 14 }}>
-          <div className="panel-heading">
-            <div>
-              <div className="section-kicker">DAILY RATE CHAT</div>
-              <h3>Ask the sales copilot</h3>
-              <p className="muted chat-sub">Signed-in Kalika users can ask about rates, film costing and dispatch. The Gemma local SLM runs first; pick a cloud model only when needed.</p>
-            </div>
-            <div className="chat-model-picker">
-              <label htmlFor="uat-chat-model">Model</label>
-              <select id="uat-chat-model" value={chatModel} onChange={(e) => setChatModel(e.target.value)} disabled={chatBusy}>
-                {(models?.models || []).map((m) => (
-                  <option key={m.id} value={m.id}>{m.label}{m.is_default ? " · default SLM" : ""}{m.available ? "" : " · offline"}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="chat-status-row">
-            <span className={models?.providers?.ollama ? "pill-ok" : "pill-warn"}>Ollama {models?.providers?.ollama ? "live" : "offline"}</span>
-            <span className={models?.providers?.gemini ? "pill-ok" : "pill-warn"}>Gemini {models?.providers?.gemini ? "configured" : "not configured"}</span>
-            <span className={models?.providers?.gemma ? "pill-ok" : "pill-warn"}>Gemma {models?.providers?.gemma ? "configured" : "not configured"}</span>
-            <span className="chat-hint">PII is redacted by guardrails before any prompt leaves the server.</span>
-          </div>
-          <div className="uat-chat-thread">
-            {!chatMessages.length && (
-              <div className="chat-welcome">
-                <Bot size={22} />
-                <div><b>Try a live prompt</b><p>“Which dispatch lines need follow-up today?” · “Draft a short rate follow-up for a packaging buyer.”</p></div>
-              </div>
-            )}
-            {chatMessages.map((m, i) => (
-              <div className={`uat-chat-msg ${m.role}`} key={i}>
-                <span className="chat-avatar">{m.role === "user" ? "You" : "AI"}</span>
-                <div className="uat-chat-bubble">
-                  <div className="uat-chat-meta">
-                    <b>{m.role === "user" ? "You" : (m.meta?.model || "Assistant")}</b>
-                    <span>{m.role === "user" ? "admin" : (m.meta?.provider || "")}{m.meta?.latency_ms ? ` · ${m.meta.latency_ms}ms` : ""}</span>
-                    {m.meta?.fallback_used && <span className="status-pill pending">fallback</span>}
-                  </div>
-                  <p>{m.content}</p>
-                  {m.meta && !m.meta.error && (
-                    <div className="uat-chat-facts">
-                      <span>in {m.meta.input_tokens ?? "—"} tok</span>
-                      <span>out {m.meta.output_tokens ?? "—"} tok</span>
-                      <span>cost ${((m.meta.cost_micros || 0) / 1e6).toFixed(4)}</span>
-                      {m.meta.guardrails?.prompt?.pii?.length > 0 && <span className="pill-warn">PII redacted</span>}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-            {chatBusy && <div className="uat-chat-msg assistant"><span className="chat-avatar">AI</span><div className="uat-chat-bubble typing"><i /><i /><i /></div></div>}
-            <div ref={chatEndRef} />
-          </div>
-          <form className="uat-chat-input" onSubmit={sendChat}>
-            <input value={chatBody} onChange={(e) => setChatBody(e.target.value)} placeholder="Ask about dispatch, orders, rates, field updates..." disabled={chatBusy} />
-            <button className="primary-button" disabled={chatBusy || !chatBody.trim()}><Send size={15} /> {chatBusy ? "Thinking..." : "Send"}</button>
-            <button type="button" className="secondary-button" onClick={() => setChatMessages([])} disabled={chatBusy || !chatMessages.length}>Clear</button>
-          </form>
-        </section>
-      )}
-
-      {preflight && (
-        <section className="panel table-panel" style={{ marginTop: 14 }}>
-          <div className="table-toolbar">
-            <div><div className="section-kicker">GUARDRAIL CHECKS</div><h3>{preflight.summary.pass} pass · {preflight.summary.warn} warn · {preflight.summary.fail} fail</h3></div>
-            <span className={preflight.summary.ready ? "pill-ok" : "pill-warn"}>{preflight.summary.ready ? "ready to deploy" : "needs attention"}</span>
-          </div>
-          <div className="check-summary">
-            <span className="check-tile pass"><b>{preflight.summary.pass}</b> pass</span>
-            <span className="check-tile warn"><b>{preflight.summary.warn}</b> warn</span>
-            <span className="check-tile fail"><b>{preflight.summary.fail}</b> fail</span>
-            <span className="check-tile total"><b>{preflight.checks.length}</b> total checks</span>
-          </div>
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>Layer</th><th>Check</th><th>Status</th><th>Detail</th><th>Remediation</th></tr></thead>
-              <tbody>
-                {preflight.checks.map((c) => (
-                  <tr key={c.layer + c.id}>
-                    <td>{c.layer}</td><td className="table-person">{c.id}</td>
-                    <td><span className={c.status === "pass" ? "pill-ok" : "pill-warn"}>{c.status}</span></td>
-                    <td><small>{c.detail}</small></td>
-                    <td><small className="muted">{c.remediation || "—"}</small></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-
-      <div className="two-column" style={{ marginTop: 14 }}>
-        <section className="panel">
-          <div className="panel-heading"><div><div className="section-kicker">CUSTOMER JOURNEY</div><h3>Recent stories</h3></div><span className="muted">{beh?.total ?? 0} events / {beh?.days ?? 30}d</span></div>
-          <div className="contact-list">
-            {stories.map((s) => (
-              <div className="contact-row" key={s.contact_id}>
-                <span className="contact-avatar">{(s.customer_type_label || "?")[0]}</span>
-                <span className="contact-main">
-                  <b>{s.customer_type_label} · contact #{s.contact_id}</b>
-                  <small>{s.current_stage} · next: {s.next_action_template || "—"} · {s.timeline.length} events</small>
-                  <small className="muted">{s.feedback_prompt}</small>
-                </span>
-              </div>
-            ))}
-            {!stories.length && <div className="empty-state"><Users size={20} /><p>No journey events yet.</p><small>Events are recorded from the feedback pipeline and manual logging.</small></div>}
-          </div>
-        </section>
-
-        <section className="panel table-panel">
-          <div className="table-toolbar"><div><div className="section-kicker">LOGS</div><h3>Sync runs &amp; model usage</h3></div></div>
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>Type</th><th>Job / model</th><th>Status</th><th>When</th></tr></thead>
-              <tbody>
-                {(logs?.sync_runs || []).slice(0, 6).map((r) => (
-                  <tr key={"s" + r.id}><td>sync</td><td className="table-person">{r.job}</td><td>{r.status}</td><td><small>{r.finished_at || r.started_at}</small></td></tr>
-                ))}
-                {(logs?.model_usage || []).slice(0, 6).map((u) => (
-                  <tr key={"u" + u.id}><td>llm</td><td className="table-person">{u.model} · {u.task}</td><td>{u.fallback_used === "True" ? "fallback" : "ok"}</td><td><small>{u.created_at}</small></td></tr>
-                ))}
-                {(logs?.audit || []).slice(0, 4).map((a) => (
-                  <tr key={"a" + a.id}><td>audit</td><td className="table-person">{a.action}{a.resource_type ? ` · ${a.resource_type}` : ""}</td><td>{a.status}</td><td><small>{a.created_at}</small></td></tr>
-                ))}
-                {!(logs?.sync_runs?.length || logs?.model_usage?.length || logs?.audit?.length) && <tr><td colSpan={4}><small className="muted">No logs yet — run checks or use the pipeline.</small></td></tr>}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------- Kalika command center
-const fmtNum = (v) => Number(v || 0).toLocaleString("en-IN");
-const fmtInr = (v) => "₹" + Number(v || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
-
-function KalikaDash({ onNavigate, onNotice, user }) {
-  const [dash, setDash] = useState(null);
-  const [team, setTeam] = useState(null);
-  const [chatBody, setChatBody] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const isAdmin = (user?.email || "").toLowerCase() === "ai.solutions@kalisoftai.in" || (user?.role || "").toLowerCase() === "admin";
-
-  const load = async () => {
-    try {
-      const [d, t] = await Promise.all([request("/dashboard/summary"), request("/team/messages?limit=30")]);
-      setDash(d); setTeam(t);
-    } catch (error) { onNotice({ type: "error", text: error.message }); }
-  };
-  useEffect(() => { load(); const timer = setInterval(load, 60000); return () => clearInterval(timer); }, []);
-
-  const syncAll = async () => {
-    setSyncing(true);
-    try {
-      const result = await request("/sync/all", { method: "POST" });
-      onNotice({ type: result.ok === false ? "error" : "success", text: result.ok === false ? "Sync finished with errors — see Future scope." : "All data synced from GCS (ERP · Tally · marketing)." });
-      await load();
-    } catch (error) { onNotice({ type: "error", text: error.message }); }
-    finally { setSyncing(false); }
-  };
-
-  const postChat = async (event) => {
-    event.preventDefault();
-    if (!chatBody.trim()) return;
-    setBusy(true);
-    try {
-      await request("/team/messages", { method: "POST", body: JSON.stringify({ kind: "general", body: chatBody.trim() }) });
-      setChatBody("");
-      load();
-    } catch (error) { onNotice({ type: "error", text: error.message }); }
-    finally { setBusy(false); }
-  };
-
-  if (!dash) return <div className="content"><div className="loading-inline"><RefreshCw size={18} className="spin" /> Loading command center...</div></div>;
-
-  const p = dash.platform, erp = dash.erp, social = dash.social, voice = dash.voice, comms = dash.comms;
-  const instore = dash.instore || { insights: {}, missing_links: 0 };
-  const field = dash.field || { visits: 0, pending_followups: 0, latest: [] };
-  const erpLastSync = p.erp_last_sync ? `${p.erp_last_sync.status} · ${String(p.erp_last_sync.finished_at).slice(0, 16)}` : "never";
-  return (
-    <div className="content dash">
-      <div className="page-heading">
-        <div><div className="section-kicker">KALIKA × KALISOFT · LIVE</div>
-          <h2>Command center</h2>
-          <p className="muted">ERP sales data, platform health, social signals and field updates — one screen. Refreshes every minute.</p>
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          {isAdmin && <button className="primary-button" onClick={syncAll} disabled={syncing}><RefreshCw size={15} /> {syncing ? "Syncing…" : "Sync all data"}</button>}
-          <button className="secondary-button" onClick={load}><RefreshCw size={15} /> Refresh</button>
-        </div>
-      </div>
-
-      <div className="live-strip">
-        <span className="live-dot"><i />Live</span>
-        <span><Clock size={13} /> Updated {new Date(dash.generated_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })} · auto-refresh 60s</span>
-        <span className={p.env === "ready" ? "pill-ok" : "pill-warn"}>API {p.env}</span>
-        <span className="muted">ERP sync: {erpLastSync}</span>
-        <span className="muted">{fmtNum(erp.customers)} companies · {fmtNum(erp.funnel.orders)} orders</span>
-      </div>
-
-      <div className="metric-grid dash-grid">
-        <Metric icon={Database} label="API endpoints live" value={p.api_endpoints} detail={`env: ${p.env} · ERP sync ${erpLastSync}`} />
-        <Metric icon={ShieldCheck} label="GCP services healthy" value={`${p.gcp_healthy}/${p.gcp_services.length}`} detail={p.gcp_services.map((s) => s.service).join(" · ")} accent />
-        <Metric icon={Truck} label="Dispatch completion" value={`${erp.funnel.completion_pct}%`} detail={`${fmtNum(erp.funnel.dispatched_qty)} / ${fmtNum(erp.funnel.scheduled_qty)} kg · ${erp.report_date}`} />
-        <Metric icon={BriefcaseBusiness} label="Orders value" value={fmtInr(erp.funnel.orders_value)} detail={`${erp.funnel.orders} orders · ${erp.customers} companies`} accent />
-        <Metric icon={Mic} label="Voice transcripts" value={voice.total} detail={`${voice.done} analysed · ${voice.pending_review} field updates pending`} />
-        <Metric icon={Send} label="Outreach queued" value={social.whatsapp_queued} detail={`${comms.campaigns} campaigns · ${comms.campaign_messages_sent} messages sent`} accent />
-      </div>
-
-      <div style={{ marginTop: 14 }}><TallySalesPanel onNotice={onNotice} compact /></div>
-
-      <div className="two-column">
-        <section className="panel">
-          <div className="panel-heading"><div><div className="section-kicker">ERP · SALES DISPATCH</div><h3>Top companies by dispatched qty</h3></div><Truck size={19} className="muted" /></div>
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>Company</th><th>Dispatched (kg)</th><th>Share</th></tr></thead>
-              <tbody>
-                {erp.top_customers.map((c) => (
-                  <tr key={c.customer}><td className="table-person"><b>{c.customer}</b></td><td>{fmtNum(c.dispatched_qty)}</td>
-                    <td><div className="share-cell"><div className="bar-track"><div className="bar-fill" style={{ width: `${Math.min(100, (c.dispatched_qty / (erp.top_customers[0]?.dispatched_qty || 1)) * 100)}%` }} /></div><small>{Math.round((c.dispatched_qty / (erp.funnel.dispatched_qty || 1)) * 100)}%</small></div></td></tr>
-                ))}
-                {!erp.top_customers.length && <tr><td colSpan={3}><small className="muted">No ERP data — run ERP sync from the ERP tab.</small></td></tr>}
-              </tbody>
-            </table>
-          </div>
-          <div className="status-breakdown">
-            {Object.entries(erp.status_breakdown).map(([k, v]) => <span className="status-chip" key={k}><b>{v}</b> {k}</span>)}
-            <span className="status-chip warn"><b>{erp.pending_followup}</b> pending follow-up</span>
-          </div>
-        </section>
-
-        <section className="panel">
-          <div className="panel-heading"><div><div className="section-kicker">TODAY · RECOMMENDED</div><h3>Daily actions</h3></div><Sparkles size={19} className="muted" /></div>
-          <div className="rec-list">
-            {dash.recommendations.map((r, i) => (
-              <div className={`rec-item rec-${r.priority}`} key={i}>
-                <span className="rec-badge">{r.priority}</span>
-                <div><b>{r.area}</b><p>{r.text}</p></div>
-              </div>
-            ))}
-          </div>
-          <div className="panel-heading" style={{ marginTop: 18 }}><div><div className="section-kicker">SOCIAL · DAILY METRICS</div><h3>Channels</h3></div><Video size={19} className="muted" /></div>
-          <Service status={!!social.youtube.cached_stats} icon={Video} label="YouTube channel views" value={social.youtube.cached_stats ? fmtNum(social.youtube.cached_stats.views || social.youtube.cached_stats.subscriberCount || 0) : "sync pending"} />
-          <Service status={social.linkedin_profiles > 0} icon={BriefcaseBusiness} label="LinkedIn profiles tracked" value={fmtNum(social.linkedin_profiles)} />
-          <Service status={social.reddit_posts > 0} icon={Search} label="Reddit hiring posts" value={fmtNum(social.reddit_posts)} />
-          <Service status icon={BarChart3} label="6-month order forecast" value={fmtInr(erp.forecast.projected_next_month)} />
-        </section>
-      </div>
-
-      <section className="panel" style={{ marginTop: 14 }}>
-        <div className="panel-heading">
-          <div><div className="section-kicker">PLATFORM · SERVICE HEALTH</div><h3>GCP services &amp; integrations</h3></div>
-          <span className={p.gcp_healthy === p.gcp_services.length ? "pill-ok" : "pill-warn"}>{p.gcp_healthy}/{p.gcp_services.length} healthy</span>
-        </div>
-        <div className="health-grid">
-          {p.gcp_services.map((s) => (
-            <div className={`health-card ${s.ok ? "ok" : "warn"}`} key={s.service}>
-              <span className="health-dot" />
-              <div><b>{s.service}</b><small>{s.detail || (s.ok ? "operational" : "needs attention")}</small></div>
-              <span className={s.ok ? "pill-ok" : "pill-warn"}>{s.ok ? "ok" : "check"}</span>
-            </div>
-          ))}
-          {!p.gcp_services.length && <div className="empty-state"><CircleAlert size={20} /><p>No service checks returned.</p><small>Run diagnostics from the ops page.</small></div>}
-        </div>
-        <div className="mini-stats" style={{ marginTop: 14 }}>
-          <span><b>{comms.email_connections}</b> email connections</span>
-          <span><b>{comms.campaigns}</b> campaigns</span>
-          <span><b>{fmtNum(comms.campaign_messages_sent)}</b> messages sent</span>
-          <span><b>{comms.feedback}</b> feedback</span>
-          <span><b>{dash.team.pending_approvals}</b> approvals pending</span>
-          <span><b>{dash.team.messages_today}</b> team messages today</span>
-        </div>
-      </section>
-
-      <div className="two-column" style={{ marginTop: 14 }}>
-        <section className="panel">
-          <div className="panel-heading"><div><div className="section-kicker">INTERNAL TEAM · DAILY REVIEW</div><h3>Team chat</h3></div><MessageSquarePlus size={19} className="muted" /></div>
-          <div className="chat-thread">
-            {(team?.messages || []).map((m) => (
-              <div className={`chat-row kind-${m.kind}`} key={m.id}>
-                <span className="contact-avatar small">{(m.author_name || "?")[0].toUpperCase()}</span>
-                <div className="chat-main"><div className="chat-head"><b>{m.author_name}</b><small>{m.kind.replace("_", " ")} · {String(m.created_at).slice(5, 16)}</small>{m.status !== "posted" && <span className={`status-pill ${m.status}`}>{m.status}</span>}</div>
-                  <p>{m.body}</p>
-                  {m.meta?.transcript && <small className="chat-transcript">🎙 {m.meta.transcript.slice(0, 160)}</small>}
-                </div>
-              </div>
-            ))}
-            {!(team?.messages || []).length && <div className="empty-state"><MessageSquarePlus size={22} /><p>No team messages yet.</p><small>Post the daily rate review or a field update.</small></div>}
-          </div>
-          <form className="chat-input" onSubmit={postChat}>
-            <input value={chatBody} onChange={(e) => setChatBody(e.target.value)} placeholder="Update the team — rate change, order note, review..." />
-            <button className="primary-button" disabled={busy}><Send size={15} /> Post</button>
-          </form>
-        </section>
-
-        <section className="panel">
-          <div className="panel-heading"><div><div className="section-kicker">VOICE · RECENT FIELD AUDIO</div><h3>Latest transcripts</h3></div><Mic size={19} className="muted" /></div>
-          {voice.recent.map((t) => (
-            <div className="connection-row" key={t.id}>
-              <span className="mail-icon"><Mic size={16} /></span>
-              <span><b>{t.file_name}</b><small>{t.status}{t.tone ? ` · tone: ${t.tone}` : ""} · {String(t.created_at).slice(0, 16)}</small></span>
-              <span className={`status ${t.status === "done" || t.status === "done_heuristic" ? "ok" : "muted-status"}`}><i />{t.status}</span>
-            </div>
-          ))}
-          {!voice.recent.length && <div className="empty-state"><Mic size={22} /><p>No voice notes yet.</p><small>Field desk lets executives record updates.</small></div>}
-          <div className="button-row" style={{ marginTop: 14 }}>
-            <button className="secondary-button" onClick={() => onNavigate("field")}><Mic size={15} /> Open field desk</button>
-            <button className="secondary-button" onClick={() => onNavigate("erp")}><Calculator size={15} /> Rate calculator</button>
-          </div>
-        </section>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------- Field desk (voice -> text -> approve)
-function FieldDesk({ onNotice, user, onNavigate }) {
-  const [team, setTeam] = useState(null);
-  const [note, setNote] = useState("");
-  const [recording, setRecording] = useState(false);
-  const [recSupported, setRecSupported] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const recogRef = React.useRef(null);
-
-  const load = async () => {
-    try { setTeam(await request("/team/messages?limit=40")); }
-    catch (error) { onNotice({ type: "error", text: error.message }); }
-  };
-  useEffect(() => { load(); }, []);
-
-  const startVoice = () => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { setRecSupported(false); onNotice({ type: "error", text: "Speech-to-text not supported in this browser — type the update instead." }); return; }
-    const recog = new SR();
-    recog.lang = "en-IN"; recog.interimResults = true; recog.continuous = true;
-    recog.onresult = (event) => {
-      let text = "";
-      for (const result of event.results) text += result[0].transcript + " ";
-      setNote(text.trim());
-    };
-    recog.onerror = () => { setRecording(false); };
-    recog.onend = () => setRecording(false);
-    recogRef.current = recog;
-    recog.start();
-    setRecording(true);
-  };
-  const stopVoice = () => { recogRef.current?.stop(); setRecording(false); };
-
-  const submit = async (event) => {
-    event.preventDefault();
-    if (!note.trim()) return;
-    setBusy(true);
-    try {
-      await request("/team/messages", { method: "POST", body: JSON.stringify({ kind: "field_update", body: note.trim(), meta: { source: "field_desk", via: recording ? "voice" : "voice-or-text" } }) });
-      setNote("");
-      onNotice({ type: "success", text: "Field update sent for approval." });
-      load();
-    } catch (error) { onNotice({ type: "error", text: error.message }); }
-    finally { setBusy(false); }
-  };
-
-  const review = async (id, decision) => {
-    try {
-      await request(`/team/messages/${id}/review`, { method: "POST", body: JSON.stringify({ decision }) });
-      onNotice({ type: "success", text: `Update ${decision}.` });
-      load();
-    } catch (error) { onNotice({ type: "error", text: error.message }); }
-  };
-
-  const isField = (user?.email || "").startsWith("field@");
-  const pending = (team?.messages || []).filter((m) => m.status === "pending");
-  const reviewed = (team?.messages || []).filter((m) => m.status !== "pending");
-
-  return (
-    <div className="content dash">
-      <div className="page-heading">
-        <div><div className="section-kicker">FIELD → SALES · VOICE ENABLED</div>
-          <h2>Field desk</h2>
-          <p className="muted">Record a voice update from the field — it converts to text, then a sales executive approves or rejects it before it reaches the team.</p>
-        </div>
-        <div className="button-row"><button className="secondary-button" onClick={() => onNavigate?.("visits")}><MapPin size={15} /> Company history</button><button className="secondary-button" onClick={() => onNavigate?.("erp")}><Calculator size={15} /> Rate calculator</button><button className="secondary-button" onClick={load}><RefreshCw size={15} /> Refresh</button></div>
-      </div>
-
-      <div className="two-column">
-        <section className="panel">
-          <div className="panel-heading"><div><div className="section-kicker">NEW FIELD UPDATE</div><h3>Voice note → text</h3></div><Mic size={19} className="muted" /></div>
-          <form onSubmit={submit}>
-            <div className="voice-recorder">
-              <button type="button" className={`record-button ${recording ? "recording" : ""}`} onClick={recording ? stopVoice : startVoice}>
-                {recording ? <Square size={20} /> : <Mic size={20} />}
-              </button>
-              <div>
-                <b>{recording ? "Listening... speak now" : "Tap to record"}</b>
-                <p className="muted">{recSupported ? "Speech converts to text below — edit before sending." : "Browser speech-to-text unavailable — type below."}</p>
-              </div>
-            </div>
-            <textarea className="voice-text" rows={5} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Visited Mahindra Accelo, Supa — met SCM head, they need 2,000 kg HDPE rolls by next Friday..." />
-            <div className="button-row">
-              <button className="primary-button" disabled={busy || !note.trim()}><Send size={15} /> Send for approval</button>
-              <button type="button" className="secondary-button" onClick={() => setNote("")}>Clear</button>
-            </div>
-          </form>
-
-          <div className="panel-heading" style={{ marginTop: 22 }}><div><div className="section-kicker">REVIEW QUEUE · TWO-OPTION</div><h3>Pending approval ({pending.length})</h3></div><ShieldCheck size={19} className="muted" /></div>
-          {pending.map((m) => (
-            <div className="review-card" key={m.id}>
-              <div className="chat-head"><b>{m.author_name}</b><small>{String(m.created_at).slice(5, 16)}</small></div>
-              <p>{m.body}</p>
-              {m.meta?.transcript && <small className="chat-transcript">🎙 {m.meta.transcript.slice(0, 200)}</small>}
-              <div className="button-row" style={{ marginTop: 10 }}>
-                <button className="primary-button" onClick={() => review(m.id, "approved")}><Check size={15} /> Approve</button>
-                <button className="secondary-button danger-button" onClick={() => review(m.id, "rejected")}><X size={15} /> Reject</button>
-              </div>
-            </div>
-          ))}
-          {!pending.length && <div className="empty-state"><Check size={22} /><p>Queue is clear.</p><small>{isField ? "Your updates will appear here until approved." : "New field updates land here for your review."}</small></div>}
-        </section>
-
-        <section className="panel">
-          <div className="panel-heading"><div><div className="section-kicker">TEAM FEED</div><h3>Reviewed updates</h3></div><Users size={19} className="muted" /></div>
-          <div className="chat-thread">
-            {reviewed.map((m) => (
-              <div className={`chat-row kind-${m.kind}`} key={m.id}>
-                <span className="contact-avatar small">{(m.author_name || "?")[0].toUpperCase()}</span>
-                <div className="chat-main">
-                  <div className="chat-head"><b>{m.author_name}</b><small>{String(m.created_at).slice(5, 16)}</small><span className={`status-pill ${m.status}`}>{m.status}</span></div>
-                  <p>{m.body}</p>
-                  {m.reviewed_by && <small className="muted">reviewed by {m.reviewed_by}</small>}
-                </div>
-              </div>
-            ))}
-            {!reviewed.length && <div className="empty-state"><Users size={22} /><p>Nothing reviewed yet.</p></div>}
-          </div>
-        </section>
-      </div>
-      <section className="panel" style={{ marginTop: 14 }}>
-        <div className="panel-heading">
-          <div>
-            <div className="section-kicker">TALLY SALES REGISTER</div>
-            <h3>Open the full Tally sales register</h3>
-            <p className="muted">Period, invoice count, buyers and latest invoice lines are in Sales analytics &amp; BI.</p>
-          </div>
-          <button className="primary-button" onClick={() => onNavigate?.("salesbi")}>Open Tally register</button>
-        </div>
-      </section>
-    </div>
   );
 }
 

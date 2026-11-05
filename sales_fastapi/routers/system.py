@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, Request
 
@@ -24,9 +24,25 @@ def _redis_ping() -> str:
 @router.get("/config")
 def public_config():
     """Public client config (no secrets)."""
+    deploy_env = settings.DEPLOY_ENV.lower()
+    try:
+        uat_active = settings.UAT_ENABLED and date.fromisoformat(settings.UAT_ENABLED_UNTIL) >= date.today()
+    except ValueError:
+        uat_active = False
+    graph_review_enabled = (
+        settings.ENV.lower() not in {"prod", "production"}
+        and deploy_env in {"dev", "development", "preprod", "stage", "staging", "uat"}
+        and (
+            deploy_env not in {"stage", "staging", "uat"}
+            or uat_active
+        )
+    )
     return {
         "project_name": settings.PROJECT_NAME,
         "version": settings.VERSION,
+        "env": settings.ENV,
+        "deploy_env": settings.DEPLOY_ENV,
+        "knowledge_graph_review_enabled": graph_review_enabled,
         "google_client_id": settings.GOOGLE_CLIENT_ID if settings.google_signin_configured else "",
         "google_gmail_oauth_configured": settings.google_gmail_oauth_configured,
         "dev_mode": settings.AUTH_DEV_MODE,

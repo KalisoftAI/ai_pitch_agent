@@ -146,7 +146,7 @@ class ModelRouter:
         gemma = ("gemma", s.LLM_GEMMA_MODEL)
         echo = ("echo", "echo")
 
-        if spec.name == "generate_outreach_message":
+        if spec.name in {"generate_outreach_message", "knowledge_graph_chat"}:
             chain = [gemma, local_medium, cloud_flash]
         elif spec.tier == Tier.NANO:
             chain = [local_nano, local_small, cloud_flash]

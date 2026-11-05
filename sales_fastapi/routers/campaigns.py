@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from functools import lru_cache
+from types import SimpleNamespace
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
@@ -21,6 +22,7 @@ from ..models import (
     CampaignMessage,
     Contact,
     EmailConnection,
+    MarketingCompany,
     MessageTemplate,
     User,
 )
@@ -95,17 +97,56 @@ def create_campaign(
     if template is None:
         raise HTTPException(status_code=404, detail="Template not found")
 
-    query = db.query(Contact).filter(Contact.user_id == user.id)
-    if payload.filter.intent:
-        query = query.filter(Contact.intent == payload.filter.intent)
-    if payload.filter.source:
-        query = query.filter(Contact.source == payload.filter.source)
-    if payload.filter.q:
-        like = f"%{payload.filter.q}%"
-        query = query.filter(
-            Contact.company.ilike(like) | Contact.name.ilike(like) | Contact.email.ilike(like)
-        )
-    contacts = query.order_by(Contact.created_at.desc()).limit(payload.filter.limit).all()
+    phone_channel = payload.channel in {"whatsapp", "wechat"}
+    if payload.filter.contact_type == "marketing_companies":
+        query = db.query(MarketingCompany).filter(MarketingCompany.user_id == user.id)
+        if payload.filter.category:
+            query = query.filter(MarketingCompany.category.ilike(f"%{payload.filter.category}%"))
+        if payload.filter.call_status:
+            query = query.filter(MarketingCompany.call_status.ilike(f"%{payload.filter.call_status}%"))
+        if payload.filter.funnel_stage:
+            query = query.filter(MarketingCompany.funnel_stage == payload.filter.funnel_stage)
+        if payload.filter.q:
+            like = f"%{payload.filter.q}%"
+            query = query.filter(
+                MarketingCompany.company.ilike(like)
+                | MarketingCompany.contact_name.ilike(like)
+                | MarketingCompany.email.ilike(like)
+                | MarketingCompany.phone.ilike(like)
+                | MarketingCompany.requirements.ilike(like)
+            )
+        address_field = MarketingCompany.phone if phone_channel else MarketingCompany.email
+        records = query.filter(address_field != "").order_by(MarketingCompany.company.asc()).limit(
+            payload.filter.limit
+        ).all()
+        contacts = [
+            SimpleNamespace(
+                id=record.id,
+                company=record.company,
+                name=record.contact_name,
+                email=record.email,
+                phone=record.phone,
+                intent=record.category,
+                domain="",
+                context=record.requirements,
+            )
+            for record in records
+        ]
+    else:
+        query = db.query(Contact).filter(Contact.user_id == user.id)
+        if payload.filter.intent:
+            query = query.filter(Contact.intent == payload.filter.intent)
+        if payload.filter.source:
+            query = query.filter(Contact.source == payload.filter.source)
+        if payload.filter.q:
+            like = f"%{payload.filter.q}%"
+            query = query.filter(
+                Contact.company.ilike(like) | Contact.name.ilike(like) | Contact.email.ilike(like)
+            )
+        address_field = Contact.phone if phone_channel else Contact.email
+        contacts = query.filter(address_field != "").order_by(Contact.created_at.desc()).limit(
+            payload.filter.limit
+        ).all()
     if not contacts:
         raise HTTPException(status_code=400, detail="No contacts matched the campaign filter")
 
@@ -133,9 +174,7 @@ def create_campaign(
                 campaign_id=campaign.id,
                 user_id=user.id,
                 contact_id=contact.id,
-                to_address=contact.phone
-                if payload.channel in {"whatsapp", "wechat"}
-                else contact.email,
+                to_address=contact.phone if phone_channel else contact.email,
                 rendered_subject=subject,
                 rendered_body=body,
                 status="pending_review",
@@ -164,7 +203,7 @@ def _detail(db: Session, campaign: Campaign) -> CampaignDetail:
         db.query(CampaignMessage)
         .filter(CampaignMessage.campaign_id == campaign.id)
         .order_by(CampaignMessage.id.asc())
-        .limit(500)
+        .limit(1000)
         .all()
     )
     return CampaignDetail(

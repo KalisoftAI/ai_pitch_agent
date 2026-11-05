@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   Activity, BarChart3, Bot, BriefcaseBusiness, Building2, CalendarDays, Calculator, Check, Clock,
-  Copy, Database, Edit2, ExternalLink, Eye, Film, FileDown, FileText, Link2, Mail, MapPin, MessageCircle, Mic, Package, Plus, RefreshCw, Save, Search, Send, ShieldCheck,
+  Copy, Database, Edit2, ExternalLink, Eye, Film, FileDown, FileText, Link2, Mail, MapPin, MessageCircle, MessageSquarePlus, Mic, Package, PhoneCall, Plus, RefreshCw, Save, Search, Send, ShieldCheck,
   Sparkles, Target, Trash2, TrendingUp, Truck, UploadCloud, Users, Video, X,
 } from "lucide-react";
 import { CampaignManager } from "./features/CampaignManager";
@@ -140,14 +140,13 @@ export function TallySalesPanel({ onNotice, compact = false }) {
       )}
       {stats.data_available && (
         <>
-          <div className="mini-stats" style={{ marginBottom: 12 }}>
-            <span><b>{fmtMoney(stats.total_value)}</b> sales value</span>
-            <span><b>{fmtNum(stats.invoices)}</b> invoices</span>
-            <span><b>{fmtNum(stats.customers)}</b> buyers</span>
-            <span><b>{fmtNum(stats.total_quantity)}</b> quantity</span>
-            <span><b>{stats.last_sync?.status || "not synced"}</b> last sync{stats.last_sync?.finished_at ? ` · ${String(stats.last_sync.finished_at).slice(0, 16)}` : ""}</span>
+          <div className="tally-stats">
+            <div><small>Sales value</small><b>{fmtMoney(stats.total_value)}</b></div>
+            <div><small>Invoices</small><b>{fmtNum(stats.invoices)}</b></div>
+            <div><small>Buyers</small><b>{fmtNum(stats.customers)}</b></div>
+            <details className="tally-extra"><summary>More register details</summary><div className="tally-extra-body"><span>{fmtNum(stats.total_quantity)} total quantity</span><span>{stats.last_sync?.status || "Not synced"}{stats.last_sync?.finished_at ? ` · ${String(stats.last_sync.finished_at).slice(0, 16)}` : ""}</span></div></details>
           </div>
-          <div className="table-wrap">
+          <div className="table-wrap tally-desktop-table">
             <table>
               <thead><tr><th>Buyer</th><th>Invoices</th><th>Value</th><th>Share</th></tr></thead>
               <tbody>
@@ -163,10 +162,18 @@ export function TallySalesPanel({ onNotice, compact = false }) {
               </tbody>
             </table>
           </div>
+          <div className="tally-mobile-list">
+            {buyers.map((row) => <details className="tally-mobile-row" key={row.buyer}>
+              <summary><span><b>{row.buyer}</b><small>{fmtNum(row.invoices)} invoices</small></span><strong>{fmtMoney(row.value)}</strong></summary>
+              <div className="tally-extra-body"><span>{Math.round((row.value / (stats.total_value || 1)) * 100)}% of sales</span></div>
+            </details>)}
+            {!buyers.length && <p className="muted">No buyer rows for this period.</p>}
+          </div>
           {!compact && sales.length > 0 && (
             <>
-              <div className="section-kicker" style={{ marginTop: 14 }}>LATEST INVOICE LINES</div>
-              <div className="table-wrap">
+              <details className="invoice-details">
+                <summary>Latest invoice lines <span>{sales.length} shown</span></summary>
+              <div className="table-wrap tally-desktop-table">
                 <table>
                   <thead><tr><th>Date</th><th>Buyer</th><th>Item</th><th>Qty</th><th>Value</th></tr></thead>
                   <tbody>
@@ -182,6 +189,13 @@ export function TallySalesPanel({ onNotice, compact = false }) {
                   </tbody>
                 </table>
               </div>
+              <div className="tally-mobile-list">
+                {sales.map((row) => <details className="tally-mobile-row" key={row.id}>
+                  <summary><span><b>{row.buyer}</b><small>{row.sale_date} · {row.voucher_no}</small></span><strong>{fmtMoney(row.value)}</strong></summary>
+                  <div className="tally-extra-body"><span>{row.item_name || "Sales line"}</span><span>{fmtNum(row.quantity)} quantity</span></div>
+                </details>)}
+              </div>
+              </details>
             </>
           )}
         </>
@@ -246,15 +260,22 @@ export function SalesBi({ onNotice }) {
       <div className="two-column">
         <section className="panel">
           <div className="panel-heading"><div><div className="section-kicker">COMPANY MIX</div><h3>Top companies by order value</h3></div><BriefcaseBusiness size={19} className="muted" /></div>
-          <div className="table-wrap"><table><thead><tr><th>Company</th><th>Orders</th><th>Value</th><th>Completion</th></tr></thead><tbody>
+          <div className="table-wrap sales-bi-desktop-table"><table><thead><tr><th>Company</th><th>Orders</th><th>Value</th><th>Completion</th></tr></thead><tbody>
             {(companies || []).map((row) => <tr key={row.company}><td className="table-person"><b>{row.company}</b><div className="bar-track"><div className="bar-fill" style={{ width: `${Math.min(100, (row.orders_value / maxValue) * 100)}%` }} /></div></td><td>{fmtNum(row.orders)}</td><td>{fmtMoney(row.orders_value)}</td><td>{row.completion_pct}%</td></tr>)}
             {!(companies || []).length && <tr><td colSpan={4}><small className="muted">No companies in the latest report.</small></td></tr>}
           </tbody></table></div>
+          <div className="sales-bi-mobile-list">
+            {(companies || []).map((row) => <details className="tally-mobile-row" key={row.company}>
+              <summary><span><b>{row.company}</b><small>{fmtNum(row.orders)} orders</small></span><strong>{fmtMoney(row.orders_value)}</strong></summary>
+              <div className="tally-extra-body"><span>{row.completion_pct}% completion</span><div className="bar-track"><div className="bar-fill" style={{ width: `${Math.min(100, row.completion_pct || 0)}%` }} /></div></div>
+            </details>)}
+            {!(companies || []).length && <p className="muted">No companies in the latest report.</p>}
+          </div>
         </section>
         <section className="panel">
           <div className="panel-heading"><div><div className="section-kicker">DELIVERY / PLANT VIEW</div><h3>Dispatch status</h3></div><Truck size={19} className="muted" /></div>
-          <div className="mini-stats">{(delivery.plants || []).map((plant) => <span key={plant.plant}><b>{plant.completion_pct}%</b> {plant.plant} / {fmtNum(plant.dispatched_qty)} kg</span>)}</div>
-          {(delivery.pending || []).slice(0, 8).map((row) => <div className="connection-row" key={row.dispatch_no}><span className="mail-icon"><Truck size={16} /></span><span><b>{row.customer}</b><small>{row.dispatch_no} / balance {fmtNum(row.balance_qty)} kg / {row.plant}</small></span><span className="status"><i />{row.status}</span></div>)}
+          <details className="delivery-plants"><summary>Plant totals <span>{(delivery.plants || []).length} plants</span></summary><div className="mini-stats">{(delivery.plants || []).map((plant) => <span key={plant.plant}><b>{plant.completion_pct}%</b> {plant.plant} / {fmtNum(plant.dispatched_qty)} kg</span>)}</div></details>
+          {!!delivery.pending?.length && <details className="pending-dispatch-details"><summary>Pending dispatch <span>{delivery.pending.length} lines</span></summary>{delivery.pending.slice(0, 8).map((row) => <div className="connection-row" key={row.dispatch_no}><span className="mail-icon"><Truck size={16} /></span><span><b>{row.customer}</b><small>{row.dispatch_no} / balance {fmtNum(row.balance_qty)} kg / {row.plant}</small></span><span className="status"><i />{row.status}</span></div>)}</details>}
           {!(delivery.pending || []).length && <div className="empty-state"><Check size={22} /><p>No pending dispatch lines.</p></div>}
         </section>
       </div>
@@ -652,6 +673,10 @@ export function CompanyVisits({ onNotice, user }) {
 export function InstoreMails({ onNotice }) {
   const [summary, setSummary] = useState(null);
   const [mails, setMails] = useState([]);
+  const [intentFilter, setIntentFilter] = useState("");
+  const [mailFilters, setMailFilters] = useState({ query: "", subject: "", company: "", since: "", until: "" });
+  const [syncSource, setSyncSource] = useState("auto");
+  const [syncLimit, setSyncLimit] = useState(25);
   const [promptInfo, setPromptInfo] = useState(null);
   const [expertise, setExpertise] = useState("sales_strategist");
   const [model, setModel] = useState("");
@@ -659,10 +684,15 @@ export function InstoreMails({ onNotice }) {
   const [reply, setReply] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  const load = async () => {
+  const load = async (intent = intentFilter, filters = mailFilters) => {
     try {
+      const params = new URLSearchParams({ limit: "50" });
+      if (intent) params.set("intent", intent);
+      Object.entries(filters).forEach(([key, value]) => { if (value) params.set(key, value); });
       const [nextSummary, nextMails, nextPrompts] = await Promise.all([
-        request("/instore/summary"), request("/instore/mails?limit=12"), request("/instore/prompts"),
+        request("/instore/summary"),
+        request(`/instore/mails?${params.toString()}`),
+        request("/instore/prompts"),
       ]);
       setSummary(nextSummary); setMails(nextMails.mails || []); setPromptInfo(nextPrompts);
       setModel((current) => current || nextPrompts.models?.default || "");
@@ -673,7 +703,7 @@ export function InstoreMails({ onNotice }) {
   const sync = async () => {
     setBusy(true);
     try {
-      const result = await request("/instore/sync", { method: "POST", body: JSON.stringify({ source: "auto", include_body: true, include_dump: true }) });
+      const result = await request("/instore/sync", { method: "POST", body: JSON.stringify({ source: syncSource, limit: syncLimit, query: mailFilters.query, include_body: true, include_dump: syncSource === "auto" || syncSource === "dump" }) });
       onNotice({ type: result.ok ? "success" : "error", text: `Instore sync: ${result.insights?.total || 0} mails, ${result.missing_links?.count || 0} missing links, ${result.stored?.gcs_uploaded ? "GCS copy saved" : "local copy saved"}.` });
       await load();
     } catch (error) { onNotice({ type: "error", text: error.message }); }
@@ -685,7 +715,7 @@ export function InstoreMails({ onNotice }) {
     if (!question.trim()) return;
     setBusy(true); setReply(null);
     try {
-      const result = await request("/instore/ask", { method: "POST", body: JSON.stringify({ question: question.trim(), expertise, model }) });
+      const result = await request("/instore/ask", { method: "POST", body: JSON.stringify({ question: question.trim(), expertise, model, intent: intentFilter, ...mailFilters }) });
       setReply(result);
     } catch (error) { onNotice({ type: "error", text: error.message }); }
     finally { setBusy(false); }
@@ -704,6 +734,20 @@ export function InstoreMails({ onNotice }) {
           <button className="primary-button" onClick={sync} disabled={busy}><Mail size={15} /> {busy ? "Working..." : "Sync mails"}</button>
         </div>
       </div>
+      <section className="panel mail-search-panel">
+        <div className="panel-heading"><div><div className="section-kicker">RECENT MAIL SEARCH</div><h3>Fetch a filtered sample</h3></div></div>
+        <div className="filter-grid">
+          <label>Keyword<input value={mailFilters.query} onChange={(event) => setMailFilters({ ...mailFilters, query: event.target.value })} placeholder="rate, product, order number" /></label>
+          <label>Subject<input value={mailFilters.subject} onChange={(event) => setMailFilters({ ...mailFilters, subject: event.target.value })} placeholder="Subject contains" /></label>
+          <label>Company / contact<input value={mailFilters.company} onChange={(event) => setMailFilters({ ...mailFilters, company: event.target.value })} placeholder="Company or sender" /></label>
+          <label>From date<input type="date" value={mailFilters.since} onChange={(event) => setMailFilters({ ...mailFilters, since: event.target.value })} /></label>
+          <label>To date<input type="date" value={mailFilters.until} onChange={(event) => setMailFilters({ ...mailFilters, until: event.target.value })} /></label>
+          <label>Intent<select value={intentFilter} onChange={(event) => setIntentFilter(event.target.value)}><option value="">All intents</option>{Object.keys(insights.by_intent || {}).map((intent) => <option key={intent} value={intent}>{intent.replaceAll("_", " ")}</option>)}</select></label>
+          <label>Mailbox source<select value={syncSource} onChange={(event) => setSyncSource(event.target.value)}><option value="auto">Connected mailbox + sample data</option><option value="gmail">Gmail OAuth</option><option value="imap">IMAP mailbox</option><option value="dump">Sample / exported mail</option></select></label>
+          <label>Recent sample size<select value={syncLimit} onChange={(event) => setSyncLimit(Number(event.target.value))}><option value={10}>10 messages</option><option value={25}>25 messages</option><option value={50}>50 messages</option><option value={100}>100 messages</option></select></label>
+        </div>
+        <div className="button-row"><button className="secondary-button" onClick={() => { const clean = { query: "", subject: "", company: "", since: "", until: "" }; setMailFilters(clean); setIntentFilter(""); load("", clean); }}><X size={15} /> Clear filters</button><button className="primary-button" onClick={() => load()}><Search size={15} /> Apply filters</button></div>
+      </section>
       <div className="metric-grid">
         <Metric icon={Mail} label="Mails" value={insights.total ?? "--"} detail={`${insights.linked || 0} linked / ${insights.unlinked || 0} missing`} accent />
         <Metric icon={Link2} label="Missing links" value={missing.count ?? "--"} detail={Object.keys(missing.domains || {}).slice(0, 3).join(", ") || "no sender gaps"} />
@@ -715,11 +759,11 @@ export function InstoreMails({ onNotice }) {
       )}
       <div className="two-column">
         <section className="panel">
-          <div className="panel-heading"><div><div className="section-kicker">LATEST MAIL</div><h3>Sender ? contact links</h3></div><Mail size={19} className="muted" /></div>
+          <div className="panel-heading"><div><div className="section-kicker">LATEST MAIL</div><h3>Sender / contact links</h3><p className="muted">{mails.length} recent message(s) match the current filters.</p></div></div>
           <div className="mini-stats" style={{ marginBottom: 12 }}>
             {Object.entries(insights.by_intent || {}).slice(0, 6).map(([intent, count]) => <span key={intent}><b>{count}</b> {intent}</span>)}
           </div>
-          <div className="table-wrap"><table><thead><tr><th>Mail / client</th><th>Date</th><th>Intent</th><th>Outcome</th><th>Link</th></tr></thead><tbody>
+          <div className="table-wrap instore-mail-table"><table><thead><tr><th>Mail / client</th><th>Date</th><th>Intent</th><th>Outcome</th><th>Link</th></tr></thead><tbody>
             {mails.map((mail) => <tr key={mail.id}>
               <td className="table-person mail-cell">
                 <details className="mail-expand">
@@ -739,6 +783,21 @@ export function InstoreMails({ onNotice }) {
             </tr>)}
             {!mails.length && <tr><td colSpan={5}><small className="muted">No mails in the current snapshot.</small></td></tr>}
           </tbody></table></div>
+          <div className="instore-mail-mobile">
+            {mails.map((mail) => <details className="instore-mail-card" key={`mobile-${mail.id}`}>
+              <summary><span><b>{mail.working_title || mail.subject || "(no subject)"}</b><small>{mail.client_name || mail.from_email || mail.to || "Unknown sender"} · {String(mail.date || "").slice(0, 10)}</small></span><span className="contact-tag">{mail.intent || "general"}</span></summary>
+              <div className="mail-detail">
+                <small className="muted">{mail.from_email || mail.to || ""}{mail.owner_email ? ` · owner ${mail.owner_email}` : ""}</small>
+                {mail.context && <p><b>Context:</b> {mail.context}</p>}
+                {mail.snippet && <p>{mail.snippet}</p>}
+                {mail.outcome && <p><b>Outcome:</b> {mail.outcome}</p>}
+                {(mail.entities || []).length > 0 && <div className="mini-stats">{mail.entities.slice(0, 8).map((entity) => <span key={entity}>{entity}</span>)}</div>}
+                {(mail.attachments || []).length > 0 && <div className="mail-attachments"><b>Attachments</b>{mail.attachments.map((item) => <span key={item.name}>{item.name} · {item.purpose || "document"}</span>)}</div>}
+                <span className={`status-pill ${mail.contact_id ? "approved" : "rejected"}`}>{mail.contact_id ? "Contact linked" : "Contact missing"}</span>
+              </div>
+            </details>)}
+            {!mails.length && <div className="empty-state"><Mail size={20} /><p>No recent mail matches these filters.</p></div>}
+          </div>
           {(missing.samples || []).length > 0 && <div className="status-breakdown" style={{ marginTop: 12 }}>
             {(missing.samples || []).slice(0, 6).map((item) => <span className="status-chip warn" key={`${item.from_email}-${item.subject}`}><b>{item.from_email || item.domain}</b> {item.subject?.slice(0, 40)}</span>)}
           </div>}
@@ -821,7 +880,8 @@ export function SocialAi({ onNotice }) {
         </section>
         <section className="panel">
           <div className="panel-heading"><div><div className="section-kicker">SOCIAL CHANNELS</div><h3>Live configuration status</h3></div><Link2 size={19} className="muted" /></div>
-          <Service status={!!instagram.configured} icon={Video} label="Instagram" value={instagram.configured ? (instagram.profile?.username || "configured") : "credentials required"} />
+          <Service status={!!instagram.configured} icon={Video} label="Instagram" value={instagram.configured ? "Kalika Enterprises" : "credentials required"} />
+          <a className="text-button" href={INSTAGRAM_PROFILE} target="_blank" rel="noreferrer">Kalika Enterprises Instagram company page <ExternalLink size={14} /></a>
           <Service status={!!social?.youtube?.configured} icon={Video} label="YouTube" value={social?.youtube?.configured ? "snapshot cached" : "not synced"} />
           <Service status={!!social?.linkedin?.configured} icon={BriefcaseBusiness} label="LinkedIn" value={social?.linkedin?.configured ? `${social.linkedin.profiles} profiles` : "token required"} />
           <Service status={!!social?.reddit?.configured} icon={Search} label="Reddit" value={social?.reddit?.configured ? `${social.reddit.posts} posts` : "credentials required"} />
@@ -915,6 +975,8 @@ export function Access({ onNotice, user }) {
 
 // ---------------------------------------------------------------- Marketing companies
 const DIWALI_REEL = "https://www.instagram.com/reel/DfB9Fa4BIsK/?utm_source=ig_web_copy_link&exln=NTc4MTIwNjQ2YQ==";
+const INSTAGRAM_PROFILE = "https://www.instagram.com/kalikaenterprises1667/";
+const PACKAGING_SHOWCASE = "https://www.instagram.com/reel/DejmP7AMb5j/?utm_source=ig_web_copy_link&rpxt=MzRlODBiNWFlZA==&srtk=MzRlODBiNWFlZA==";
 
 const CURATED_MESSAGES = [
   {
@@ -971,7 +1033,7 @@ const CURATED_MESSAGES = [
 
 const CHANNEL_VIDEOS = [
   { title: "Diwali festive reel", link: DIWALI_REEL, tag: "Instagram", note: "Share with Diwali greetings" },
-  { title: "Packaging showcase", link: "https://www.instagram.com/kalikaenterprises/", tag: "Instagram", note: "Short packaging message" },
+  { title: "Packaging showcase", link: PACKAGING_SHOWCASE, tag: "Instagram", note: "Kalika Enterprises packaging reel" },
   { title: "Plant & capacity tour", link: "https://www.youtube.com/@kalikaenterprises", tag: "YouTube", note: "Build trust with new customers" },
   { title: "Product demo", link: "https://www.youtube.com/@kalikaenterprises", tag: "YouTube", note: "Attach to follow-ups" },
 ];
@@ -1123,6 +1185,17 @@ export function MarketingCompanies({ onNotice }) {
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [funnelStageFilter, setFunnelStageFilter] = useState(() => {
+    const saved = sessionStorage.getItem("marketing_funnel_filter") || "";
+    sessionStorage.removeItem("marketing_funnel_filter");
+    return saved;
+  });
+  const [salesProgressFilter, setSalesProgressFilter] = useState("");
+  const [dueFollowupsOnly, setDueFollowupsOnly] = useState(() => {
+    const saved = sessionStorage.getItem("marketing_due_follow_up") === "true";
+    sessionStorage.removeItem("marketing_due_follow_up");
+    return saved;
+  });
   const [editing, setEditing] = useState({});
   const [busy, setBusy] = useState(false);
   const fileInputRef = React.useRef(null);
@@ -1132,6 +1205,9 @@ export function MarketingCompanies({ onNotice }) {
     if (query) params.set("q", query);
     if (categoryFilter) params.set("category", categoryFilter);
     if (statusFilter) params.set("call_status", statusFilter);
+    if (funnelStageFilter) params.set("funnel_stage", funnelStageFilter);
+    if (salesProgressFilter) params.set("sales_progress", salesProgressFilter);
+    if (dueFollowupsOnly) params.set("due_follow_up", "true");
     try {
       const [nextRows, nextStats] = await Promise.all([
         request(`/marketing-companies?${params.toString()}`),
@@ -1150,7 +1226,7 @@ export function MarketingCompanies({ onNotice }) {
   useEffect(() => {
     const id = setTimeout(() => load(), 250);
     return () => clearTimeout(id);
-  }, [debounced, categoryFilter, statusFilter]);
+  }, [debounced, categoryFilter, statusFilter, funnelStageFilter, salesProgressFilter, dueFollowupsOnly]);
 
   const updateField = async (id, field, value) => {
     try {
@@ -1223,7 +1299,7 @@ export function MarketingCompanies({ onNotice }) {
       const result = await request("/marketing-companies/sync", { method: "POST" });
       onNotice({
         type: result.ok ? "success" : "error",
-        text: `Synced from GCS: ${result.imported} new, ${result.updated} updated, ${result.skipped} skipped.`,
+        text: `Synced ${result.sources?.length || 0} GCS file(s): ${result.imported} new, ${result.updated} refreshed, ${result.skipped} unchanged.${result.warnings?.length ? ` ${result.warnings.join("; ")}` : ""}`,
       });
       await load();
     } catch (error) {
@@ -1235,6 +1311,16 @@ export function MarketingCompanies({ onNotice }) {
 
   const categories = stats ? Object.keys(stats.by_category || {}).sort() : [];
   const statuses = stats ? Object.keys(stats.by_call_status || {}).sort() : [];
+  const funnelStages = ["awareness", "interest", "decision", "action"];
+  const progressOptions = ["new", "video_sent", "catalog_sent", "requirements_requested", "rate_requested", "quote_sent", "material_sent"];
+  const copyPhone = async (phone) => {
+    try {
+      await navigator.clipboard.writeText(phone);
+      onNotice({ type: "success", text: "Phone number copied." });
+    } catch {
+      onNotice({ type: "error", text: "Clipboard unavailable — copy the number manually." });
+    }
+  };
 
   return (
     <div className="content">
@@ -1258,7 +1344,7 @@ export function MarketingCompanies({ onNotice }) {
             />
           </label>
           <button className="secondary-button" onClick={syncFromGCS} disabled={busy}>
-            <Database size={16} />{busy ? "Syncing..." : "Sync from GCS"}
+            <Database size={16} />{busy ? "Syncing..." : "Sync GCS files"}
           </button>
           <button className="primary-button" onClick={runImport} disabled={busy}>
             <Database size={16} />{busy ? "Importing..." : "Import Default"}
@@ -1269,27 +1355,36 @@ export function MarketingCompanies({ onNotice }) {
       {stats && (
         <section className="panel studio-panel">
           <div className="panel-heading">
-            <div><div className="section-kicker">MARKETING FUNNEL</div><h3>Refine the funnel</h3></div>
+            <div><div className="section-kicker">MARKETING FUNNEL</div><h3>Company coverage</h3></div>
             <span className="muted">{fmtNum(stats.total)} companies</span>
           </div>
-          <div className="funnel-fill">
+          <div className="marketing-stat-grid">
             {[
-              ["In list", stats.total],
-              ["With phone", stats.with_phone],
-              ["With email", stats.with_email],
-              ["With requirements", stats.with_requirements],
+              ["Companies", stats.total],
+              ["Phone", stats.with_phone],
+              ["Email", stats.with_email],
+              ["Requirements", stats.with_requirements],
+              ["Follow-ups due", stats.follow_up_due || 0],
             ].map(([label, value]) => {
               const pct = stats.total ? Math.round((value / stats.total) * 100) : 0;
               return (
-                <div className="funnel-fill-row" key={label}>
-                  <span>{label}</span>
-                  <div className="bar-track"><div className="bar-fill" style={{ width: `${pct}%` }} /></div>
+                <div className="marketing-stat" key={label}>
+                  <small>{label}</small>
                   <b>{fmtNum(value)}</b>
-                  <small className="muted">{pct}%</small>
+                  <span>{pct}%</span>
                 </div>
               );
             })}
           </div>
+          <details className="marketing-breakdown">
+            <summary>Funnel, progress and source breakdown</summary>
+            <div className="marketing-breakdown-grid">
+              <div><b>Funnel stage</b>{Object.entries(stats.by_funnel_stage || {}).map(([label, count]) => <button className="funnel-stat-link" key={label} onClick={() => setFunnelStageFilter(label)}>{label}<strong>{fmtNum(count)}</strong></button>)}</div>
+              <div><b>Next progress</b>{Object.entries(stats.by_sales_progress || {}).map(([label, count]) => <span key={label}>{label.replaceAll("_", " ")}<strong>{fmtNum(count)}</strong></span>)}</div>
+              <div><b>Categories</b>{Object.entries(stats.by_category || {}).map(([label, count]) => <span key={label}>{label}<strong>{fmtNum(count)}</strong></span>)}</div>
+              <div><b>Call status / source</b>{Object.entries(stats.by_call_status || {}).map(([label, count]) => <span key={label}>{label}<strong>{fmtNum(count)}</strong></span>)}{Object.entries(stats.by_source || {}).map(([label, count]) => <span key={label}>{label}<strong>{fmtNum(count)}</strong></span>)}</div>
+            </div>
+          </details>
         </section>
       )}
       <section className="panel table-panel">
@@ -1303,9 +1398,16 @@ export function MarketingCompanies({ onNotice }) {
             <option value="">All call statuses</option>
             {statuses.map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
-          <span className="muted">{rows.length} shown</span>
+          <select value={funnelStageFilter} onChange={(event) => setFunnelStageFilter(event.target.value)} aria-label="Filter by funnel stage">
+            <option value="">All funnel stages</option>{funnelStages.map((stage) => <option key={stage} value={stage}>{stage}</option>)}
+          </select>
+          <select value={salesProgressFilter} onChange={(event) => setSalesProgressFilter(event.target.value)} aria-label="Filter by sales progress">
+            <option value="">All progress</option>{progressOptions.map((progress) => <option key={progress} value={progress}>{progress.replaceAll("_", " ")}</option>)}
+          </select>
+          <label className="follow-up-toggle"><input type="checkbox" checked={dueFollowupsOnly} onChange={(event) => setDueFollowupsOnly(event.target.checked)} /> Follow-ups due</label>
+          <span className="muted">{rows.length} shown{stats?.total > rows.length ? ` of ${fmtNum(stats.total)}` : ""}</span>
         </div>
-        <div className="table-wrap">
+        <div className="table-wrap marketing-desktop-table">
           <table>
             <thead>
               <tr>
@@ -1313,6 +1415,9 @@ export function MarketingCompanies({ onNotice }) {
                 <th>Contact</th>
                 <th>Category</th>
                 <th>Call status</th>
+                <th>Funnel</th>
+                <th>Progress</th>
+                <th>Follow-up</th>
                 <th>Requirements</th>
               </tr>
             </thead>
@@ -1328,6 +1433,9 @@ export function MarketingCompanies({ onNotice }) {
                     </td>
                     <td>{row.category || "-"}</td>
                     <td>{row.call_status || "-"}</td>
+                    <td><select value={row.funnel_stage || "awareness"} onChange={(event) => updateField(row.id, "funnel_stage", event.target.value)} aria-label={`Funnel stage for ${row.company}`}>{funnelStages.map((stage) => <option key={stage} value={stage}>{stage}</option>)}</select></td>
+                    <td><select value={row.sales_progress || "new"} onChange={(event) => updateField(row.id, "sales_progress", event.target.value)} aria-label={`Sales progress for ${row.company}`}>{progressOptions.map((progress) => <option key={progress} value={progress}>{progress.replaceAll("_", " ")}</option>)}</select></td>
+                    <td><input aria-label={`Follow-up date for ${row.company}`} type="date" value={row.follow_up_date || ""} onChange={(event) => updateField(row.id, "follow_up_date", event.target.value)} /></td>
                     <td>
                       <textarea
                         rows={2}
@@ -1344,9 +1452,53 @@ export function MarketingCompanies({ onNotice }) {
                   </tr>
                 );
               })}
-              {!rows.length && <tr><td colSpan={5}><div className="empty-state"><BriefcaseBusiness size={22} /><p>No marketing companies yet.</p><small>Import the Kalika marketing workbook to populate this view.</small></div></td></tr>}
+              {!rows.length && <tr><td colSpan={8}><div className="empty-state"><BriefcaseBusiness size={22} /><p>No marketing companies yet.</p><small>Sync the latest marketing workbook and customers CSV from GCS.</small></div></td></tr>}
             </tbody>
           </table>
+        </div>
+        <div className="marketing-mobile-list">
+          {rows.map((row) => {
+            const editingRequirements = (editing[row.id]?.requirements ?? row.requirements) || "";
+            const phoneHref = String(row.phone || "").replace(/[^\d+]/g, "");
+            return (
+              <article className="marketing-company-card" key={row.id}>
+                <div className="marketing-company-heading">
+                  <div><b>{row.company}</b><small>{row.contact_name || "Contact not listed"}</small></div>
+                  <span className="contact-tag">{row.funnel_stage || "awareness"}</span>
+                </div>
+                <div className="marketing-company-meta"><span>{row.category || "Uncategorized"}</span><span>{row.call_status || "No call status"}</span><span>{(row.sales_progress || "new").replaceAll("_", " ")}</span>{row.follow_up_date && <span>Follow-up {row.follow_up_date}</span>}</div>
+                <div className="marketing-company-actions">
+                  {row.phone && <>
+                    <a className="secondary-button" href={`tel:${phoneHref}`} aria-label={`Call ${row.phone}`}><PhoneCall size={16} /> Call</a>
+                    <button className="icon-button" type="button" title="Copy phone number" aria-label={`Copy ${row.phone}`} onClick={() => copyPhone(row.phone)}><Copy size={17} /></button>
+                  </>}
+                  {row.email && <a className="secondary-button" href={`mailto:${row.email}`}><Mail size={16} /> Email</a>}
+                </div>
+                <details className="marketing-company-details">
+                  <summary>Progress, follow-up and contact details</summary>
+                  <label>Funnel stage<select value={row.funnel_stage || "awareness"} onChange={(event) => updateField(row.id, "funnel_stage", event.target.value)}>{funnelStages.map((stage) => <option key={stage} value={stage}>{stage}</option>)}</select></label>
+                  <label>Progress<select value={row.sales_progress || "new"} onChange={(event) => updateField(row.id, "sales_progress", event.target.value)}>{progressOptions.map((progress) => <option key={progress} value={progress}>{progress.replaceAll("_", " ")}</option>)}</select></label>
+                  <label>Call status<input value={editing[row.id]?.call_status ?? row.call_status ?? ""} onChange={(event) => setEditing((previous) => ({ ...previous, [row.id]: { ...(previous[row.id] || {}), call_status: event.target.value } }))} onBlur={(event) => { if (event.target.value !== row.call_status) updateField(row.id, "call_status", event.target.value); }} placeholder="Not called, answered, call later..." /></label>
+                  <label>Next follow-up<input type="date" value={row.follow_up_date || ""} onChange={(event) => updateField(row.id, "follow_up_date", event.target.value)} /></label>
+                  <label>Next action<input value={editing[row.id]?.next_action ?? row.next_action ?? ""} onChange={(event) => setEditing((previous) => ({ ...previous, [row.id]: { ...(previous[row.id] || {}), next_action: event.target.value } }))} onBlur={(event) => { if (event.target.value !== row.next_action) updateField(row.id, "next_action", event.target.value); }} placeholder="Call about quote, send catalog..." /></label>
+                  <label>Requirements<textarea
+                    rows={3}
+                    value={editingRequirements}
+                    onChange={(event) => setEditing((previous) => ({
+                      ...previous,
+                      [row.id]: { ...(previous[row.id] || {}), requirements: event.target.value },
+                    }))}
+                    onBlur={(event) => {
+                      if (event.target.value !== row.requirements) updateField(row.id, "requirements", event.target.value);
+                    }}
+                  /></label>
+                  {row.email && <p><b>Email:</b> <a href={`mailto:${row.email}`}>{row.email}</a></p>}
+                  <p><b>Source:</b> {row.source_sheet || "Not recorded"}{row.source_row ? ` · row ${row.source_row}` : ""}</p>
+                </details>
+              </article>
+            );
+          })}
+          {!rows.length && <div className="empty-state"><BriefcaseBusiness size={22} /><p>No marketing companies yet.</p><small>Import the Kalika marketing workbook to populate this view.</small></div>}
         </div>
       </section>
     </div>
@@ -1650,6 +1802,177 @@ export function Templates({ onNotice }) {
 }
 
 export { CampaignManager };
+
+// ---------------------------------------------------------------- Knowledge graph review (DEV / UAT)
+export function KnowledgeGraphReview({ onNotice, user, config }) {
+  const [graph, setGraph] = useState(null);
+  const [summary, setSummary] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [feedback, setFeedback] = useState([]);
+  const [statusFilter, setStatusFilter] = useState("pending");
+  const [teamQueue, setTeamQueue] = useState(false);
+  const [selectedNode, setSelectedNode] = useState("");
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState(null);
+  const [correction, setCorrection] = useState("");
+  const [rating, setRating] = useState(3);
+  const [busy, setBusy] = useState(false);
+  const isAdmin = (user?.email || "").toLowerCase() === "ai.solutions@kalisoftai.in" || (user?.role || "").toLowerCase() === "admin";
+
+  const load = async () => {
+    try {
+      const [nextSummary, nextGraph, nextReviews, nextFeedback, uat] = await Promise.all([
+        request("/knowledge-graph/summary"),
+        request("/knowledge-graph"),
+        request(`/knowledge-graph/reviews?status=${statusFilter}&limit=200${teamQueue && isAdmin ? "&team=true" : ""}`),
+        request(`/knowledge-graph/feedback${teamQueue && isAdmin ? "?team=true" : ""}`),
+        request("/ops/uat"),
+      ]);
+      setSummary({ ...nextSummary, uat });
+      setGraph(nextGraph);
+      setReviews(nextReviews.items || []);
+      setFeedback(nextFeedback || []);
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+  };
+  useEffect(() => { load(); }, [statusFilter, teamQueue]);
+
+  const build = async () => {
+    setBusy(true);
+    try {
+      const result = await request("/knowledge-graph/build", { method: "POST" });
+      onNotice({ type: "success", text: `Graph snapshot ${result.version} built: ${result.stats.nodes} nodes, ${result.stats.edges} edges.` });
+      await load();
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+    finally { setBusy(false); }
+  };
+
+  const decide = async (item, action) => {
+    try {
+      await request(`/knowledge-graph/reviews/${item.edge_key}?graph_owner_id=${item.graph_owner_id || 0}`, {
+        method: "POST",
+        body: JSON.stringify({ action, note: item.reviewNote || "" }),
+      });
+      onNotice({ type: "success", text: `Relationship ${action}ed.` });
+      await load();
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+  };
+
+  const ask = async (event) => {
+    event.preventDefault();
+    if (!question.trim()) return;
+    setBusy(true);
+    try {
+      setAnswer(await request("/knowledge-graph/chat", {
+        method: "POST",
+        body: JSON.stringify({ question: question.trim(), selected_node: selectedNode }),
+      }));
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+    finally { setBusy(false); }
+  };
+
+  const submitFeedback = async () => {
+    if (!answer || !question.trim()) return;
+    setBusy(true);
+    try {
+      await request("/knowledge-graph/feedback", {
+        method: "POST",
+        body: JSON.stringify({
+          graph_version: answer.graph_version,
+          question: question.trim(),
+          answer: answer.reply,
+          correction,
+          rating,
+        }),
+      });
+      setCorrection("");
+      onNotice({ type: "success", text: "Feedback saved for human evaluation; it does not train a model automatically." });
+      await load();
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+    finally { setBusy(false); }
+  };
+
+  const reviewFeedback = async (item, action) => {
+    try {
+      await request(`/knowledge-graph/feedback/${item.id}/review?graph_owner_id=${item.graph_owner_id || 0}`, {
+        method: "POST",
+        body: JSON.stringify({ action, note: "Reviewed in DEV/UAT knowledge graph workspace." }),
+      });
+      onNotice({ type: "success", text: `Feedback sample ${action}ed for evaluation.` });
+      await load();
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+  };
+
+  const nodes = graph?.nodes || [];
+  const edges = graph?.edges || [];
+  const nodeLabels = Object.fromEntries(nodes.map((node) => [node.id, node.label || node.id]));
+  const visibleEdges = selectedNode
+    ? edges.filter((edge) => edge.source === selectedNode || edge.target === selectedNode)
+    : edges;
+
+  return (
+    <div className="content dash knowledge-graph-page">
+      <div className="page-heading">
+        <div><div className="section-kicker">{summary?.environment || config?.deploy_env || "DEV / UAT"} · REVIEW WORKSPACE</div><h2>Knowledge graph</h2><p className="muted">Explore normalized contacts, companies, mail and visit links. Suggested relationships stay pending until reviewed.</p></div>
+        <div className="button-row">
+          {isAdmin && <button className="secondary-button" onClick={() => request("/sync/all", { method: "POST" }).then(() => onNotice({ type: "success", text: "Source sync completed." })).then(load).catch((error) => onNotice({ type: "error", text: error.message }))} disabled={busy}><RefreshCw size={15} /> Sync sources</button>}
+          <button className="primary-button" onClick={build} disabled={busy}><Activity size={15} className={busy ? "spin" : ""} /> {busy ? "Building..." : "Build snapshot"}</button>
+        </div>
+      </div>
+      <div className="kg-environment-note"><ShieldCheck size={16} /><span><b>{summary?.environment || config?.deploy_env || "development"}</b> · {summary?.uat?.uat_active ? `UAT window active until ${summary.uat.enabled_until}` : "DEV / pre-production review"} · {summary?.storage || "snapshot not built"} · {summary?.generated_at ? `updated ${String(summary.generated_at).slice(0, 16).replace("T", " ")}` : "no snapshot yet"}</span></div>
+
+      <div className="metric-grid kg-stats">
+        <Metric icon={Building2} label="Nodes" value={summary?.stats?.nodes ?? 0} detail={Object.entries(summary?.stats?.nodes_by_kind || {}).map(([kind, count]) => `${count} ${kind}`).join(" · ") || "no data"} accent />
+        <Metric icon={Link2} label="Relationships" value={summary?.stats?.edges ?? 0} detail={`${Object.keys(summary?.stats?.edges_by_relation || {}).length} relation types`} />
+        <Metric icon={Clock} label="Needs review" value={summary?.pending_reviews ?? 0} detail="suggestions are not confirmed" accent />
+        <Metric icon={Database} label="Sources" value={Object.keys(summary?.stats?.sources || {}).length} detail={Object.entries(summary?.stats?.sources || {}).map(([key, count]) => `${count} ${key.replaceAll("_", " ")}`).join(" · ") || "sync sources first"} />
+      </div>
+
+      <div className="two-column">
+        <section className="panel">
+          <div className="panel-heading"><div><div className="section-kicker">ENTITY NODES</div><h3>{nodes.length} nodes</h3></div><select value={selectedNode} onChange={(event) => setSelectedNode(event.target.value)} aria-label="Filter graph by node"><option value="">All nodes</option>{nodes.map((node) => <option key={node.id} value={node.id}>{node.kind}: {node.label}</option>)}</select></div>
+          <div className="kg-node-list">
+            {nodes.slice(0, 300).map((node) => <button className={`kg-node ${node.id === selectedNode ? "active" : ""}`} key={node.id} onClick={() => setSelectedNode(node.id === selectedNode ? "" : node.id)}>
+              <span className="kg-kind">{node.kind}</span><b>{node.label}</b><small>{node.company || node.intent || node.funnel_stage || node.date || node.source || ""}</small>
+            </button>)}
+            {!nodes.length && <div className="empty-state"><Database size={22} /><p>No graph snapshot yet.</p><small>Sync available data, then build a snapshot.</small></div>}
+          </div>
+        </section>
+        <section className="panel">
+          <div className="panel-heading"><div><div className="section-kicker">RELATIONSHIPS</div><h3>{visibleEdges.length} edges</h3></div><span className="status-pill">{summary?.version || "not built"}</span></div>
+          <div className="kg-edge-list">
+            {visibleEdges.slice(0, 300).map((edge) => <article className="kg-edge" key={edge.id}>
+              <div className="kg-edge-flow"><b>{nodeLabels[edge.source] || edge.source}</b><span>{edge.relation.replaceAll("_", " ")}</span><b>{nodeLabels[edge.target] || edge.target}</b></div>
+              <div className="kg-edge-meta"><span className={`status-pill ${edge.review_status === "accepted" ? "approved" : edge.review_status === "rejected" ? "rejected" : ""}`}>{edge.review_status}</span><span>{Math.round((edge.confidence || 0) * 100)}% match</span></div>
+              {edge.evidence && <small className="muted">{edge.evidence}</small>}
+            </article>)}
+            {!visibleEdges.length && <div className="empty-state"><Link2 size={22} /><p>No relationships yet.</p><small>Choose a node or build a snapshot.</small></div>}
+          </div>
+        </section>
+      </div>
+
+      <section className="panel" style={{ marginTop: 14 }}>
+        <div className="panel-heading"><div><div className="section-kicker">HUMAN VALIDATION</div><h3>Suggested relationships</h3></div><div className="button-row">{isAdmin && <button className={`secondary-button ${teamQueue ? "active" : ""}`} onClick={() => setTeamQueue(!teamQueue)}><Users size={15} /> {teamQueue ? "Team queue" : "My queue"}</button>}<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="pending">Pending</option><option value="accepted">Accepted</option><option value="rejected">Rejected</option></select></div></div>
+        <div className="kg-review-list">
+          {reviews.map((item) => <article className="kg-review" key={`${item.graph_owner_id}-${item.edge_key}`}>
+            <div className="kg-edge-flow"><b>{item.source}</b><span>{item.relation.replaceAll("_", " ")}</span><b>{item.target}</b></div>
+            <p>{item.evidence}</p><small className="muted">{Math.round(item.confidence * 100)}% similarity · {item.graph_version}{teamQueue ? ` · user ${item.graph_owner_id}` : ""}</small>
+            {item.status === "pending" && <div className="button-row"><button className="primary-button" onClick={() => decide(item, "accept")}><Check size={15} /> Accept</button><button className="secondary-button danger-button" onClick={() => decide(item, "reject")}><X size={15} /> Reject</button></div>}
+            {item.status !== "pending" && <span className={`status-pill ${item.status === "accepted" ? "approved" : "rejected"}`}>{item.status} by {item.reviewer}</span>}
+          </article>)}
+          {!reviews.length && <div className="empty-state"><Check size={22} /><p>No {statusFilter} relationships.</p></div>}
+        </div>
+      </section>
+
+      <section className="panel" style={{ marginTop: 14 }}>
+        <div className="panel-heading"><div><div className="section-kicker">GRAPH ASSISTANT</div><h3>Ask, verify, then give feedback</h3></div><Bot size={19} className="muted" /></div>
+        <form onSubmit={ask} className="kg-chat-form"><select value={selectedNode} onChange={(event) => setSelectedNode(event.target.value)}><option value="">Whole graph</option>{nodes.map((node) => <option key={node.id} value={node.id}>{node.kind}: {node.label}</option>)}</select><textarea value={question} onChange={(event) => setQuestion(event.target.value)} rows={2} placeholder="Ask about a company, source, or relationship..." /><button className="primary-button" disabled={busy || !summary?.version}><Send size={15} /> {busy ? "Reviewing..." : "Ask about graph"}</button></form>
+        {answer && <div className="kg-chat-answer"><div className="chat-head"><b>{answer.model} · {answer.provider}</b><small>{answer.cost_micros} micro-USD</small></div><p>{answer.reply}</p><div className="kg-feedback-form"><label>Rating<select value={rating} onChange={(event) => setRating(Number(event.target.value))}><option value={5}>Helpful</option><option value={4}>Mostly helpful</option><option value={3}>Needs review</option><option value={2}>Mostly incorrect</option><option value={1}>Incorrect</option></select></label><label>Correction / evidence<textarea rows={2} value={correction} onChange={(event) => setCorrection(event.target.value)} placeholder="Optional correction for human evaluation" /></label><button className="secondary-button" onClick={submitFeedback} disabled={busy}><MessageSquarePlus size={15} /> Submit feedback</button></div></div>}
+        <small className="muted">Feedback is stored for human evaluation; it does not update model weights automatically.</small>
+      </section>
+      {!!feedback.length && <section className="panel" style={{ marginTop: 14 }}><div className="panel-heading"><div><div className="section-kicker">HUMAN-EVALUATED CHAT SAMPLES</div><h3>{feedback.length} recent sample(s)</h3></div><span className="status-pill">{teamQueue ? "team" : "mine"}</span></div><div className="kg-feedback-history-list">{feedback.slice(0, 20).map((item) => <article className="kg-review" key={`${item.graph_owner_id || user?.id}-${item.id}`}><div className="chat-head"><b>Rating {item.rating}/5 · {item.status}</b><small>{String(item.created_at).slice(0, 16).replace("T", " ")}{item.graph_owner_id ? ` · user ${item.graph_owner_id}` : ""}</small></div><p><b>Question:</b> {item.question}</p>{item.correction && <p><b>Human correction:</b> {item.correction}</p>}{item.review_note && <small className="muted">Reviewer note: {item.review_note}</small>}{isAdmin && item.status === "pending_evaluation" && <div className="button-row"><button className="primary-button" onClick={() => reviewFeedback(item, "accept")}><Check size={15} /> Accept sample</button><button className="secondary-button danger-button" onClick={() => reviewFeedback(item, "reject")}><X size={15} /> Reject</button></div>}</article>)}</div></section>}
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------- Review hub
 // Human-review console (ai.solutions admin): sync-all + 2h refresh status,

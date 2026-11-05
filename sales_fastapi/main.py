@@ -27,6 +27,7 @@ from .routers import (
     governance_router,
     instore_router,
     journey_router,
+    knowledge_graph_router,
     llm_router,
     marketing_companies_router,
     ops_router,
@@ -106,6 +107,7 @@ app.include_router(events_router, prefix=api_prefix)
 app.include_router(dashboard_router, prefix=api_prefix)
 app.include_router(tally_router, prefix=api_prefix)
 app.include_router(instore_router, prefix=api_prefix)
+app.include_router(knowledge_graph_router, prefix=api_prefix)
 app.include_router(team_router, prefix=api_prefix)
 app.include_router(visits_router, prefix=api_prefix)
 app.include_router(users_router, prefix=api_prefix)

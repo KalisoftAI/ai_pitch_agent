@@ -31,6 +31,13 @@ class Settings(BaseSettings):
         default="gcs_data/instore_mails.json", alias="INSTORE_MAIL_CACHE_PATH"
     )
     INSTORE_MAIL_SYNC_LIMIT: int = Field(default=50, alias="INSTORE_MAIL_SYNC_LIMIT")
+    KNOWLEDGE_GRAPH_GCS_PREFIX: str = Field(
+        default="sales-app/knowledge_graph/", alias="KNOWLEDGE_GRAPH_GCS_PREFIX"
+    )
+    KNOWLEDGE_GRAPH_CHAT_ENABLED: bool = Field(
+        default=False, alias="KNOWLEDGE_GRAPH_CHAT_ENABLED"
+    )
+    KNOWLEDGE_GRAPH_REFRESH_DAYS: int = Field(default=7, alias="KNOWLEDGE_GRAPH_REFRESH_DAYS")
 
     # --- Database ---
     # If DATABASE_URL is set it wins. Otherwise the app builds a Postgres URL
@@ -78,6 +85,8 @@ class Settings(BaseSettings):
     IMAP_HOST: str = Field(default="", alias="IMAP_HOST")
     IMAP_PORT: int = Field(default=993, alias="IMAP_PORT")
     IMAP_USER: str = Field(default="", alias="IMAP_USER")
+    GMAIL_ADDRESS: str = Field(default="", alias="GMAIL_ADDRESS")
+    GMAIL_APP_PASSWORD: str = Field(default="", alias="GMAIL_APP_PASSWORD")
 
     # --- AI ---
     GEMMA_MODEL: str = Field(default="gemma-4-27b-it", alias="GEMMA_MODEL")
@@ -241,6 +250,18 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_security_settings(self):
+        if "@" in self.SMTP_HOST:
+            self.SMTP_HOST = "smtp.gmail.com"
+        if not self.SMTP_HOST and self.GMAIL_ADDRESS:
+            self.SMTP_HOST = "smtp.gmail.com"
+        if not self.SMTP_USER:
+            self.SMTP_USER = self.GMAIL_ADDRESS
+        if not self.SMTP_PASSWORD:
+            self.SMTP_PASSWORD = self.GMAIL_APP_PASSWORD
+        if not self.IMAP_HOST and self.GMAIL_ADDRESS:
+            self.IMAP_HOST = "imap.gmail.com"
+        if not self.IMAP_USER:
+            self.IMAP_USER = self.GMAIL_ADDRESS
         if len(self.SECRET_KEY) < 32 or self.SECRET_KEY == "change-this-secret":
             raise ValueError("SECRET_KEY must be at least 32 characters and non-default")
         if self.ACCESS_TOKEN_EXPIRE_MINUTES < 5 or self.ACCESS_TOKEN_EXPIRE_MINUTES > 1440:
@@ -260,11 +281,14 @@ class Settings(BaseSettings):
             missing = [name for name, value in required.items() if not value.strip()]
             if missing:
                 raise ValueError(f"Missing production security settings: {', '.join(missing)}")
-            # Temporarily disabled for initial deployment
-            # if not self.CORS_ORIGINS.strip() or "*" in self.cors_origin_list:
-            #     raise ValueError("Production CORS_ORIGINS must list explicit origins")
-            # if not self.allowed_host_list or "*" in self.allowed_host_list:
-            #     raise ValueError("Production ALLOWED_HOSTS must be restricted")
+            if not self.CORS_ORIGINS.strip() or any(
+                "*" in origin for origin in self.cors_origin_list
+            ):
+                raise ValueError("Production CORS_ORIGINS must list explicit origins")
+            if not self.allowed_host_list or any(
+                "*" in host for host in self.allowed_host_list
+            ):
+                raise ValueError("Production ALLOWED_HOSTS must be restricted")
             if not self.PII_REDACTION_ENABLED:
                 raise ValueError("PII_REDACTION_ENABLED must be true in production")
             if not self.AUDIT_LOG_ENABLED:

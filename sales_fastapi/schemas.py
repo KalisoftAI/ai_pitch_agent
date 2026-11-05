@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -293,7 +293,11 @@ class TemplateOut(TemplateBase):
 class CampaignFilter(BaseModel):
     intent: str = ""
     source: str = ""
+    contact_type: Literal["contacts", "marketing_companies"] = "contacts"
     q: str = ""
+    category: str = ""
+    call_status: str = ""
+    funnel_stage: str = ""
     limit: int = Field(default=50, ge=1, le=1000)
 
 
@@ -541,6 +545,10 @@ class MarketingCompanyOut(BaseModel):
     category: str = ""
     call_status: str = ""
     requirements: str = ""
+    funnel_stage: str = "awareness"
+    sales_progress: str = "new"
+    next_action: str = ""
+    follow_up_date: str = ""
     source_sheet: str = ""
     source_row: int = 0
     created_at: datetime
@@ -554,6 +562,10 @@ class MarketingCompanyUpdate(BaseModel):
     category: Optional[str] = None
     call_status: Optional[str] = None
     requirements: Optional[str] = None
+    funnel_stage: Optional[str] = None
+    sales_progress: Optional[str] = None
+    next_action: Optional[str] = None
+    follow_up_date: Optional[str] = None
 
 
 class MarketingImportResult(BaseModel):

@@ -71,6 +71,43 @@ The FastAPI workspace (`sales_fastapi/` + React `frontend/`) is the actively dev
 - **Engaging next-scope section** — sign-in page previews Gemma 4 personalisation, knowledge-catalog graph DB, YouTube signals, smart notifications, BigQuery KPI warehouse, multi-tenant RLS, and the Account catalog → quote → invoice workflow.
 - **UAT/Prod parity** — env badge in the UI (DEV/UAT/PROD) fed by `/api/health`; CD pipeline maps `main`→production, `UAT`→staging, `DEV`→development Cloud Run services.
 
+### DEV / UAT Knowledge Graph Review
+
+The **Graph review** tab is enabled only in DEV, pre-production, and active UAT
+environments. It builds a deterministic graph from already-synced, normalized
+contacts, marketing companies, company visits, linked mail, ERP orders/dispatch,
+and Tally sales. The refresh is Python-only and costs no model tokens; the
+`POST /api/sync/all` cycle rebuilds it only after
+`KNOWLEDGE_GRAPH_REFRESH_DAYS` (default: 7) has elapsed.
+
+Per-user graph snapshots and human-review decisions are JSON, not SQL tables:
+
+```text
+gs://<GCS_BUCKET_CONTACTS>/<KNOWLEDGE_GRAPH_GCS_PREFIX>/users/<user_id>/current.json
+gs://<GCS_BUCKET_CONTACTS>/<KNOWLEDGE_GRAPH_GCS_PREFIX>/users/<user_id>/feedback.json
+```
+
+`GET /api/knowledge-graph` returns nodes and edges. Ambiguous company matches
+are marked `pending`; a human accepts or rejects each edge before it is treated
+as verified. Admins can view the team queue in DEV/UAT. The graph assistant
+defaults to a zero-cost rules answer. Optional Gemma/Gemini processing requires
+both `KNOWLEDGE_GRAPH_CHAT_ENABLED=true` and `LLM_ENABLED=true`, uses the
+existing guarded router and usage ledger, and receives only human-accepted
+relationships. Chat corrections are stored for review; they do **not** train or
+change model weights automatically.
+
+Run the focused checks locally before opening a PR:
+
+```powershell
+pytest -q tests/test_knowledge_graph.py
+ruff check sales_fastapi tests migrations
+cd frontend; npm run build
+```
+
+The feature branch triggers CI only. Merge to `UAT` to deploy to staging after
+the CI gate and reviewer sign-off; do not merge to `main` until UAT validation
+is complete.
+
 ### Run it
 
 ```powershell

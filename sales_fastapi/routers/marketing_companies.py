@@ -9,8 +9,10 @@ the workspace can filter, edit requirements and re-import without touching the
 
 from __future__ import annotations
 
+import csv
 import re
-from io import BytesIO
+from datetime import date, datetime
+from io import BytesIO, StringIO
 from typing import Any
 
 from fastapi import (
@@ -27,6 +29,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..database import get_db
+from ..governance.audit import log_event
 from ..models import MarketingCompany, User
 from ..schemas import MarketingCompanyOut, MarketingCompanyUpdate, MarketingImportResult
 from ..security import get_current_user
@@ -36,6 +39,17 @@ router = APIRouter(prefix="/marketing-companies", tags=["marketing"])
 
 DEFAULT_BUCKET = "kalika_enterprises"
 DEFAULT_PATH = "sales-contacts/RECENT_marketing_list_kalika.xlsx"
+DEFAULT_CUSTOMERS_PATH = "sales-contacts/customers.csv"
+FUNNEL_STAGES = ("awareness", "interest", "decision", "action")
+SALES_PROGRESS = (
+    "new",
+    "video_sent",
+    "catalog_sent",
+    "requirements_requested",
+    "rate_requested",
+    "quote_sent",
+    "material_sent",
+)
 
 
 # ----------------------------------------------------------------- helpers
@@ -103,6 +117,34 @@ def _parse_workbook(raw: bytes) -> list[dict[str, Any]]:
 
     workbook.close()
     return out
+
+
+def _parse_customers_csv(raw: bytes) -> list[dict[str, Any]]:
+    reader = csv.DictReader(StringIO(raw.decode("utf-8-sig", errors="replace")))
+    rows: list[dict[str, Any]] = []
+    for index, row in enumerate(reader, start=2):
+        values = {str(key or "").strip().lower(): value for key, value in row.items()}
+
+        def first(*keys: str) -> str:
+            return next((_cell(values.get(key)) for key in keys if _cell(values.get(key))), "")
+
+        company = first("company", "company name", "customer", "customer name", "account", "name")
+        if not company:
+            continue
+        rows.append(
+            {
+                "company": company,
+                "contact_name": first("contact name", "contact person", "person", "buyer name"),
+                "phone": first("phone", "phone number", "mobile", "contact", "contact no", "contact no."),
+                "email": first("email", "email address", "email id", "e-mail"),
+                "category": first("category", "segment", "customer type"),
+                "call_status": first("call status", "status"),
+                "requirements": first("requirements", "requirement", "product", "products"),
+                "source_sheet": "customers.csv",
+                "source_row": index,
+            }
+        )
+    return rows
 
 
 def _index(headers: list[str], *candidates: str) -> int:
@@ -175,7 +217,11 @@ def _map_sheet1(headers: list[str], row: tuple) -> dict[str, Any] | None:
 
 
 def _upsert_rows(
-    db: Session, user_id: int, rows: list[dict[str, Any]]
+    db: Session,
+    user_id: int,
+    rows: list[dict[str, Any]],
+    *,
+    refresh_source_values: bool = False,
 ) -> tuple[int, int, int]:
     """Insert or update rows keyed by (user_id, company_key).
 
@@ -205,6 +251,7 @@ def _upsert_rows(
         "call_status": 255,
         "source_sheet": 255,
         "requirements": 100_000,
+        "next_action": 10_000,
     }
 
     for row in rows:
@@ -226,6 +273,8 @@ def _upsert_rows(
                 category=_clip(row.get("category"), 255),
                 call_status=_clip(row.get("call_status"), 255),
                 requirements=row.get("requirements") or "",
+                funnel_stage="awareness",
+                sales_progress="new",
                 source_sheet=_clip(row.get("source_sheet"), 255),
                 source_row=int(row.get("source_row") or 0),
             )
@@ -244,12 +293,17 @@ def _upsert_rows(
             "requirements",
         ):
             new_value = _clip(row.get(field), limits[field])
-            if new_value and not getattr(target, field):
+            if new_value and (refresh_source_values or not getattr(target, field)) and new_value != getattr(target, field):
                 setattr(target, field, new_value)
                 changed = True
         contact_name = _clip(row.get("contact_name"), 255)
-        if not target.contact_name and contact_name:
+        if contact_name and (refresh_source_values or not target.contact_name) and contact_name != target.contact_name:
             target.contact_name = contact_name
+            changed = True
+        source_sheet = _clip(row.get("source_sheet"), 255)
+        if refresh_source_values and source_sheet and source_sheet != target.source_sheet:
+            target.source_sheet = source_sheet
+            target.source_row = int(row.get("source_row") or target.source_row)
             changed = True
         if changed:
             updated += 1
@@ -265,6 +319,9 @@ def list_marketing_companies(
     q: str | None = Query(default=None),
     category: str | None = Query(default=None),
     call_status: str | None = Query(default=None),
+    funnel_stage: str | None = Query(default=None),
+    sales_progress: str | None = Query(default=None),
+    due_follow_up: bool = False,
     limit: int = Query(default=500, ge=1, le=5000),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -283,6 +340,15 @@ def list_marketing_companies(
         query = query.filter(MarketingCompany.category.ilike(f"%{category}%"))
     if call_status:
         query = query.filter(MarketingCompany.call_status.ilike(f"%{call_status}%"))
+    if funnel_stage:
+        query = query.filter(MarketingCompany.funnel_stage == funnel_stage)
+    if sales_progress:
+        query = query.filter(MarketingCompany.sales_progress == sales_progress)
+    if due_follow_up:
+        query = query.filter(
+            MarketingCompany.follow_up_date != "",
+            MarketingCompany.follow_up_date <= datetime.now().date().isoformat(),
+        )
     return (
         query.order_by(MarketingCompany.company.asc())
         .limit(limit)
@@ -313,6 +379,12 @@ def marketing_company_stats(
         "with_email": base.filter(MarketingCompany.email != "").count(),
         "by_category": group(MarketingCompany.category),
         "by_call_status": group(MarketingCompany.call_status),
+        "by_funnel_stage": group(MarketingCompany.funnel_stage),
+        "by_sales_progress": group(MarketingCompany.sales_progress),
+        "follow_up_due": base.filter(
+            MarketingCompany.follow_up_date != "",
+            MarketingCompany.follow_up_date <= datetime.now().date().isoformat(),
+        ).count(),
         "by_source": group(MarketingCompany.source_sheet),
     }
 
@@ -331,8 +403,29 @@ def update_marketing_company(
     )
     if company is None:
         raise HTTPException(status_code=404, detail="Marketing company not found")
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    changed = payload.model_dump(exclude_unset=True)
+    for field, value in changed.items():
+        if field == "funnel_stage" and value not in FUNNEL_STAGES:
+            raise HTTPException(status_code=422, detail="Invalid funnel stage")
+        if field == "sales_progress" and value not in SALES_PROGRESS:
+            raise HTTPException(status_code=422, detail="Invalid sales progress")
+        if field == "follow_up_date" and value and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+            raise HTTPException(status_code=422, detail="Follow-up date must use YYYY-MM-DD")
+        if field == "follow_up_date" and value:
+            try:
+                date.fromisoformat(value)
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail="Follow-up date must be a valid date") from exc
         setattr(company, field, value or "")
+    log_event(
+        db,
+        action="marketing_company.update",
+        actor_user_id=user.id,
+        resource_type="marketing_company",
+        resource_id=str(company.id),
+        tenant_id=user.domain,
+        detail={"fields": sorted(changed)},
+    )
     db.commit()
     db.refresh(company)
     return company
@@ -413,28 +506,43 @@ def marketing_source_info(user: User = Depends(get_current_user)):
 
 @router.post("/sync")
 def sync_marketing_companies(
+    source: str = Query(default="all"),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Sync marketing companies from GCS (default path)."""
+    """Sync the latest marketing workbook and/or customers CSV from GCS."""
+    if source not in {"all", "marketing", "customers"}:
+        raise HTTPException(status_code=400, detail="Source must be all, marketing, or customers")
     gcs = GCSStorage(bucket_name=DEFAULT_BUCKET)
     if not gcs.available:
         raise HTTPException(status_code=503, detail="GCS is not available")
 
-    raw = gcs.download_blob(DEFAULT_PATH)
-    if not raw:
-        raise HTTPException(status_code=404, detail=f"Marketing workbook not found at {DEFAULT_PATH}")
+    paths = []
+    if source in {"all", "marketing"}:
+        paths.append((DEFAULT_PATH, _parse_workbook))
+    if source in {"all", "customers"}:
+        paths.append((DEFAULT_CUSTOMERS_PATH, _parse_customers_csv))
+    rows: list[dict[str, Any]] = []
+    synced_sources: list[str] = []
+    errors: list[str] = []
+    for path, parser in paths:
+        raw = gcs.download_blob(path)
+        if not raw:
+            errors.append(f"Source not found: {path}")
+            continue
+        try:
+            parsed_rows = parser(raw)
+            rows.extend(parsed_rows)
+            synced_sources.append(path)
+        except Exception as exc:
+            errors.append(f"Parse failed for {path}: {type(exc).__name__}")
+    if not synced_sources:
+        raise HTTPException(status_code=404, detail="; ".join(errors) or "No GCS sources found")
 
     try:
-        rows = _parse_workbook(raw)
-    except Exception as exc:
-        raise HTTPException(
-            status_code=500,
-            detail=f"parse failed ({len(raw)} bytes): {type(exc).__name__}: {exc}",
-        ) from exc
-
-    try:
-        imported, updated, skipped = _upsert_rows(db, user.id, rows)
+        imported, updated, skipped = _upsert_rows(
+            db, user.id, rows, refresh_source_values=True
+        )
         db.commit()
     except Exception as exc:
         db.rollback()
@@ -449,5 +557,6 @@ def sync_marketing_companies(
         "updated": updated,
         "skipped": skipped,
         "rows_parsed": len(rows),
-        "source": f"gcs://{DEFAULT_BUCKET}/{DEFAULT_PATH}",
+        "sources": [f"gs://{DEFAULT_BUCKET}/{path}" for path in synced_sources],
+        "warnings": errors,
     }

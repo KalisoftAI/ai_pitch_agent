@@ -1,4 +1,75 @@
+from sales_fastapi.config import Settings
 from sales_fastapi.instore_mail import build_insights
+from sales_fastapi.routers.instore import _filter_mails, _snapshot_context
+
+
+def test_gmail_credentials_fill_smtp_and_imap_defaults():
+    config = Settings(
+        _env_file=None,
+        SECRET_KEY="test-secret-key-that-is-long-enough-for-hs256",
+        GMAIL_ADDRESS="sales@example.com",
+        GMAIL_APP_PASSWORD="app-password",
+        SMTP_HOST="sales@example.com",
+    )
+
+    assert config.SMTP_HOST == "smtp.gmail.com"
+    assert config.SMTP_USER == "sales@example.com"
+    assert config.SMTP_PASSWORD == "app-password"
+    assert config.IMAP_HOST == "imap.gmail.com"
+    assert config.IMAP_USER == "sales@example.com"
+
+
+def test_snapshot_context_uses_selected_intent_only():
+    payload = {
+        "insights": {"total": 2},
+        "mails": [
+            {"intent": "quote_request", "subject": "Rate enquiry", "contact_id": 1},
+            {"intent": "order", "subject": "Purchase order", "contact_id": 0},
+        ],
+    }
+
+    context = _snapshot_context(payload, intent="quote_request")
+
+    assert "Total mails: 1; linked contacts: 1; unlinked: 0" in context
+    assert "Rate enquiry" in context
+    assert "Purchase order" not in context
+
+
+def test_mail_filters_match_keyword_subject_company_and_date_newest_first():
+    mails = [
+        {
+            "intent": "quote_request",
+            "subject": "Rate enquiry for LD film",
+            "company": "Acme Packaging",
+            "snippet": "Please send the best rate.",
+            "date": "Tue, 03 Nov 2026 10:00:00 +0530",
+        },
+        {
+            "intent": "quote_request",
+            "subject": "Older rate enquiry",
+            "company": "Acme Packaging",
+            "snippet": "LD film quotation",
+            "date": "2026-11-02T10:00:00+00:00",
+        },
+        {
+            "intent": "order",
+            "subject": "Purchase order",
+            "company": "Other Company",
+            "date": "2026-11-04",
+        },
+    ]
+
+    result = _filter_mails(
+        mails,
+        intent="quote_request",
+        query="best rate",
+        subject="LD film",
+        company="Acme",
+        since="2026-11-03",
+    )
+
+    assert len(result) == 1
+    assert result[0]["subject"] == "Rate enquiry for LD film"
 
 
 def test_build_insights_links_senders_and_attachments():

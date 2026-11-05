@@ -53,6 +53,12 @@ TASKS: dict[str, TaskSpec] = {
         description="Condense a LinkedIn/company profile",
         max_output_tokens=256,
     ),
+    "knowledge_graph_chat": TaskSpec(
+        name="knowledge_graph_chat",
+        tier=Tier.SMALL,
+        description="Answer a UAT/DEV graph question using accepted, human-reviewed relationships",
+        max_output_tokens=512,
+    ),
     "dedupe_match": TaskSpec(
         name="dedupe_match",
         tier=Tier.NANO,

@@ -628,6 +628,10 @@ class MarketingCompany(Base):
     category: Mapped[str] = mapped_column(String(255), default="")
     call_status: Mapped[str] = mapped_column(String(255), default="")
     requirements: Mapped[str] = mapped_column(Text, default="")
+    funnel_stage: Mapped[str] = mapped_column(String(32), default="awareness", index=True)
+    sales_progress: Mapped[str] = mapped_column(String(48), default="new", index=True)
+    next_action: Mapped[str] = mapped_column(Text, default="")
+    follow_up_date: Mapped[str] = mapped_column(String(10), default="", index=True)
     source_sheet: Mapped[str] = mapped_column(String(255), default="")
     source_row: Mapped[int] = mapped_column(Integer, default=0)
 

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -76,6 +77,12 @@ class AskIn(BaseModel):
     expertise: str = Field(default="sales_strategist", max_length=64)
     model: str = Field(default="", max_length=128)
     mail_limit: int = Field(default=8, ge=1, le=50)
+    intent: str = Field(default="", max_length=64)
+    query: str = Field(default="", max_length=256)
+    subject: str = Field(default="", max_length=256)
+    company: str = Field(default="", max_length=256)
+    since: str = Field(default="", max_length=10)
+    until: str = Field(default="", max_length=10)
 
 
 def _contacts(db: Session, user: User) -> list[dict]:
@@ -165,19 +172,33 @@ def _collect(payload: SyncIn, db: Session, user: User) -> tuple[list[dict], dict
 
     if payload.source in {"auto", "imap"} and not mails:
         try:
-            connection = _imap_access(db, user)
-            extractor = EmailExtractor(
-                connection.imap_host,
-                connection.imap_port,
-                connection.email_address,
-                decrypt_secret(connection.secret_encrypted),
-            )
+            mailbox_email = ""
+            try:
+                connection = _imap_access(db, user)
+            except HTTPException:
+                if not (settings.IMAP_HOST and settings.IMAP_USER and settings.SMTP_PASSWORD):
+                    raise
+                mailbox_email = settings.IMAP_USER
+                extractor = EmailExtractor(
+                    settings.IMAP_HOST,
+                    settings.IMAP_PORT,
+                    settings.IMAP_USER,
+                    settings.SMTP_PASSWORD,
+                )
+            else:
+                mailbox_email = connection.email_address
+                extractor = EmailExtractor(
+                    connection.imap_host,
+                    connection.imap_port,
+                    connection.email_address,
+                    decrypt_secret(connection.secret_encrypted),
+                )
             try:
                 rows = extractor.fetch_emails(limit=limit, query=payload.query)
             finally:
                 extractor.disconnect()
             mails.extend(dict(row, source="imap") for row in rows)
-            source = {"kind": "imap", "mailbox": connection.email_address, "scanned": len(rows)}
+            source = {"kind": "imap", "mailbox": mailbox_email, "scanned": len(rows)}
         except HTTPException as exc:
             if payload.source == "imap":
                 raise
@@ -214,13 +235,24 @@ def summary(user: User = Depends(get_current_user)):
 def list_mails(
     limit: int = Query(default=25, ge=1, le=200),
     intent: str = "",
+    query: str = Query(default="", max_length=256),
+    subject: str = Query(default="", max_length=256),
+    company: str = Query(default="", max_length=256),
+    since: str = Query(default="", max_length=10),
+    until: str = Query(default="", max_length=10),
     only_missing: bool = False,
     user: User = Depends(get_current_user),
 ):
     payload = load_insights()
-    rows = list(payload.get("mails", []))
-    if intent:
-        rows = [row for row in rows if row.get("intent") == intent]
+    rows = _filter_mails(
+        list(payload.get("mails", [])),
+        intent=intent,
+        query=query,
+        subject=subject,
+        company=company,
+        since=since,
+        until=until,
+    )
     if only_missing:
         rows = [row for row in rows if not row.get("contact_id")]
     return {
@@ -291,17 +323,103 @@ def sync(
     }
 
 
-def _snapshot_context(payload: dict, limit: int = 8) -> str:
-    insights = payload.get("insights", {})
+def _filter_mails(
+    mails: list[dict],
+    *,
+    intent: str = "",
+    query: str = "",
+    subject: str = "",
+    company: str = "",
+    since: str = "",
+    until: str = "",
+) -> list[dict]:
+    def mail_datetime(value: str) -> datetime | None:
+        value = value.strip()
+        if not value:
+            return None
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            try:
+                parsed = parsedate_to_datetime(value)
+            except (TypeError, ValueError, OverflowError):
+                return None
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+
+    def contains(value: str, term: str) -> bool:
+        return not term or term.casefold() in value.casefold()
+
+    since_date = date.fromisoformat(since) if since else None
+    until_date = date.fromisoformat(until) if until else None
+    rows = []
+    for mail in mails:
+        title = " ".join(
+            str(mail.get(key) or "") for key in ("working_title", "subject")
+        )
+        client = " ".join(
+            str(mail.get(key) or "")
+            for key in ("client_name", "company", "from_name", "from_email")
+        )
+        searchable = " ".join(
+            str(mail.get(key) or "")
+            for key in ("working_title", "subject", "snippet", "context", "from_email", "to")
+        )
+        sent_at = mail_datetime(str(mail.get("date") or ""))
+        if intent and mail.get("intent") != intent:
+            continue
+        if not contains(searchable, query) or not contains(title, subject):
+            continue
+        if not contains(client, company):
+            continue
+        if since_date and (sent_at is None or sent_at.date() < since_date):
+            continue
+        if until_date and (sent_at is None or sent_at.date() > until_date):
+            continue
+        rows.append(mail)
+    return sorted(
+        rows,
+        key=lambda mail: mail_datetime(str(mail.get("date") or ""))
+        or datetime.min.replace(tzinfo=timezone.utc),
+        reverse=True,
+    )
+
+
+def _snapshot_context(
+    payload: dict,
+    limit: int = 8,
+    intent: str = "",
+    query: str = "",
+    subject: str = "",
+    company: str = "",
+    since: str = "",
+    until: str = "",
+) -> str:
+    mails = _filter_mails(
+        payload.get("mails") or [],
+        intent=intent,
+        query=query,
+        subject=subject,
+        company=company,
+        since=since,
+        until=until,
+    )
+    linked = sum(bool(mail.get("contact_id")) for mail in mails)
+    attachments = [item for mail in mails for item in mail.get("attachments", [])]
+    attachment_purposes: dict[str, int] = {}
+    for attachment in attachments:
+        purpose = str(attachment.get("purpose") or "document")
+        attachment_purposes[purpose] = attachment_purposes.get(purpose, 0) + 1
     lines = [
-        f"Total mails: {insights.get('total', 0)}; linked contacts: {insights.get('linked', 0)}; "
-        f"unlinked: {insights.get('unlinked', 0)}",
-        f"Intents: {insights.get('by_intent', {})}",
-        f"Attachments: {insights.get('attachments', 0)}; purposes: {insights.get('attachment_purposes', {})}",
-        f"Missing links: {(payload.get('missing_links') or {}).get('count', 0)}",
+        f"Total mails: {len(mails)}; linked contacts: {linked}; unlinked: {len(mails) - linked}",
+        f"Intent filter: {intent or 'all'}",
+        f"Keyword: {query or 'all'}; subject: {subject or 'all'}; company: {company or 'all'}",
+        f"Attachments: {len(attachments)}; purposes: {attachment_purposes}",
+        f"Missing links: {len(mails) - linked}",
         "Latest mails:",
     ]
-    for mail in (payload.get("mails") or [])[:limit]:
+    for mail in mails[:limit]:
         title = mail.get("working_title") or mail.get("subject", "")
         client = mail.get("client_name") or mail.get("company") or "unknown"
         lines.append(
@@ -318,13 +436,24 @@ def _snapshot_context(payload: dict, limit: int = 8) -> str:
     return "\n".join(lines)
 
 
-def _dynamic_prompt(question: str, payload: dict, expertise: dict, mail_limit: int) -> str:
+def _dynamic_prompt(
+    question: str,
+    payload: dict,
+    expertise: dict,
+    mail_limit: int,
+    intent: str = "",
+    query: str = "",
+    subject: str = "",
+    company: str = "",
+    since: str = "",
+    until: str = "",
+) -> str:
     return (
         f"Role: {expertise['system']}\n"
         "Use only the snapshot below. Cite sender/subject when recommending an action. "
         "Return: (1) summary, (2) priority accounts, (3) missing links to fix, "
         "(4) next actions with owner and timing.\n\n"
-        f"INSTORE MAIL SNAPSHOT\n{_snapshot_context(payload, mail_limit)}\n\n"
+        f"INSTORE MAIL SNAPSHOT\n{_snapshot_context(payload, mail_limit, intent, query, subject, company, since, until)}\n\n"
         f"QUESTION\n{question}"
     )
 
@@ -358,7 +487,18 @@ def ask(
 ):
     expertise = next((item for item in EXPERTISE if item["id"] == payload.expertise), EXPERTISE[0])
     snapshot = load_insights()
-    prompt = _dynamic_prompt(payload.question, snapshot, expertise, payload.mail_limit)
+    prompt = _dynamic_prompt(
+        payload.question,
+        snapshot,
+        expertise,
+        payload.mail_limit,
+        payload.intent,
+        payload.query,
+        payload.subject,
+        payload.company,
+        payload.since,
+        payload.until,
+    )
     report = scan_prompt(prompt, max_chars=settings.LLM_MAX_INPUT_CHARS, redact_pii=True)
     if not report.allowed:
         raise HTTPException(

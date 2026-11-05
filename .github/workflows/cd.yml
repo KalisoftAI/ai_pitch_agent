@@ -26,16 +26,73 @@ jobs:
       environment: ${{ steps.map.outputs.environment }}
       service: ${{ steps.map.outputs.service }}
       app_env: ${{ steps.map.outputs.app_env }}
+      deploy_env: ${{ steps.map.outputs.deploy_env }}
       max_instances: ${{ steps.map.outputs.max_instances }}
       cors: ${{ steps.map.outputs.cors }}
+      allowed_hosts: ${{ steps.map.outputs.allowed_hosts }}
+      frontend_url: ${{ steps.map.outputs.frontend_url }}
+      graph_chat_enabled: ${{ steps.map.outputs.graph_chat_enabled }}
     steps:
       - id: map
         run: |
+          if [ -z "${{ vars.GCP_PROJECT_ID }}" ] || [ -z "${{ vars.GCP_REGION }}" ] || \
+             [ -z "${{ vars.ARTIFACT_REPOSITORY }}" ] || [ -z "${{ vars.CLOUD_SQL_INSTANCE }}" ] || \
+             [ -z "${{ vars.GCS_BUCKET }}" ] || [ -z "${{ vars.GCS_PATH }}" ] || \
+             [ -z "${{ secrets.GOOGLE_CLIENT_ID }}" ] || [ -z "${{ vars.GOOGLE_ALLOWED_DOMAINS }}" ]; then
+            echo "Required GitHub Actions deployment variables are missing"; exit 1
+          fi
           case "${GITHUB_REF_NAME}" in
-            main) echo "environment=production" >> "$GITHUB_OUTPUT"; echo "service=kalisoft-sales"     >> "$GITHUB_OUTPUT"; echo "app_env=production" >> "$GITHUB_OUTPUT"; echo "max_instances=3" >> "$GITHUB_OUTPUT"; echo "cors=${{ vars.CORS_ORIGINS }}"        >> "$GITHUB_OUTPUT" ;;
-            UAT)  echo "environment=staging"    >> "$GITHUB_OUTPUT"; echo "service=kalisoft-sales-uat"  >> "$GITHUB_OUTPUT"; echo "app_env=staging"    >> "$GITHUB_OUTPUT"; echo "max_instances=2" >> "$GITHUB_OUTPUT"; echo "cors=${{ vars.CORS_ORIGINS_UAT }}"    >> "$GITHUB_OUTPUT" ;;
-            *)    echo "environment=development" >> "$GITHUB_OUTPUT"; echo "service=kalisoft-sales-dev"  >> "$GITHUB_OUTPUT"; echo "app_env=development" >> "$GITHUB_OUTPUT"; echo "max_instances=1" >> "$GITHUB_OUTPUT"; echo "cors=${{ vars.CORS_ORIGINS_DEV }}"    >> "$GITHUB_OUTPUT" ;;
+            main)
+              ENV=production; DEPLOY_ENV=prod; SVC=kalisoft-sales; APP=production; MAX=3
+              FE="${{ vars.FRONTEND_URL }}"; CORS="${{ vars.CORS_ORIGINS }}"; HOSTS="${{ vars.ALLOWED_HOSTS }}"
+              GRAPH_CHAT=false
+              ;;
+            UAT)
+              ENV=staging; DEPLOY_ENV=uat; SVC=kalisoft-sales-uat; APP=staging; MAX=2
+              FE="${{ vars.FRONTEND_URL_UAT }}"; CORS="${{ vars.CORS_ORIGINS_UAT }}"; HOSTS="${{ vars.ALLOWED_HOSTS_UAT }}"
+              GRAPH_CHAT="${{ vars.KNOWLEDGE_GRAPH_CHAT_ENABLED_UAT }}"
+              ;;
+            DEV)
+              ENV=development; DEPLOY_ENV=dev; SVC=kalisoft-sales-dev; APP=development; MAX=1
+              FE="${{ vars.FRONTEND_URL_DEV }}"; CORS="${{ vars.CORS_ORIGINS_DEV }}"; HOSTS="${{ vars.ALLOWED_HOSTS_DEV }}"
+              GRAPH_CHAT="${{ vars.KNOWLEDGE_GRAPH_CHAT_ENABLED_DEV }}"
+              ;;
+            *) echo "Unsupported deploy branch: ${GITHUB_REF_NAME}"; exit 1 ;;
           esac
+          if [ -z "$FE" ] || [ -z "$CORS" ] || [ -z "$HOSTS" ]; then
+            echo "FRONTEND_URL, CORS_ORIGINS and ALLOWED_HOSTS must be set for ${GITHUB_REF_NAME}"; exit 1
+          fi
+          CORS="${CORS//[[:space:]]/}"
+          HOSTS="${HOSTS//[[:space:]]/}"
+          if [[ ! "$FE" =~ ^https://[^/]+/?$ ]]; then echo "FRONTEND_URL must be an explicit HTTPS origin"; exit 1; fi
+          IFS=',' read -ra ORIGINS <<< "$CORS"
+          for ORIGIN in "${ORIGINS[@]}"; do
+            ORIGIN="${ORIGIN//[[:space:]]/}"
+            if [[ -z "$ORIGIN" || "$ORIGIN" == *"*"* || ! "$ORIGIN" =~ ^https://[^/]+$ ]]; then
+              echo "CORS_ORIGINS entries must be explicit HTTPS origins without wildcards"; exit 1
+            fi
+          done
+          IFS=',' read -ra HOST_ENTRIES <<< "$HOSTS"
+          for HOST in "${HOST_ENTRIES[@]}"; do
+            HOST="${HOST//[[:space:]]/}"
+            if [[ -z "$HOST" || "$HOST" == *"*"* || ! "$HOST" =~ ^[A-Za-z0-9.-]+(:[0-9]+)?$ ]]; then
+              echo "ALLOWED_HOSTS entries must be explicit hostnames without wildcards"; exit 1
+            fi
+          done
+          FE_ORIGIN="${FE%/}"
+          GRAPH_CHAT="${GRAPH_CHAT:-false}"
+          if [ "$GRAPH_CHAT" != "true" ]; then GRAPH_CHAT=false; fi
+          case ",$CORS," in
+            *",$FE_ORIGIN,"*) ;;
+            *) echo "CORS_ORIGINS must include FRONTEND_URL origin"; exit 1 ;;
+          esac
+          {
+            echo "environment=$ENV"; echo "service=$SVC"; echo "app_env=$APP";
+            echo "deploy_env=$DEPLOY_ENV";
+            echo "max_instances=$MAX"; echo "frontend_url=$FE";
+            echo "graph_chat_enabled=$GRAPH_CHAT";
+            echo "allowed_hosts=$HOSTS"; echo "cors=$CORS";
+          } >> "$GITHUB_OUTPUT"
 
   deploy:
     name: Build & deploy (${{ needs.resolve.outputs.environment }})
@@ -64,6 +121,25 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
+          # Signing key and database URL are required. Optional service credentials
+          # are bound only when present; no secret values are printed.
+          for REQUIRED_SECRET in SALES_SECRET_KEY SALES_DATABASE_URL; do
+            if ! gcloud secrets describe "$REQUIRED_SECRET" --project "${{ vars.GCP_PROJECT_ID }}" >/dev/null 2>&1; then
+              echo "Required Secret Manager secret is missing: $REQUIRED_SECRET"; exit 1
+            fi
+          done
+          SECRETS="SECRET_KEY=SALES_SECRET_KEY:latest,DATABASE_URL=SALES_DATABASE_URL:latest"
+          add_optional_secret() {  # $1 = env var name, $2 = Secret Manager secret name
+            if gcloud secrets describe "$2" --project "${{ vars.GCP_PROJECT_ID }}" >/dev/null 2>&1; then
+              SECRETS="${SECRETS:+$SECRETS,}$1=$2:latest"
+            else
+              echo "Optional secret is not configured: $2"
+            fi
+          }
+          add_optional_secret GEMINI_API_KEY GEMINI_API_KEY
+          add_optional_secret GOOGLE_CLIENT_SECRET GOOGLE_CLIENT_SECRET
+          add_optional_secret SMTP_PASSWORD SMTP_PASSWORD
+
           gcloud run deploy "${{ needs.resolve.outputs.service }}" \
             --image "${IMAGE_BASE}:${GITHUB_SHA}" \
             --project "${{ vars.GCP_PROJECT_ID }}" \
@@ -71,7 +147,8 @@ jobs:
             --platform managed \
             --allow-unauthenticated \
             --add-cloudsql-instances "${{ vars.CLOUD_SQL_INSTANCE }}" \
-            --set-env-vars "ENV=${{ needs.resolve.outputs.app_env }},GOOGLE_CLOUD_PROJECT=${{ vars.GCP_PROJECT_ID }},GOOGLE_CLIENT_ID=placeholder-not-configured,ALLOWED_HOSTS=*,CORS_ORIGINS=*,GCS_BUCKET_CONTACTS=${{ vars.GCS_BUCKET }},GCS_PATH_CONTACTS=${{ vars.GCS_PATH }},CLOUD_SQL_CONNECTION_NAME=${{ vars.CLOUD_SQL_INSTANCE }},RATE_LIMIT_ENABLED=true,AUTH_DEV_MODE=false,GEMMA_MODEL=${{ vars.GEMMA_MODEL || 'gemma-4-27b-it' }},LLM_GEMMA_MODEL=${{ vars.LLM_GEMMA_MODEL || 'gemma-4-27b-it' }},FRONTEND_URL=${{ vars.FRONTEND_URL || 'https://kalisoft-sales-19782268668.asia-south1.run.app' }}" \
+            --set-env-vars "^@^ENV=${{ needs.resolve.outputs.app_env }}@DEPLOY_ENV=${{ needs.resolve.outputs.deploy_env }}@GOOGLE_CLOUD_PROJECT=${{ vars.GCP_PROJECT_ID }}@GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}@GOOGLE_ALLOWED_DOMAINS=${{ vars.GOOGLE_ALLOWED_DOMAINS }}@ALLOWED_HOSTS=${{ needs.resolve.outputs.allowed_hosts }}@CORS_ORIGINS=${{ needs.resolve.outputs.cors }}@GCS_BUCKET_CONTACTS=${{ vars.GCS_BUCKET }}@GCS_PATH_CONTACTS=${{ vars.GCS_PATH }}@KNOWLEDGE_GRAPH_GCS_PREFIX=sales-app/knowledge_graph/@KNOWLEDGE_GRAPH_REFRESH_DAYS=7@KNOWLEDGE_GRAPH_CHAT_ENABLED=${{ needs.resolve.outputs.graph_chat_enabled }}@CLOUD_SQL_CONNECTION_NAME=${{ vars.CLOUD_SQL_INSTANCE }}@RATE_LIMIT_ENABLED=true@AUTH_DEV_MODE=false@GEMMA_MODEL=${{ vars.GEMMA_MODEL || 'gemma-4-27b-it' }}@LLM_GEMMA_MODEL=${{ vars.LLM_GEMMA_MODEL || 'gemma-4-27b-it' }}@FRONTEND_URL=${{ needs.resolve.outputs.frontend_url }}" \
+            --update-secrets "$SECRETS" \
             --min-instances=0 \
             --max-instances="${{ needs.resolve.outputs.max_instances }}" \
             --cpu=1 \
