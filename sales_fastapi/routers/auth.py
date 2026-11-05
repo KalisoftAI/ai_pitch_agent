@@ -182,48 +182,53 @@ def seed_initial_users(
     db: Session = Depends(get_db),
 ):
     """One-time setup endpoint to create initial users. Only works if no users exist yet."""
-    # Security check: only allow if database is empty or has only the demo user
-    existing_users = db.query(User).count()
-    if existing_users > 1:
-        raise HTTPException(status_code=400, detail="Database already has users. Seed already run.")
-    
-    from .security import hash_password
-    
-    created_users = []
-    for username, display, pwd, role in (
-        ("kalika", "Kalika Admin", "kalika123", "admin"),
-        ("field", "Field Executive", "field123", "field"),
-    ):
-        email_address = f"{username}@kalika.local"
-        kuser = db.query(User).filter(User.email == email_address).first()
-        if kuser is None:
-            kuser = User(
-                google_sub=f"pwd-{username}",
-                email=email_address,
-                name=display,
-                domain="kalika.local",
-                role=role,
-                password_hash=hash_password(pwd),
-            )
-            db.add(kuser)
-            created_users.append(username)
-        else:
-            # Update password if user already exists
-            kuser.password_hash = hash_password(pwd)
-            kuser.role = role
-            created_users.append(f"{username} (updated)")
-    
-    db.commit()
-    
-    log_event(
-        db,
-        action="auth.seed_users",
-        actor_user_id=0,
-        resource_type="user",
-        resource_id="",
-        ip_address=request.client.host if request.client else "",
-        detail={"created_users": created_users},
-    )
-    db.commit()
-    
-    return {"ok": True, "users_created": created_users}
+    try:
+        # Security check: only allow if database is empty or has only the demo user
+        existing_users = db.query(User).count()
+        if existing_users > 1:
+            raise HTTPException(status_code=400, detail="Database already has users. Seed already run.")
+        
+        from .security import hash_password
+        
+        created_users = []
+        for username, display, pwd, role in (
+            ("kalika", "Kalika Admin", "kalika123", "admin"),
+            ("field", "Field Executive", "field123", "field"),
+        ):
+            email_address = f"{username}@kalika.local"
+            kuser = db.query(User).filter(User.email == email_address).first()
+            if kuser is None:
+                kuser = User(
+                    google_sub=f"pwd-{username}",
+                    email=email_address,
+                    name=display,
+                    domain="kalika.local",
+                    role=role,
+                    password_hash=hash_password(pwd),
+                )
+                db.add(kuser)
+                created_users.append(username)
+            else:
+                # Update password if user already exists
+                kuser.password_hash = hash_password(pwd)
+                kuser.role = role
+                created_users.append(f"{username} (updated)")
+        
+        db.commit()
+        
+        log_event(
+            db,
+            action="auth.seed_users",
+            actor_user_id=0,
+            resource_type="user",
+            resource_id="",
+            ip_address=request.client.host if request.client else "",
+            detail={"created_users": created_users},
+        )
+        db.commit()
+        
+        return {"ok": True, "users_created": created_users}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Seed failed: {str(e)}")
