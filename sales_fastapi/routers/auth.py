@@ -184,12 +184,17 @@ def test_post(message: str = "test"):
 
 @router.post("/setup/set-user-password")
 def set_user_password(
-    email: str,
-    password: str,
+    payload: dict,
     db: Session = Depends(get_db),
 ):
     """Set password for a specific user (for setup purposes)."""
     try:
+        email = payload.get("email")
+        password = payload.get("password")
+        
+        if not email or not password:
+            raise HTTPException(status_code=400, detail="email and password are required")
+        
         user = db.query(User).filter(User.email == email).first()
         if not user:
             raise HTTPException(status_code=404, detail=f"User not found: {email}")
