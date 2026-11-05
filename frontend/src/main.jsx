@@ -1788,6 +1788,8 @@ function ErpDashboard({ onNotice }) {
   const [analytics, setAnalytics] = useState(null);
   const [dispatch, setDispatch] = useState([]);
   const [forecast, setForecast] = useState(null);
+  const [forecastMonths, setForecastMonths] = useState(6);
+  const [forecastView, setForecastView] = useState("chart");
   const [filter, setFilter] = useState("");
   const [busy, setBusy] = useState(false);
   const [yt, setYt] = useState(null);
@@ -1807,13 +1809,13 @@ function ErpDashboard({ onNotice }) {
       const [s, a, d, f, y] = await Promise.all([
         request("/erp/status"), request("/erp/analytics"),
         request(`/erp/dispatch${filter ? `?status=${encodeURIComponent(filter)}` : ""}`),
-        request("/erp/forecast?months=6"), request("/erp/youtube/status"),
+        request(`/erp/forecast?months=${forecastMonths}`), request("/erp/youtube/status"),
       ]);
       setStatus(s); setAnalytics(a); setDispatch(d); setForecast(f); setYt(y);
       setYtForm((cur) => ({ ...cur, youtube_channel_id: cur.youtube_channel_id || y.channel_id || "" }));
     } catch (error) { onNotice({ type: "error", text: error.message }); }
   };
-  useEffect(() => { load(); }, [filter]);
+  useEffect(() => { load(); }, [filter, forecastMonths]);
 
   const syncErp = async () => {
     setBusy(true);
@@ -1914,19 +1916,45 @@ function ErpDashboard({ onNotice }) {
 
       <div className="two-column">
         <section className="panel">
-          <div className="panel-heading"><div><div className="section-kicker">FORECAST</div><h3>Monthly orders value & next-month projection</h3></div><TrendingUp size={17} className="muted" /></div>
-          <div className="bars">
-            {series.map((s) => (
-              <div className="bar" key={s.period} title={`${s.period}: ₹${s.value.toLocaleString()}`}>
-                <i style={{ height: `${Math.max(4, (s.value / maxVal) * 100)}%` }} />
-                <small>{s.period.slice(5)}</small>
-              </div>
-            ))}
-            <div className="bar" title={`Projected: ₹${(forecast?.projected_next_month || 0).toLocaleString()}`}>
-              <i className="proj" style={{ height: `${Math.max(4, ((forecast?.projected_next_month || 0) / maxVal) * 100)}%` }} />
-              <small>proj.</small>
+          <div className="panel-heading">
+            <div><div className="section-kicker">FORECAST</div><h3>Monthly orders value &amp; next-month projection</h3></div>
+            <div className="button-row">
+              <select value={forecastMonths} onChange={(e) => setForecastMonths(Number(e.target.value))} aria-label="Forecast window">
+                <option value={3}>3 months</option>
+                <option value={6}>6 months</option>
+                <option value={12}>12 months</option>
+              </select>
+              <button className="secondary-button compact" onClick={() => setForecastView(forecastView === "chart" ? "table" : "chart")}>
+                {forecastView === "chart" ? "Table view" : "Chart view"}
+              </button>
             </div>
           </div>
+          {forecastView === "chart" ? (
+            <div className="bars">
+              {series.map((s) => (
+                <div className="bar" key={s.period} title={`${s.period}: ₹${s.value.toLocaleString()}`}>
+                  <i style={{ height: `${Math.max(4, (s.value / maxVal) * 100)}%` }} />
+                  <small>{s.period.slice(5)}</small>
+                </div>
+              ))}
+              <div className="bar" title={`Projected: ₹${(forecast?.projected_next_month || 0).toLocaleString()}`}>
+                <i className="proj" style={{ height: `${Math.max(4, ((forecast?.projected_next_month || 0) / maxVal) * 100)}%` }} />
+                <small>proj.</small>
+              </div>
+            </div>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Period</th><th>Orders value</th><th>Share of window</th></tr></thead>
+                <tbody>
+                  {series.map((s) => (
+                    <tr key={s.period}><td>{s.period}</td><td>{fmtMoney(s.value)}</td><td>{Math.round((s.value / (series.reduce((sum, row) => sum + row.value, 0) || 1)) * 100)}%</td></tr>
+                  ))}
+                  <tr><td><b>Projected next month</b></td><td><b>{fmtMoney(forecast?.projected_next_month || 0)}</b></td><td>—</td></tr>
+                </tbody>
+              </table>
+            </div>
+          )}
           <p className="muted" style={{ marginTop: 8, fontSize: 11 }}>{forecast?.method || "Baseline projection"} · projected ₹{(((forecast?.projected_next_month) || 0) / 1e5).toFixed(1)}L next month</p>
           <div className="section-kicker" style={{ marginTop: 14 }}>TOP CUSTOMERS BY DISPATCHED QTY</div>
           <div className="contact-list">
@@ -2781,7 +2809,16 @@ function FieldDesk({ onNotice, user, onNavigate }) {
           </div>
         </section>
       </div>
-      <div style={{ marginTop: 14 }}><TallySalesPanel onNotice={onNotice} compact /></div>
+      <section className="panel" style={{ marginTop: 14 }}>
+        <div className="panel-heading">
+          <div>
+            <div className="section-kicker">TALLY SALES REGISTER</div>
+            <h3>Open the full Tally sales register</h3>
+            <p className="muted">Period, invoice count, buyers and latest invoice lines are in Sales analytics &amp; BI.</p>
+          </div>
+          <button className="primary-button" onClick={() => onNavigate?.("salesbi")}>Open Tally register</button>
+        </div>
+      </section>
     </div>
   );
 }

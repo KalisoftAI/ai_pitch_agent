@@ -1621,3 +1621,87 @@ nav { min-height: 0; overflow-y: auto; padding-right: 2px; scrollbar-width: thin
   .studio-video { padding: 10px; }
   .content.dash .page-heading .button-row { flex-wrap: wrap; }
 }
+
+/* ---------------------------------------------------------------- Theme aliases
+   Several components referenced --surface/--bg-card/--bg-hover/--bg without
+   them being defined, which made cards and modals render transparent. */
+:root {
+  --surface: var(--paper);
+  --bg-card: var(--paper);
+  --bg-hover: var(--cream);
+  --bg: var(--cream);
+}
+
+/* ---------------------------------------------------------------- Visit view */
+.visit-capture-inline {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  box-shadow: var(--shadow);
+  padding: 18px 20px;
+  margin-bottom: 20px;
+  animation: slideUp .2s ease;
+}
+.visit-capture-inline .form-grid label,
+.visit-capture-modal .form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.visit-capture-inline input,
+.visit-capture-inline textarea,
+.visit-capture-modal input,
+.visit-capture-modal textarea {
+  width: 100%;
+  background: #fafaf5;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: var(--ink);
+  font-size: 16px;
+  outline: 0;
+}
+.visit-capture-inline input:focus,
+.visit-capture-inline textarea:focus,
+.visit-capture-modal input:focus,
+.visit-capture-modal textarea:focus {
+  border-color: var(--mint-strong);
+  box-shadow: 0 0 0 3px #d9f2e3;
+}
+.visit-detail-list { display: grid; gap: 10px; }
+.visit-detail-row {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 10px;
+  font-size: 13px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--line);
+}
+.visit-detail-row span:first-child { color: var(--muted); font-weight: 600; }
+.visit-media-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.visit-media-list a {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 6px 10px; font-size: 12px; color: var(--ink);
+  text-decoration: none; background: var(--cream);
+}
+.visit-media-list a:hover { border-color: var(--orange); }
+
+@media (max-width: 768px) {
+  .modal-overlay { padding: 12px; align-items: flex-end; }
+  .modal-content,
+  .visit-capture-modal,
+  .visit-detail-modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: 88vh;
+    border-radius: 18px 18px 0 0;
+  }
+  .modal-body { padding: 16px; }
+  .modal-header { padding: 16px; }
+  .visit-capture-inline { padding: 14px; }
+  .visit-detail-row { grid-template-columns: 1fr; gap: 2px; }
+}

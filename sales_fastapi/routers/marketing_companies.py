@@ -53,6 +53,11 @@ def _cell(value: Any) -> str:
     return text if text.lower() != "nan" else ""
 
 
+def _clip(value: Any, limit: int) -> str:
+    text = "" if value is None else str(value).strip()
+    return text[:limit]
+
+
 def _safe(row: tuple, idx: int) -> Any:
     if idx < 0 or idx >= len(row):
         return ""
@@ -193,12 +198,21 @@ def _upsert_rows(
     }
     pending: set[str] = set()
 
+    limits = {
+        "phone": 255,
+        "email": 320,
+        "category": 255,
+        "call_status": 255,
+        "source_sheet": 255,
+        "requirements": 100_000,
+    }
+
     for row in rows:
-        company = (row.get("company") or "").strip()
+        company = _clip(row.get("company"), 255)
         if not company:
             skipped += 1
             continue
-        company_key = _normalise_company_key(company)
+        company_key = _normalise_company_key(company)[:255]
 
         target = by_key.get(company_key)
         if target is None:
@@ -206,13 +220,13 @@ def _upsert_rows(
                 user_id=user_id,
                 company=company,
                 company_key=company_key,
-                contact_name=row.get("contact_name") or "",
-                phone=row.get("phone") or "",
-                email=row.get("email") or "",
-                category=row.get("category") or "",
-                call_status=row.get("call_status") or "",
+                contact_name=_clip(row.get("contact_name"), 255),
+                phone=_clip(row.get("phone"), 255),
+                email=_clip(row.get("email"), 320),
+                category=_clip(row.get("category"), 255),
+                call_status=_clip(row.get("call_status"), 255),
                 requirements=row.get("requirements") or "",
-                source_sheet=row.get("source_sheet") or "",
+                source_sheet=_clip(row.get("source_sheet"), 255),
                 source_row=int(row.get("source_row") or 0),
             )
             db.add(target)
@@ -229,12 +243,13 @@ def _upsert_rows(
             "call_status",
             "requirements",
         ):
-            new_value = row.get(field) or ""
+            new_value = _clip(row.get(field), limits[field])
             if new_value and not getattr(target, field):
                 setattr(target, field, new_value)
                 changed = True
-        if not target.contact_name and (row.get("contact_name") or ""):
-            target.contact_name = row["contact_name"]
+        contact_name = _clip(row.get("contact_name"), 255)
+        if not target.contact_name and contact_name:
+            target.contact_name = contact_name
             changed = True
         if changed:
             updated += 1

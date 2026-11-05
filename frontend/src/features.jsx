@@ -145,7 +145,7 @@ export function TallySalesPanel({ onNotice, compact = false }) {
             <span><b>{fmtNum(stats.invoices)}</b> invoices</span>
             <span><b>{fmtNum(stats.customers)}</b> buyers</span>
             <span><b>{fmtNum(stats.total_quantity)}</b> quantity</span>
-            <span><b>{stats.last_sync?.status || "not synced"}</b> last sync</span>
+            <span><b>{stats.last_sync?.status || "not synced"}</b> last sync{stats.last_sync?.finished_at ? ` · ${String(stats.last_sync.finished_at).slice(0, 16)}` : ""}</span>
           </div>
           <div className="table-wrap">
             <table>
@@ -458,6 +458,31 @@ export function CompanyVisits({ onNotice, user }) {
     acc[category].push(visit);
     return acc;
   }, {});
+  const captureForm = (
+    <form onSubmit={create}>
+      <div className="form-grid">
+        <label>Company *<input required placeholder="Company name" value={form.company} onChange={(event) => setForm({ ...form, company: event.target.value })} /></label>
+        <label>Contact Name<input placeholder="Person met" value={form.contact_name} onChange={(event) => setForm({ ...form, contact_name: event.target.value })} /></label>
+        <label>Phone<input placeholder="Contact phone" value={form.contact_phone} onChange={(event) => setForm({ ...form, contact_phone: event.target.value })} /></label>
+        <label>Visit Date<input type="date" value={form.visit_date} onChange={(event) => setForm({ ...form, visit_date: event.target.value })} /></label>
+        <label>Person Met<input placeholder="Name and role" value={form.meet_person} onChange={(event) => setForm({ ...form, meet_person: event.target.value })} /></label>
+        <label>Location<input placeholder="Plant/office location" value={form.meet_home_location} onChange={(event) => setForm({ ...form, meet_home_location: event.target.value })} /></label>
+      </div>
+      <label style={{ display: "block", marginTop: "12px" }}>Previous Discussion<textarea className="voice-text" rows={3} placeholder="What was discussed previously?" value={form.previous_discussion} onChange={(event) => setForm({ ...form, previous_discussion: event.target.value })} /></label>
+      <label style={{ display: "block", marginTop: "12px" }}>Visit Notes<textarea className="voice-text" rows={4} placeholder="Meeting notes and observations" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
+      <label style={{ display: "block", marginTop: "12px" }}>Mail / Chat Details<textarea className="voice-text" rows={2} placeholder="Emails, WhatsApp or chat references" value={form.mail_chat_details} onChange={(event) => setForm({ ...form, mail_chat_details: event.target.value })} /></label>
+      <div className="form-grid" style={{ marginTop: "12px" }}>
+        <label>Outcome<input placeholder="e.g. quote_requested, positive" value={form.outcome} onChange={(event) => setForm({ ...form, outcome: event.target.value })} /></label>
+        <label>Next Action<input placeholder="What to do next" value={form.next_action} onChange={(event) => setForm({ ...form, next_action: event.target.value })} /></label>
+        <label>Follow-up Date<input type="date" value={form.follow_up_date} onChange={(event) => setForm({ ...form, follow_up_date: event.target.value })} /></label>
+      </div>
+      <div className="button-row" style={{ marginTop: "20px" }}>
+        <button type="button" className="secondary-button" onClick={() => setShowCaptureForm(false)}>Cancel</button>
+        <button type="submit" className="primary-button"><Plus size={15} /> Save Visit</button>
+      </div>
+    </form>
+  );
+
   return (
     <div className={`content dash ${expandedView ? "visit-expanded" : ""}`}>
       <div className="greeting-banner">
@@ -475,11 +500,22 @@ export function CompanyVisits({ onNotice, user }) {
             {expandedView ? <X size={15} /> : <Eye size={15} />} {expandedView ? "Compact" : "Expanded"}
           </button>
           <button className="secondary-button" onClick={load}><RefreshCw size={15} /> Refresh</button>
-          <button className="primary-button" onClick={() => setShowCaptureForm(true)}>
-            <Plus size={15} /> Capture Meeting
+          <button className="primary-button" onClick={() => setShowCaptureForm((open) => !open)}>
+            {showCaptureForm ? <X size={15} /> : <Plus size={15} />} {showCaptureForm ? "Close capture" : "Capture Meeting"}
           </button>
         </div>
       </div>
+
+      {showCaptureForm && (
+        <div className="visit-capture-inline">
+          <div className="panel-heading" style={{ marginBottom: 14 }}>
+            <div><div className="section-kicker">NEW VISIT</div><h3>Capture meeting</h3></div>
+            <button className="icon-button" onClick={() => setShowCaptureForm(false)} aria-label="Close capture form"><X size={18} /></button>
+          </div>
+          {captureForm}
+        </div>
+      )}
+
       <div className="metric-grid">
         <Metric icon={MapPin} label="Visits" value={stats?.visits ?? "--"} detail={`${stats?.companies ?? 0} companies`} accent />
         <Metric icon={CalendarDays} label="This month" value={stats?.this_month ?? "--"} detail="logged visits" />
@@ -538,79 +574,6 @@ export function CompanyVisits({ onNotice, user }) {
         )}
       </div>
 
-      {/* Floating Capture Form Modal */}
-      {showCaptureForm && (
-        <div className="modal-overlay" onClick={() => setShowCaptureForm(false)}>
-          <div className="modal-content visit-capture-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <div className="section-kicker">NEW VISIT</div>
-                <h2>Capture Meeting</h2>
-              </div>
-              <button className="icon-button" onClick={() => setShowCaptureForm(false)}>
-                <X size={20} />
-              </button>
-            </div>
-            <div className="modal-body">
-              <form onSubmit={create}>
-                <div className="form-grid">
-                  <label>
-                    Company *
-                    <input required placeholder="Company name" value={form.company} onChange={(event) => setForm({ ...form, company: event.target.value })} />
-                  </label>
-                  <label>
-                    Contact Name
-                    <input placeholder="Person met" value={form.contact_name} onChange={(event) => setForm({ ...form, contact_name: event.target.value })} />
-                  </label>
-                  <label>
-                    Phone
-                    <input placeholder="Contact phone" value={form.contact_phone} onChange={(event) => setForm({ ...form, contact_phone: event.target.value })} />
-                  </label>
-                  <label>
-                    Visit Date
-                    <input type="date" value={form.visit_date} onChange={(event) => setForm({ ...form, visit_date: event.target.value })} />
-                  </label>
-                  <label>
-                    Person Met
-                    <input placeholder="Name and role" value={form.meet_person} onChange={(event) => setForm({ ...form, meet_person: event.target.value })} />
-                  </label>
-                  <label>
-                    Location
-                    <input placeholder="Plant/office location" value={form.meet_home_location} onChange={(event) => setForm({ ...form, meet_home_location: event.target.value })} />
-                  </label>
-                </div>
-                <label style={{ display: "block", marginTop: "12px" }}>
-                  Previous Discussion
-                  <textarea className="voice-text" rows={3} placeholder="What was discussed previously?" value={form.previous_discussion} onChange={(event) => setForm({ ...form, previous_discussion: event.target.value })} />
-                </label>
-                <label style={{ display: "block", marginTop: "12px" }}>
-                  Visit Notes
-                  <textarea className="voice-text" rows={4} placeholder="Meeting notes and observations" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} />
-                </label>
-                <div className="form-grid" style={{ marginTop: "12px" }}>
-                  <label>
-                    Outcome
-                    <input placeholder="e.g. quote_requested, positive" value={form.outcome} onChange={(event) => setForm({ ...form, outcome: event.target.value })} />
-                  </label>
-                  <label>
-                    Next Action
-                    <input placeholder="What to do next" value={form.next_action} onChange={(event) => setForm({ ...form, next_action: event.target.value })} />
-                  </label>
-                  <label>
-                    Follow-up Date
-                    <input type="date" placeholder="Follow-up date" value={form.follow_up_date} onChange={(event) => setForm({ ...form, follow_up_date: event.target.value })} />
-                  </label>
-                </div>
-                <div className="button-row" style={{ marginTop: "20px" }}>
-                  <button type="button" className="secondary-button" onClick={() => setShowCaptureForm(false)}>Cancel</button>
-                  <button type="submit" className="primary-button"><Plus size={15} /> Save Visit</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Visit Detail Modal */}
       {selectedVisit && (
         <div className="modal-overlay" onClick={() => setSelectedVisit(null)}>
@@ -625,22 +588,16 @@ export function CompanyVisits({ onNotice, user }) {
               </button>
             </div>
             <div className="modal-body">
-              <div className="visit-detail-grid">
-                <div>
-                  <strong>Contact:</strong> {selectedVisit.contact_name || selectedVisit.meet_person || "Not specified"}
-                </div>
-                <div>
-                  <strong>Phone:</strong> {selectedVisit.contact_phone || "Not provided"}
-                </div>
-                <div>
-                  <strong>Location:</strong> {selectedVisit.meet_home_location || "Not specified"}
-                </div>
+              <div className="visit-detail-list">
+                <div className="visit-detail-row"><span>Contact</span><span>{selectedVisit.contact_name || selectedVisit.meet_person || "Not specified"}</span></div>
+                <div className="visit-detail-row"><span>Phone</span><span>{selectedVisit.contact_phone || "Not provided"}</span></div>
+                <div className="visit-detail-row"><span>Person met</span><span>{selectedVisit.meet_person || "Not specified"}</span></div>
+                <div className="visit-detail-row"><span>Location</span><span>{selectedVisit.meet_home_location || "Not specified"}</span></div>
+                <div className="visit-detail-row"><span>Outcome</span><span>{selectedVisit.outcome || selectedVisit.status || "Not recorded"}</span></div>
+                <div className="visit-detail-row"><span>Next action</span><span>{selectedVisit.next_action || "Not specified"}</span></div>
+                <div className="visit-detail-row"><span>Follow-up</span><span>{selectedVisit.follow_up_date || "Not scheduled"}</span></div>
                 {selectedVisit.map_location && (
-                  <div>
-                    <a href={selectedVisit.map_location} target="_blank" rel="noreferrer" className="text-button">
-                      <MapPin size={14} /> View on Map
-                    </a>
-                  </div>
+                  <div className="visit-detail-row"><span>Map</span><span><a href={selectedVisit.map_location} target="_blank" rel="noreferrer" className="text-button"><MapPin size={14} /> View on map</a></span></div>
                 )}
               </div>
               <div className="visit-detail-section">
@@ -652,18 +609,22 @@ export function CompanyVisits({ onNotice, user }) {
                 <p>{selectedVisit.notes || "No notes"}</p>
               </div>
               <div className="visit-detail-section">
-                <h3>Next Action</h3>
-                <p>{selectedVisit.next_action || "Not specified"}</p>
+                <h3>Mail / Chat Details</h3>
+                <p>{selectedVisit.mail_chat_details || "No mail or chat references"}</p>
               </div>
-              {selectedVisit.follow_up_date && (
-                <div className="visit-detail-section">
-                  <h3>Follow-up</h3>
-                  <p>{selectedVisit.follow_up_date}</p>
-                </div>
-              )}
               <div className="visit-detail-section">
                 <h3>Attachments ({(selectedVisit.media || []).length})</h3>
-                <label className="secondary-button">
+                {(selectedVisit.media || []).length > 0 && (
+                  <div className="visit-media-list">
+                    {selectedVisit.media.map((item, index) => (
+                      <a key={`${item.gcs_path || item.name}-${index}`} href="#" onClick={(event) => event.preventDefault()} title={item.gcs_path || item.name}>
+                        {item.kind === "video" ? <Video size={14} /> : <UploadCloud size={14} />}
+                        {item.name || `Attachment ${index + 1}`}
+                      </a>
+                    ))}
+                  </div>
+                )}
+                <label className="secondary-button" style={{ marginTop: 10 }}>
                   <UploadCloud size={15} /> Upload Files
                   <input type="file" accept="image/*,video/*" hidden onChange={(event) => upload(selectedVisit, event.target.files?.[0])} />
                 </label>

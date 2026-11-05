@@ -97,3 +97,16 @@ def _ensure_columns() -> None:
             if column not in cols:
                 with engine.begin() as conn:
                     conn.execute(text(f"ALTER TABLE company_visits ADD COLUMN {column} {ddl}"))
+    if "marketing_companies" in insp.get_table_names():
+        cols = {c["name"]: c for c in insp.get_columns("marketing_companies")}
+        for column in ("phone", "call_status", "source_sheet"):
+            col = cols.get(column)
+            length = getattr(col.get("type"), "length", None) if col else None
+            if col is not None and length is not None and length < 255:
+                with engine.begin() as conn:
+                    conn.execute(
+                        text(
+                            f"ALTER TABLE marketing_companies "
+                            f"ALTER COLUMN {column} TYPE VARCHAR(255)"
+                        )
+                    )
