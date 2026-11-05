@@ -176,6 +176,12 @@ def test_endpoint():
     return {"status": "ok", "message": "Auth router is working"}
 
 
+@router.post("/setup/test-post")
+def test_post(message: str = "test"):
+    """Test POST endpoint."""
+    return {"ok": True, "message": message}
+
+
 @router.post("/setup/set-user-password")
 def set_user_password(
     email: str,
