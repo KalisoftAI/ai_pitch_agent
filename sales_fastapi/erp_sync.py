@@ -15,10 +15,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from .config import settings
-from .models import ErpDispatch, ErpOrder, SyncRun
+from .models import ErpDispatch, ErpOrder, SyncRun, TallySale
 
 
 # ------------------------------------------------------------------ fetch
@@ -246,13 +247,27 @@ def orders_stats(db: Session, report_date: str | None = None) -> dict:
 
 
 def forecast(db: Session, months: int = 6) -> dict:
-    """Monthly orders value from ERP snapshots + simple next-month projection."""
+    """Monthly orders value + simple next-month projection.
+
+    Prefers ERP order snapshots. When no ERP orders are synced (the common
+    Kalika case) it falls back to the Tally sales register so the forecast is
+    never blank.
+    """
     rows = db.query(ErpOrder.order_date, ErpOrder.total_value, ErpOrder.report_date).all()
     buckets: dict[str, float] = {}
+    source = "erp"
     for order_date, value, report_date in rows:
         key = (order_date or report_date or "")[:7]
         if key:
             buckets[key] = buckets.get(key, 0.0) + float(value or 0)
+    if not buckets:
+        source = "tally"
+        tally = (
+            db.query(TallySale.period, func.sum(TallySale.value))
+            .group_by(TallySale.period)
+            .all()
+        )
+        buckets = {period: float(total or 0) for period, total in tally if period}
     ordered = sorted(buckets.items())[-months:]
     series = [{"period": k, "value": round(v, 2)} for k, v in ordered]
     values = [v for _, v in ordered]
@@ -265,7 +280,8 @@ def forecast(db: Session, months: int = 6) -> dict:
     return {
         "series": series,
         "projected_next_month": projected,
-        "method": "60% last month + 40% trailing average (policy-free baseline)",
+        "source": source,
+        "method": f"60% last month + 40% trailing average ({source} sales)",
     }
 
 
