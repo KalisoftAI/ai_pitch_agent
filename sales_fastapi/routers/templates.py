@@ -39,7 +39,29 @@ def templates_meta(user: User = Depends(get_current_user)):
     }
 
 
-@router.get("", response_model=list[TemplateOut])
+def _template_out(row: MessageTemplate) -> dict[str, Any]:
+    """Serialize a template defensively so legacy rows never break the list."""
+    variables = row.variables
+    if isinstance(variables, str):
+        variables = [v.strip() for v in variables.split(",") if v.strip()]
+    if not isinstance(variables, (list, tuple)):
+        variables = []
+    return {
+        "id": row.id,
+        "name": row.name or "Untitled",
+        "channel": row.channel or "email",
+        "strategy": row.strategy or "cold_outreach",
+        "funnel_stage": row.funnel_stage or "awareness",
+        "subject": row.subject or "",
+        "body": row.body or "",
+        "variables": [str(v) for v in variables],
+        "is_active": bool(row.is_active),
+        "created_at": str(row.created_at),
+        "updated_at": str(row.updated_at),
+    }
+
+
+@router.get("")
 def list_templates(
     channel: str | None = Query(default=None),
     strategy: str | None = Query(default=None),
@@ -53,7 +75,8 @@ def list_templates(
         query = query.filter(MessageTemplate.channel == channel)
     if strategy:
         query = query.filter(MessageTemplate.strategy == strategy)
-    return query.order_by(MessageTemplate.updated_at.desc()).all()
+    rows = query.order_by(MessageTemplate.updated_at.desc()).all()
+    return [_template_out(row) for row in rows]
 
 
 @router.post("", response_model=TemplateOut, status_code=201)
