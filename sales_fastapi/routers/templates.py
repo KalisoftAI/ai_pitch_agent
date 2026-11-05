@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import re
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -17,9 +20,13 @@ from ..outreach_templates import (
 )
 from ..schemas import TemplateCreate, TemplateOut, TemplateUpdate
 from ..security import get_current_user
+from ..services import GCSStorage
 from ..templating import variables_used
 
 router = APIRouter(prefix="/templates", tags=["templates"])
+
+GCS_BUCKET = "kalika_enterprises"
+GCS_PATH = "Mail_templates/"
 
 
 @router.get("/meta")
@@ -138,3 +145,130 @@ def seed_templates(user: User = Depends(get_current_user), db: Session = Depends
         created += 1
     db.commit()
     return {"created": created, "total": len(DEFAULT_TEMPLATES)}
+
+
+def _parse_html_metadata(html_content: str, filename: str) -> dict[str, Any]:
+    """Extract metadata from HTML template."""
+    # Extract title from <title> tag or first <h1>
+    title_match = re.search(r"<title[^>]*>(.*?)</title>", html_content, re.IGNORECASE | re.DOTALL)
+    h1_match = re.search(r"<h1[^>]*>(.*?)</h1>", html_content, re.IGNORECASE | re.DOTALL)
+    
+    name = filename.replace(".html", "").replace("_", " ").title()
+    if title_match:
+        name = title_match.group(1).strip()
+    elif h1_match:
+        name = h1_match.group(1).strip()
+    
+    # Extract category from filename or path
+    category = "email"
+    if "whatsapp" in filename.lower():
+        category = "whatsapp"
+    elif "linkedin" in filename.lower():
+        category = "linkedin"
+    elif "follow" in filename.lower():
+        category = "follow_up"
+    elif "intro" in filename.lower():
+        category = "introduction"
+    
+    # Extract subject from first heading or meta
+    subject = name
+    subject_match = re.search(r'<meta[^>]*name=["\']subject["\'][^>]*content=["\'](.*?)["\']', html_content, re.IGNORECASE)
+    if subject_match:
+        subject = subject_match.group(1).strip()
+    
+    return {
+        "name": name[:128],
+        "subject": subject[:255],
+        "body": html_content,
+        "category": category,
+    }
+
+
+@router.post("/sync-gcs")
+def sync_templates_from_gcs(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Sync HTML templates from GCS bucket kalika_enterprises/Mail_templates."""
+    gcs = GCSStorage(bucket_name=GCS_BUCKET)
+    if not gcs.available:
+        raise HTTPException(status_code=503, detail="GCS is not available")
+    
+    # List HTML files in Mail_templates folder
+    blobs = gcs.list_contacts(prefix=GCS_PATH)
+    html_blobs = [b for b in blobs if b["name"].lower().endswith(".html")]
+    
+    if not html_blobs:
+        return {"synced": 0, "updated": 0, "message": "No HTML templates found in GCS"}
+    
+    synced = 0
+    updated = 0
+    
+    for blob_info in html_blobs:
+        blob_name = blob_info["name"]
+        filename = blob_name.split("/")[-1]
+        
+        # Download HTML content
+        html_bytes = gcs.download_blob(blob_name)
+        if not html_bytes:
+            continue
+        
+        try:
+            html_content = html_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            html_content = html_bytes.decode("latin-1")
+        
+        # Parse metadata
+        metadata = _parse_html_metadata(html_content, filename)
+        
+        # Check if template already exists
+        existing = (
+            db.query(MessageTemplate)
+            .filter(
+                MessageTemplate.user_id == user.id,
+                MessageTemplate.name == metadata["name"],
+            )
+            .first()
+        )
+        
+        if existing:
+            # Update existing template
+            existing.body = metadata["body"]
+            existing.subject = metadata["subject"]
+            existing.channel = metadata["category"]
+            db.commit()
+            updated += 1
+        else:
+            # Create new template
+            template = MessageTemplate(
+                user_id=user.id,
+                name=metadata["name"],
+                channel=metadata["category"],
+                strategy="cold_outreach",
+                funnel_stage="awareness",
+                subject=metadata["subject"],
+                body=metadata["body"],
+                variables=variables_used(metadata["subject"] + " " + metadata["body"]),
+                is_active=True,
+            )
+            db.add(template)
+            db.commit()
+            synced += 1
+    
+    log_event(
+        db,
+        action="template.sync_gcs",
+        actor_user_id=user.id,
+        resource_type="template",
+        resource_id="",
+        tenant_id=user.domain,
+        detail={"synced": synced, "updated": updated},
+        commit=True,
+    )
+    
+    return {
+        "synced": synced,
+        "updated": updated,
+        "total": len(html_blobs),
+        "message": f"Synced {synced} new templates, updated {updated} existing templates",
+    }

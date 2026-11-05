@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import {
   Activity, BarChart3, Bot, BriefcaseBusiness, Building2, CalendarDays, Calculator, Check, Clock,
-  Copy, Database, FileDown, Link2, Mail, MapPin, Mic, Package, Plus, RefreshCw, Save, Search, Send, ShieldCheck,
-  Sparkles, TrendingUp, Truck, UploadCloud, Users, Video, X,
+  Copy, Database, Edit2, Eye, FileDown, FileText, Link2, Mail, MapPin, Mic, Package, Plus, RefreshCw, Save, Search, Send, ShieldCheck,
+  Sparkles, Trash2, TrendingUp, Truck, UploadCloud, Users, Video, X,
 } from "lucide-react";
 
 const API = "/api";
@@ -968,6 +968,301 @@ export function MarketingCompanies({ onNotice }) {
           </table>
         </div>
       </section>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- Templates
+export function Templates({ onNotice }) {
+  const [templates, setTemplates] = useState([]);
+  const [meta, setMeta] = useState(null);
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [sortBy, setSortBy] = useState("recent");
+  const [previewTemplate, setPreviewTemplate] = useState(null);
+  const [editTemplate, setEditTemplate] = useState(null);
+  const [syncing, setSyncing] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [templatesData, metaData] = await Promise.all([
+        request("/templates"),
+        request("/templates/meta"),
+      ]);
+      setTemplates(templatesData);
+      setMeta(metaData);
+    } catch (error) {
+      onNotice({ type: "error", text: error.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const syncFromGCS = async () => {
+    setSyncing(true);
+    try {
+      const result = await request("/templates/sync-gcs", { method: "POST" });
+      onNotice({ type: "success", text: result.message || `Synced ${result.synced} templates` });
+      await load();
+    } catch (error) {
+      onNotice({ type: "error", text: error.message });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const deleteTemplate = async (id) => {
+    if (!window.confirm("Delete this template?")) return;
+    try {
+      await request(`/templates/${id}`, { method: "DELETE" });
+      onNotice({ type: "success", text: "Template deleted" });
+      await load();
+    } catch (error) {
+      onNotice({ type: "error", text: error.message });
+    }
+  };
+
+  const updateTemplate = async (id, updates) => {
+    try {
+      await request(`/templates/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(updates),
+      });
+      onNotice({ type: "success", text: "Template updated" });
+      setEditTemplate(null);
+      await load();
+    } catch (error) {
+      onNotice({ type: "error", text: error.message });
+    }
+  };
+
+  // Filter and sort templates
+  let filteredTemplates = templates;
+  if (categoryFilter) {
+    filteredTemplates = filteredTemplates.filter(t => t.channel === categoryFilter);
+  }
+
+  const sortedTemplates = [...filteredTemplates].sort((a, b) => {
+    if (sortBy === "recent") {
+      return new Date(b.updated_at) - new Date(a.updated_at);
+    } else if (sortBy === "name") {
+      return a.name.localeCompare(b.name);
+    } else if (sortBy === "channel") {
+      return a.channel.localeCompare(b.channel);
+    }
+    return 0;
+  });
+
+  // Group by category for expanded view
+  const grouped = sortedTemplates.reduce((acc, template) => {
+    const key = template.channel || "other";
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(template);
+    return acc;
+  }, {});
+
+  return (
+    <div className="content">
+      <div className="page-heading">
+        <div>
+          <div className="section-kicker">MESSAGE TEMPLATES</div>
+          <h2>Templates</h2>
+          <p className="muted">Manage HTML email templates synced from GCS. Preview, edit, and organize by category.</p>
+        </div>
+        <div className="button-row">
+          <button className="secondary-button" onClick={load} disabled={loading}>
+            <RefreshCw size={16} className={loading ? "spin" : ""} /> Refresh
+          </button>
+          <button className="primary-button" onClick={syncFromGCS} disabled={syncing}>
+            <Database size={16} /> {syncing ? "Syncing..." : "Sync from GCS"}
+          </button>
+        </div>
+      </div>
+
+      <div className="panel" style={{ marginBottom: "20px" }}>
+        <div className="table-toolbar">
+          <div className="search-field">
+            <Search size={17} />
+            <input
+              placeholder="Search templates..."
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+            />
+          </div>
+          <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+            <option value="recent">Recent first</option>
+            <option value="name">Name A-Z</option>
+            <option value="channel">Category</option>
+          </select>
+          <span className="muted">{sortedTemplates.length} templates</span>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="loading-inline">
+          <RefreshCw size={18} className="spin" /> Loading templates...
+        </div>
+      ) : (
+        <div className="templates-grid">
+          {Object.entries(grouped).map(([category, categoryTemplates]) => (
+            <div key={category} className="template-category-section">
+              <div className="template-category-header">
+                <h3>{category.toUpperCase().replace("_", " ")} ({categoryTemplates.length})</h3>
+              </div>
+              <div className="template-cards">
+                {categoryTemplates.map((template) => (
+                  <div key={template.id} className="template-card">
+                    <div className="template-card-header">
+                      <div>
+                        <div className="template-name">{template.name}</div>
+                        <div className="template-meta">
+                          <span className="template-channel">{template.channel}</span>
+                          <span className="template-date">
+                            {new Date(template.updated_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="template-actions">
+                        <button
+                          className="icon-button"
+                          onClick={() => setPreviewTemplate(template)}
+                          title="Preview"
+                        >
+                          <Eye size={18} />
+                        </button>
+                        <button
+                          className="icon-button"
+                          onClick={() => setEditTemplate(template)}
+                          title="Edit"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button
+                          className="icon-button danger"
+                          onClick={() => deleteTemplate(template.id)}
+                          title="Delete"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="template-subject">{template.subject || "No subject"}</div>
+                    <div className="template-preview">
+                      {template.body.substring(0, 150)}...
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+          {Object.keys(grouped).length === 0 && (
+            <div className="empty-state">
+              <FileText size={22} />
+              <p>No templates yet</p>
+              <small>Sync from GCS to import HTML templates</small>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Preview Modal */}
+      {previewTemplate && (
+        <div className="modal-overlay" onClick={() => setPreviewTemplate(null)}>
+          <div className="modal-content template-preview-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{previewTemplate.name}</h2>
+              <button className="icon-button" onClick={() => setPreviewTemplate(null)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="template-preview-info">
+                <div><strong>Channel:</strong> {previewTemplate.channel}</div>
+                <div><strong>Subject:</strong> {previewTemplate.subject}</div>
+                <div><strong>Updated:</strong> {new Date(previewTemplate.updated_at).toLocaleString()}</div>
+              </div>
+              <div className="template-html-preview">
+                <iframe
+                  srcDoc={previewTemplate.body}
+                  title="Template Preview"
+                  style={{ width: "100%", height: "500px", border: "1px solid #ddd", borderRadius: "8px" }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editTemplate && (
+        <div className="modal-overlay" onClick={() => setEditTemplate(null)}>
+          <div className="modal-content template-edit-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Edit Template</h2>
+              <button className="icon-button" onClick={() => setEditTemplate(null)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="form-grid">
+                <label>
+                  Name
+                  <input
+                    value={editTemplate.name}
+                    onChange={(e) => setEditTemplate({ ...editTemplate, name: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Channel
+                  <select
+                    value={editTemplate.channel}
+                    onChange={(e) => setEditTemplate({ ...editTemplate, channel: e.target.value })}
+                  >
+                    {meta?.channels?.map((ch) => (
+                      <option key={ch} value={ch}>{ch}</option>
+                    )) || (
+                      <>
+                        <option value="email">email</option>
+                        <option value="whatsapp">whatsapp</option>
+                        <option value="linkedin">linkedin</option>
+                      </>
+                    )}
+                  </select>
+                </label>
+                <label>
+                  Subject
+                  <input
+                    value={editTemplate.subject}
+                    onChange={(e) => setEditTemplate({ ...editTemplate, subject: e.target.value })}
+                  />
+                </label>
+              </div>
+              <label style={{ marginTop: "16px", display: "block" }}>
+                HTML Body
+                <textarea
+                  rows={20}
+                  value={editTemplate.body}
+                  onChange={(e) => setEditTemplate({ ...editTemplate, body: e.target.value })}
+                  style={{ fontFamily: "monospace", fontSize: "12px" }}
+                />
+              </label>
+              <div className="button-row" style={{ marginTop: "16px" }}>
+                <button className="primary-button" onClick={() => updateTemplate(editTemplate.id, editTemplate)}>
+                  Save Changes
+                </button>
+                <button className="secondary-button" onClick={() => setEditTemplate(null)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
