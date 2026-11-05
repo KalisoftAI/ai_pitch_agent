@@ -170,6 +170,12 @@ def set_password(
     return {"ok": True, "username": user.email.split("@")[0]}
 
 
+@router.get("/setup/test")
+def test_endpoint():
+    """Test endpoint to verify auth router is working."""
+    return {"status": "ok", "message": "Auth router is working"}
+
+
 @router.get("/setup/seed-users")
 def seed_initial_users(
     request: Request,
