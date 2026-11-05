@@ -35,7 +35,7 @@ from ..services import GCSStorage
 router = APIRouter(prefix="/marketing-companies", tags=["marketing"])
 
 DEFAULT_BUCKET = "kalika_enterprises"
-DEFAULT_PATH = "sales-metadata/marketing_list_kalika.xlsx"
+DEFAULT_PATH = "sales-contacts/RECENT_marketing_list_kalika.xlsx"
 
 
 # ----------------------------------------------------------------- helpers
@@ -364,3 +364,30 @@ async def import_marketing_companies(
         source=source_label,
         sheets=sheets,
     )
+
+
+@router.post("/sync")
+def sync_marketing_companies(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Sync marketing companies from GCS (default path)."""
+    gcs = GCSStorage(bucket_name=DEFAULT_BUCKET)
+    if not gcs.available:
+        raise HTTPException(status_code=503, detail="GCS is not available")
+    
+    raw = gcs.download_blob(DEFAULT_PATH)
+    if not raw:
+        raise HTTPException(status_code=404, detail=f"Marketing workbook not found at {DEFAULT_PATH}")
+    
+    rows = _parse_workbook(raw)
+    imported, updated, skipped = _upsert_rows(db, user.id, rows)
+    db.commit()
+    
+    return {
+        "ok": True,
+        "imported": imported,
+        "updated": updated,
+        "skipped": skipped,
+        "source": f"gcs://{DEFAULT_BUCKET}/{DEFAULT_PATH}",
+    }

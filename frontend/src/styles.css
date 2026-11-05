@@ -16,6 +16,25 @@
   --deep: #10251f;
   --shadow: 0 18px 50px rgba(30, 61, 48, .09);
 }
+
+/* Prevent zoom and double-tap zoom on mobile */
+* {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+html, body {
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  overscroll-behavior: none;
+}
+
+button, input, select, textarea {
+  touch-action: manipulation;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; background: var(--cream); }
 button, input, select { font: inherit; }

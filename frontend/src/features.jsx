@@ -818,6 +818,22 @@ export function MarketingCompanies({ onNotice }) {
     }
   };
 
+  const syncFromGCS = async () => {
+    setBusy(true);
+    try {
+      const result = await request("/marketing-companies/sync", { method: "POST" });
+      onNotice({
+        type: result.ok ? "success" : "error",
+        text: `Synced from GCS: ${result.imported} new, ${result.updated} updated, ${result.skipped} skipped.`,
+      });
+      await load();
+    } catch (error) {
+      onNotice({ type: "error", text: error.message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const categories = stats ? Object.keys(stats.by_category || {}).sort() : [];
   const statuses = stats ? Object.keys(stats.by_call_status || {}).sort() : [];
 
@@ -831,8 +847,11 @@ export function MarketingCompanies({ onNotice }) {
         </div>
         <div className="button-row">
           <button className="secondary-button" onClick={load}><RefreshCw size={16} /> Refresh</button>
+          <button className="secondary-button" onClick={syncFromGCS} disabled={busy}>
+            <UploadCloud size={16} />{busy ? "Syncing..." : "Sync from GCS"}
+          </button>
           <button className="primary-button" onClick={runImport} disabled={busy}>
-            <Database size={16} />{busy ? "Importing..." : "Import marketing workbook"}
+            <Database size={16} />{busy ? "Importing..." : "Import workbook"}
           </button>
         </div>
       </div>
