@@ -176,6 +176,13 @@ def test_endpoint():
     return {"status": "ok", "message": "Auth router is working"}
 
 
+@router.get("/setup/count-users")
+def count_users(db: Session = Depends(get_db)):
+    """Count users in database."""
+    count = db.query(User).count()
+    return {"user_count": count}
+
+
 @router.get("/setup/seed-users")
 def seed_initial_users(
     request: Request,
