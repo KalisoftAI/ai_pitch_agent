@@ -371,6 +371,31 @@ async def import_marketing_companies(
     )
 
 
+@router.get("/source-info")
+def marketing_source_info(user: User = Depends(get_current_user)):
+    """Report the size and type of the default marketing workbook."""
+    gcs = GCSStorage(bucket_name=DEFAULT_BUCKET)
+    if not gcs.available or gcs._client is None:
+        raise HTTPException(status_code=503, detail="GCS is not available")
+    try:
+        blob = gcs._client.bucket(DEFAULT_BUCKET).blob(DEFAULT_PATH)
+        if not blob.exists():
+            return {"exists": False, "path": DEFAULT_PATH}
+        blob.reload()
+        return {
+            "exists": True,
+            "path": DEFAULT_PATH,
+            "size_bytes": blob.size,
+            "size_mb": round((blob.size or 0) / (1024 * 1024), 2),
+            "content_type": blob.content_type,
+            "updated": str(blob.updated),
+        }
+    except Exception as exc:  # pragma: no cover - diagnostics
+        raise HTTPException(
+            status_code=500, detail=f"source-info failed: {type(exc).__name__}: {exc}"
+        ) from exc
+
+
 @router.post("/sync")
 def sync_marketing_companies(
     user: User = Depends(get_current_user),
@@ -380,19 +405,34 @@ def sync_marketing_companies(
     gcs = GCSStorage(bucket_name=DEFAULT_BUCKET)
     if not gcs.available:
         raise HTTPException(status_code=503, detail="GCS is not available")
-    
+
     raw = gcs.download_blob(DEFAULT_PATH)
     if not raw:
         raise HTTPException(status_code=404, detail=f"Marketing workbook not found at {DEFAULT_PATH}")
-    
-    rows = _parse_workbook(raw)
-    imported, updated, skipped = _upsert_rows(db, user.id, rows)
-    db.commit()
-    
+
+    try:
+        rows = _parse_workbook(raw)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"parse failed ({len(raw)} bytes): {type(exc).__name__}: {exc}",
+        ) from exc
+
+    try:
+        imported, updated, skipped = _upsert_rows(db, user.id, rows)
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"db failed: {type(exc).__name__}: {exc}",
+        ) from exc
+
     return {
         "ok": True,
         "imported": imported,
         "updated": updated,
         "skipped": skipped,
+        "rows_parsed": len(rows),
         "source": f"gcs://{DEFAULT_BUCKET}/{DEFAULT_PATH}",
     }
