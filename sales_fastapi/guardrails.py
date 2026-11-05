@@ -65,7 +65,9 @@ class RequestGuardrailsMiddleware(BaseHTTPMiddleware):
             "default-src 'self'; script-src 'self' https://accounts.google.com; "
             "connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com; "
             "img-src 'self' data: https://*.googleusercontent.com; "
-            "style-src 'self' 'unsafe-inline'; frame-src https://accounts.google.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "frame-src https://accounts.google.com; "
             "object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
         )
         if settings.ENV.lower() == "production":
