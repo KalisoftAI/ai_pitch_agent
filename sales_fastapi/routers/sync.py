@@ -24,16 +24,35 @@ REFRESH_INTERVAL_MINUTES = 120  # 2-hour realtime refresh cadence
 
 
 def _sync_marketing(db: Session, user: User) -> dict:
+    from datetime import datetime, timezone
+
     gcs = GCSStorage(bucket_name=DEFAULT_BUCKET)
     if not gcs.available:
         return {"ok": False, "error": "gcs_unavailable"}
     raw = gcs.download_blob(DEFAULT_PATH)
     if not raw:
         return {"ok": False, "error": "workbook_not_found"}
-    rows = _parse_workbook(raw)
-    imported, updated, skipped = _upsert_rows(db, user.id, rows)
+    run = SyncRun(job="marketing_companies_sync", status="running", detail="")
+    db.add(run)
     db.commit()
-    return {"ok": True, "imported": imported, "updated": updated, "skipped": skipped}
+    db.refresh(run)
+    try:
+        rows = _parse_workbook(raw)
+        imported, updated, skipped = _upsert_rows(db, user.id, rows)
+        db.commit()
+        run.status = "ok"
+        run.detail = f"imported={imported} updated={updated} skipped={skipped}"
+        run.finished_at = datetime.now(timezone.utc)
+        db.commit()
+        return {"ok": True, "imported": imported, "updated": updated, "skipped": skipped}
+    except Exception as exc:
+        db.rollback()
+        db.query(SyncRun).filter(SyncRun.id == run.id).update(
+            {"status": "error", "detail": str(exc)[:400],
+             "finished_at": datetime.now(timezone.utc)}
+        )
+        db.commit()
+        raise
 
 
 @router.post("/all")

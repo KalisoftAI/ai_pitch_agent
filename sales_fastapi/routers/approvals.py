@@ -276,7 +276,7 @@ def issues_log(
     )
     audit_errors = (
         db.query(AuditLog)
-        .filter(AuditLog.status.notin_(("success", "dry_run")))
+        .filter(AuditLog.status.in_(("failed", "error", "rejected", "budget_exceeded")))
         .order_by(AuditLog.id.desc())
         .limit(30)
         .all()
