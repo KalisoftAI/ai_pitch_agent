@@ -41,6 +41,7 @@ from .routers import (
     voice_router,
     whatsapp_router,
 )
+from .routers.category_campaigns import router as category_campaigns_router
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -92,6 +93,7 @@ app.include_router(whatsapp_router, prefix=api_prefix)
 app.include_router(voice_router, prefix=api_prefix)
 app.include_router(templates_router, prefix=api_prefix)
 app.include_router(campaigns_router, prefix=api_prefix)
+app.include_router(category_campaigns_router, prefix=api_prefix)
 app.include_router(scheduler_router, prefix=api_prefix)
 app.include_router(feedback_router, prefix=api_prefix)
 app.include_router(feedback_pipeline_router, prefix=api_prefix)

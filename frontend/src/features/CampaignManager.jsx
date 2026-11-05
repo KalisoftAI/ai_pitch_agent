@@ -47,7 +47,7 @@ export function CampaignManager({ onNotice }) {
 
   const loadCampaigns = async () => {
     try {
-      const data = await request("/campaigns/list");
+      const data = await request("/category-campaigns/list");
       setCampaigns(data);
     } catch (error) {
       onNotice({ type: "error", text: error.message });
@@ -57,7 +57,7 @@ export function CampaignManager({ onNotice }) {
   const loadContacts = async () => {
     setLoading(true);
     try {
-      const data = await request(`/campaigns/load-contacts?source=${selectedSource}`, {
+      const data = await request(`/category-campaigns/load-contacts?source=${selectedSource}`, {
         method: "POST",
       });
       setContacts(data.contacts);
@@ -79,7 +79,7 @@ export function CampaignManager({ onNotice }) {
 
     setLoading(true);
     try {
-      const result = await request("/campaigns/create", {
+      const result = await request("/category-campaigns/create", {
         method: "POST",
         body: JSON.stringify({
           template_id: parseInt(selectedTemplate),
@@ -101,7 +101,7 @@ export function CampaignManager({ onNotice }) {
 
   const approveCampaign = async (id) => {
     try {
-      await request(`/campaigns/${id}/approve`, { method: "POST" });
+      await request(`/category-campaigns/${id}/approve`, { method: "POST" });
       onNotice({ type: "success", text: "Campaign approved" });
       await loadCampaigns();
     } catch (error) {
@@ -112,7 +112,7 @@ export function CampaignManager({ onNotice }) {
   const deleteCampaign = async (id) => {
     if (!window.confirm("Delete this campaign?")) return;
     try {
-      await request(`/campaigns/${id}`, { method: "DELETE" });
+      await request(`/category-campaigns/${id}`, { method: "DELETE" });
       onNotice({ type: "success", text: "Campaign deleted" });
       await loadCampaigns();
     } catch (error) {
@@ -122,7 +122,7 @@ export function CampaignManager({ onNotice }) {
 
   const viewCampaignMessages = async (id) => {
     try {
-      const messages = await request(`/campaigns/${id}/messages`);
+      const messages = await request(`/category-campaigns/${id}/messages`);
       setPreviewCampaign(campaigns.find(c => c.id === id));
       setPreviewMessages(messages);
     } catch (error) {
