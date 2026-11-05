@@ -1,4 +1,4 @@
-﻿"""Bulk outreach campaigns with human-in-the-loop review.
+"""Bulk outreach campaigns with human-in-the-loop review.
 
 Flow: create (render + optional Gemma personalisation) -> pending_review ->
 approve / edit -> send (email / WhatsApp / WeChat) -> status updates.

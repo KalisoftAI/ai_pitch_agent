@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import {
   Activity, BarChart3, Bot, BriefcaseBusiness, Building2, CalendarDays, Calculator, Check, Clock,
-  Copy, Database, Edit2, Eye, FileDown, FileText, Link2, Mail, MapPin, Mic, Package, Plus, RefreshCw, Save, Search, Send, ShieldCheck,
-  Sparkles, Trash2, TrendingUp, Truck, UploadCloud, Users, Video, X,
+  Copy, Database, Edit2, ExternalLink, Eye, Film, FileDown, FileText, Link2, Mail, MapPin, MessageCircle, Mic, Package, Plus, RefreshCw, Save, Search, Send, ShieldCheck,
+  Sparkles, Target, Trash2, TrendingUp, Truck, UploadCloud, Users, Video, X,
 } from "lucide-react";
 import { CampaignManager } from "./features/CampaignManager";
 
@@ -953,6 +953,209 @@ export function Access({ onNotice, user }) {
 }
 
 // ---------------------------------------------------------------- Marketing companies
+const DIWALI_REEL = "https://www.instagram.com/reel/DfB9Fa4BIsK/?utm_source=ig_web_copy_link&exln=NTc4MTIwNjQ2YQ==";
+
+const CURATED_MESSAGES = [
+  {
+    id: "diwali-2026",
+    category: "Diwali",
+    title: "Diwali greetings + festive reel",
+    text: `✨ Happy Diwali from Kalika Enterprises! ✨\n\nMay this festival of lights bring growth, prosperity and new partnerships to your business. Thank you for trusting us with your flexible packaging needs.\n\n🎬 Watch our festive reel: ${DIWALI_REEL}\n\nWarm wishes,\nKalika Enterprises\n📞 Reply to this message for a quick quote.`,
+    video: DIWALI_REEL,
+  },
+  {
+    id: "growth-partner",
+    category: "Business growth",
+    title: "Grow faster with a packaging partner",
+    text: `Hi {name},\n\nEvery order is a chance to grow. At Kalika Enterprises we help brands cut packaging cost, improve shelf appeal and deliver on time — every time.\n\n✅ Custom poly bags & films\n✅ Fast sampling and quotes\n✅ Reliable dispatch from our plant\n\nReply YES and we will share a growth plan for {company}.`,
+  },
+  {
+    id: "short-packaging",
+    category: "Packaging",
+    title: "Short packaging pitch",
+    text: `Hi {name}, need stronger, lighter, better-looking packaging?\n\nKalika Enterprises makes custom poly bags & films that protect your product and lift your brand — at the right price.\n\nSend us your size and quantity for a same-day estimate. 📦`,
+  },
+  {
+    id: "feedback-recent-order",
+    category: "Feedback",
+    title: "Feedback on recent order",
+    text: `Hi {name},\n\nThank you for your recent order {order_no} with Kalika Enterprises. We would love your feedback:\n\n1️⃣ Product quality (1-5)\n2️⃣ Delivery timeliness (1-5)\n3️⃣ Anything we can improve?\n\nYour feedback helps us serve you better. 🙏`,
+  },
+  {
+    id: "new-customer",
+    category: "New customer",
+    title: "Welcome a new customer",
+    text: `Welcome to Kalika Enterprises, {name}! 🎉\n\nWe are excited to partner with {company} for flexible packaging. Here is what you can expect:\n\n• Dedicated support\n• Fast quotes and samples\n• Consistent quality and dispatch\n\nReply with your requirement and we will get started today.`,
+  },
+  {
+    id: "reorder",
+    category: "Follow-up",
+    title: "Reorder / follow-up",
+    text: `Hi {name}, hope your last batch from Kalika Enterprises is working well.\n\nRunning low on stock? Reply with your quantity and we will reserve production for {company} this week.\n\n🎬 See our packaging in action: {video}`,
+    video: DIWALI_REEL,
+  },
+  {
+    id: "rate-quote",
+    category: "Business growth",
+    title: "Share a rate quote",
+    text: `Hi {name}, here is our latest quote for {company}:\n\n• Product: {product}\n• Rate: {rate}\n• Validity: 7 days\n\nReply to confirm and we will block capacity for you. Thank you for choosing Kalika Enterprises.`,
+  },
+  {
+    id: "catalogue",
+    category: "Packaging",
+    title: "Share catalogue / samples",
+    text: `Hi {name}, sharing the Kalika Enterprises packaging range for {company}. We can customise size, micron, print and finish.\n\nWant physical samples? Reply with your address and we will courier them. 📬`,
+  },
+];
+
+const CHANNEL_VIDEOS = [
+  { title: "Diwali festive reel", link: DIWALI_REEL, tag: "Instagram", note: "Share with Diwali greetings" },
+  { title: "Packaging showcase", link: "https://www.instagram.com/kalikaenterprises/", tag: "Instagram", note: "Short packaging message" },
+  { title: "Plant & capacity tour", link: "https://www.youtube.com/@kalikaenterprises", tag: "YouTube", note: "Build trust with new customers" },
+  { title: "Product demo", link: "https://www.youtube.com/@kalikaenterprises", tag: "YouTube", note: "Attach to follow-ups" },
+];
+
+function whatsappHref(text, phone) {
+  const digits = String(phone || "").replace(/\D/g, "");
+  const base = digits ? `https://wa.me/${digits.length === 10 ? `91${digits}` : digits}` : "https://wa.me/";
+  return `${base}?text=${encodeURIComponent(text || "")}`;
+}
+
+export function MessageStudio({ onNotice }) {
+  const [category, setCategory] = useState("All");
+  const [phone, setPhone] = useState("");
+  const [orders, setOrders] = useState([]);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    request("/erp/orders?limit=5")
+      .then((rows) => setOrders(Array.isArray(rows) ? rows.slice(0, 5) : []))
+      .catch(() => setOrders([]));
+  }, []);
+
+  const categories = ["All", ...Array.from(new Set(CURATED_MESSAGES.map((m) => m.category)))];
+  const visible = category === "All" ? CURATED_MESSAGES : CURATED_MESSAGES.filter((m) => m.category === category);
+
+  const fill = (text, order) => {
+    let out = text;
+    if (order) {
+      out = out
+        .replaceAll("{name}", order.customer || "there")
+        .replaceAll("{company}", order.customer || "your business")
+        .replaceAll("{order_no}", order.order_no || "recent order");
+    }
+    return out.replaceAll("{video}", DIWALI_REEL);
+  };
+
+  const copy = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      onNotice({ type: "success", text: "Message copied — paste it in WhatsApp." });
+    } catch {
+      onNotice({ type: "error", text: "Clipboard unavailable — select and copy manually." });
+    }
+  };
+
+  const openWhatsApp = (text) => {
+    window.open(whatsappHref(text, phone), "_blank", "noopener");
+  };
+
+  return (
+    <section className="panel studio-panel">
+      <div className="panel-heading">
+        <div>
+          <div className="section-kicker">CURATED OUTREACH / COPY &amp; WHATSAPP</div>
+          <h3>Message studio</h3>
+        </div>
+        <div className="studio-phone">
+          <MessageCircle size={16} />
+          <input
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
+            placeholder="WhatsApp number (optional)"
+            inputMode="tel"
+          />
+        </div>
+      </div>
+
+      <div className="studio-funnel">
+        <div className="studio-funnel-head"><Target size={15} /><b>Refine your funnel</b><span className="muted">turn the marketing list into conversations</span></div>
+        <div className="studio-chips">
+          {categories.map((item) => (
+            <button key={item} className={`chip ${category === item ? "active" : ""}`} onClick={() => setCategory(item)}>{item}</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="studio-grid">
+        {visible.map((message) => {
+          const text = fill(message.text);
+          return (
+            <article className="studio-card" key={message.id}>
+              <div className="studio-card-top">
+                <span className="template-channel">{message.category}</span>
+                <b>{message.title}</b>
+              </div>
+              <p className="studio-text">{text}</p>
+              <div className="button-row studio-actions">
+                <button className="secondary-button" onClick={() => copy(text)}><Copy size={14} /> Copy</button>
+                <button className="primary-button" onClick={() => openWhatsApp(text)}><MessageCircle size={14} /> WhatsApp</button>
+                {message.video && <a className="text-button" href={message.video} target="_blank" rel="noreferrer"><ExternalLink size={14} /> Reel</a>}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      <div className="studio-section">
+        <div className="section-kicker"><Film size={13} /> CHANNEL VIDEO LIBRARY</div>
+        <div className="studio-videos">
+          {CHANNEL_VIDEOS.map((video) => (
+            <div className="studio-video" key={video.title}>
+              <span className="mail-icon"><Video size={16} /></span>
+              <div>
+                <b>{video.title}</b>
+                <small>{video.tag} · {video.note}</small>
+              </div>
+              <div className="button-row">
+                <button className="icon-button" title="Copy link" onClick={() => copy(video.link)}><Copy size={15} /></button>
+                <a className="icon-button" title="Open video" href={video.link} target="_blank" rel="noreferrer"><ExternalLink size={15} /></a>
+                <button className="icon-button" title="Share on WhatsApp" onClick={() => openWhatsApp(`${video.title}: ${video.link}`)}><MessageCircle size={15} /></button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="studio-section">
+        <div className="section-kicker"><TrendingUp size={13} /> RECENT ERP ORDERS · ASK FOR FEEDBACK</div>
+        {orders.length === 0 ? (
+          <p className="muted" style={{ fontSize: 12 }}>No recent ERP orders available yet.</p>
+        ) : (
+          <div className="studio-videos">
+            {orders.map((order) => {
+              const feedback = fill(CURATED_MESSAGES.find((m) => m.id === "feedback-recent-order").text, order);
+              return (
+                <div className="studio-video" key={order.order_no}>
+                  <span className="mail-icon"><BriefcaseBusiness size={16} /></span>
+                  <div>
+                    <b>{order.customer}</b>
+                    <small>{order.order_no} · ₹{fmtNum(order.total_value)} · {order.status}</small>
+                  </div>
+                  <div className="button-row">
+                    <button className="icon-button" title="Copy feedback request" onClick={() => copy(feedback)}><Copy size={15} /></button>
+                    <button className="icon-button" title="Send feedback request on WhatsApp" onClick={() => openWhatsApp(feedback)}><MessageCircle size={15} /></button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export function MarketingCompanies({ onNotice }) {
   const [rows, setRows] = useState([]);
   const [stats, setStats] = useState(null);
@@ -1010,7 +1213,7 @@ export function MarketingCompanies({ onNotice }) {
       const formData = new FormData();
       formData.append("file", file);
       
-      const response = await fetch("/api/marketing-companies/upload", {
+      const response = await fetch("/api/marketing-companies/import", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${sessionStorage.getItem("sales_token")}`,
@@ -1101,13 +1304,32 @@ export function MarketingCompanies({ onNotice }) {
           </button>
         </div>
       </div>
+      <MessageStudio onNotice={onNotice} />
       {stats && (
-        <div className="mini-stats">
-          <span><b>{fmtNum(stats.total)}</b> companies</span>
-          <span><b>{fmtNum(stats.with_phone)}</b> with phone</span>
-          <span><b>{fmtNum(stats.with_email)}</b> with email</span>
-          <span><b>{fmtNum(stats.with_requirements)}</b> with requirements</span>
-        </div>
+        <section className="panel studio-panel">
+          <div className="panel-heading">
+            <div><div className="section-kicker">MARKETING FUNNEL</div><h3>Refine the funnel</h3></div>
+            <span className="muted">{fmtNum(stats.total)} companies</span>
+          </div>
+          <div className="funnel-fill">
+            {[
+              ["In list", stats.total],
+              ["With phone", stats.with_phone],
+              ["With email", stats.with_email],
+              ["With requirements", stats.with_requirements],
+            ].map(([label, value]) => {
+              const pct = stats.total ? Math.round((value / stats.total) * 100) : 0;
+              return (
+                <div className="funnel-fill-row" key={label}>
+                  <span>{label}</span>
+                  <div className="bar-track"><div className="bar-fill" style={{ width: `${pct}%` }} /></div>
+                  <b>{fmtNum(value)}</b>
+                  <small className="muted">{pct}%</small>
+                </div>
+              );
+            })}
+          </div>
+        </section>
       )}
       <section className="panel table-panel">
         <div className="table-toolbar">
