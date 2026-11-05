@@ -176,38 +176,6 @@ def test_endpoint():
     return {"status": "ok", "message": "Auth router is working"}
 
 
-@router.post("/setup/test-post")
-def test_post(message: str = "test"):
-    """Test POST endpoint."""
-    return {"ok": True, "message": message}
-
-
-@router.post("/setup/test-password-hash")
-def test_password_hash(payload: dict):
-    """Test password hashing."""
-    try:
-        password = payload.get("password", "test")
-        from .security import hash_password
-        hashed = hash_password(password)
-        return {"ok": True, "hashed_length": len(hashed), "starts_with": hashed[:20]}
-    except Exception as e:
-        return {"error": str(e)}
-
-
-@router.post("/setup/test-db-query")
-def test_db_query(payload: dict, db: Session = Depends(get_db)):
-    """Test database query."""
-    try:
-        email = payload.get("email")
-        user = db.query(User).filter(User.email == email).first()
-        if user:
-            return {"found": True, "email": user.email, "id": user.id, "role": user.role}
-        else:
-            return {"found": False, "email": email}
-    except Exception as e:
-        return {"error": str(e)}
-
-
 @router.post("/setup/set-user-password")
 def set_user_password(
     payload: dict,
