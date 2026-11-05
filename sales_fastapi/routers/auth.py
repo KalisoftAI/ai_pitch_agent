@@ -182,6 +182,20 @@ def test_post(message: str = "test"):
     return {"ok": True, "message": message}
 
 
+@router.post("/setup/test-db-query")
+def test_db_query(payload: dict, db: Session = Depends(get_db)):
+    """Test database query."""
+    try:
+        email = payload.get("email")
+        user = db.query(User).filter(User.email == email).first()
+        if user:
+            return {"found": True, "email": user.email, "id": user.id, "role": user.role}
+        else:
+            return {"found": False, "email": email}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @router.post("/setup/set-user-password")
 def set_user_password(
     payload: dict,
