@@ -170,7 +170,7 @@ def set_password(
     return {"ok": True, "username": user.email.split("@")[0]}
 
 
-@router.post("/setup/seed-users")
+@router.get("/setup/seed-users")
 def seed_initial_users(
     request: Request,
     db: Session = Depends(get_db),
