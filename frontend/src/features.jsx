@@ -1650,3 +1650,125 @@ export function Templates({ onNotice }) {
 }
 
 export { CampaignManager };
+
+// ---------------------------------------------------------------- Review hub
+// Human-review console (ai.solutions admin): sync-all + 2h refresh status,
+// subtask approvals with model confidence, and the issues log.
+export function ReviewHub({ onNotice, user }) {
+  const isAdmin = (user?.email || "").toLowerCase() === "ai.solutions@kalisoftai.in" || (user?.role || "").toLowerCase() === "admin";
+  const [syncStatus, setSyncStatus] = useState(null);
+  const [approvals, setApprovals] = useState({ pending: 0, items: [] });
+  const [issues, setIssues] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const load = async () => {
+    try {
+      const [s, a] = await Promise.all([request("/sync/status"), request("/approvals")]);
+      setSyncStatus(s); setApprovals(a); setError("");
+      if (isAdmin) {
+        try { setIssues(await request("/approvals/issues")); } catch { setIssues(null); }
+      }
+    } catch (err) { setError(err.message); }
+  };
+  useEffect(() => { load(); const t = setInterval(load, 2 * 60 * 60 * 1000); return () => clearInterval(t); }, []);
+
+  const syncAll = async () => {
+    setBusy(true);
+    try {
+      const result = await request("/sync/all", { method: "POST" });
+      onNotice({ type: result.ok === false ? "error" : "success", text: result.ok === false ? "Sync finished with errors." : "All data synced from GCS." });
+      await load();
+    } catch (err) { onNotice({ type: "error", text: err.message }); }
+    finally { setBusy(false); }
+  };
+  const generate = async () => {
+    setBusy(true);
+    try {
+      const result = await request("/approvals/generate", { method: "POST" });
+      onNotice({ type: "success", text: `${result.created} subtask(s) proposed for review.` });
+      await load();
+    } catch (err) { onNotice({ type: "error", text: err.message }); }
+    finally { setBusy(false); }
+  };
+  const decide = async (id, action) => {
+    try {
+      await request(`/approvals/${id}/decide`, { method: "POST", body: JSON.stringify({ action }) });
+      onNotice({ type: "success", text: `Subtask ${action}d.` });
+      await load();
+    } catch (err) { onNotice({ type: "error", text: err.message }); }
+  };
+
+  const jobs = syncStatus?.jobs || {};
+  const pending = approvals.items.filter((i) => i.status === "pending");
+  const decided = approvals.items.filter((i) => i.status !== "pending");
+
+  return (
+    <div className="content dash">
+      <div className="page-heading">
+        <div><div className="section-kicker">FUTURE SCOPE / HUMAN REVIEW</div><h2>Subtasks &amp; sync control</h2>
+          <p className="muted">Cost-effective Gemma → Gemini-Flash proposals stay pending until you accept them. Data auto-refreshes every {syncStatus?.refresh_interval_minutes || 120} minutes.</p></div>
+        <div style={{ display: "flex", gap: 8 }}>
+          {isAdmin && <button className="secondary-button" onClick={generate} disabled={busy}><Sparkles size={15} /> Propose subtasks</button>}
+          {isAdmin && <button className="primary-button" onClick={syncAll} disabled={busy}><RefreshCw size={15} /> {busy ? "Syncing…" : "Sync all now"}</button>}
+          <button className="secondary-button" onClick={load}><RefreshCw size={15} /> Refresh</button>
+        </div>
+      </div>
+      {error && <div className="config-warning"><ShieldCheck size={18} /><span>{error}</span></div>}
+
+      <section className="panel">
+        <div className="panel-heading"><div><div className="section-kicker">DATA SYNC</div><h3>Last sync per source</h3></div><Database size={19} className="muted" /></div>
+        <div className="table-wrap"><table><thead><tr><th>Source</th><th>Status</th><th>Finished</th></tr></thead><tbody>
+          {Object.entries(jobs).map(([job, info]) => (
+            <tr key={job}><td><b>{job.replace(/_/g, " ")}</b></td>
+              <td><span className={`status-pill ${info.status === "ok" ? "approved" : info.status === "never" ? "" : "rejected"}`}>{info.status}</span></td>
+              <td>{info.finished_at ? String(info.finished_at).slice(0, 19).replace("T", " ") : "—"}</td></tr>
+          ))}
+        </tbody></table></div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-heading"><div><div className="section-kicker">PENDING ACCEPTANCE</div><h3>{pending.length} subtask(s) awaiting review</h3></div><Sparkles size={19} className="muted" /></div>
+        {!pending.length && <div className="empty-state"><Check size={22} /><p>No pending subtasks. Use "Propose subtasks" to generate refined tasks.</p></div>}
+        {pending.map((item) => (
+          <div className="panel form-panel" key={item.id} style={{ marginBottom: 12 }}>
+            <div className="panel-heading"><div><div className="section-kicker">{item.area} · {item.source}</div><h3>{item.title}</h3></div>
+              <span className="status-pill">{Math.round((item.confidence || 0) * 100)}% conf</span></div>
+            {item.detail && <p className="muted">{item.detail}</p>}
+            {isAdmin && <div style={{ display: "flex", gap: 8 }}>
+              <button className="primary-button" onClick={() => decide(item.id, "approve")}><Check size={15} /> Accept</button>
+              <button className="secondary-button" onClick={() => decide(item.id, "reject")}><X size={15} /> Reject</button>
+            </div>}
+          </div>
+        ))}
+      </section>
+
+      {decided.length > 0 && <section className="panel">
+        <div className="panel-heading"><div><div className="section-kicker">DECIDED</div><h3>Reviewed subtasks</h3></div><Clock size={19} className="muted" /></div>
+        <div className="table-wrap"><table><thead><tr><th>Subtask</th><th>Confidence</th><th>Status</th><th>By</th></tr></thead><tbody>
+          {decided.slice(0, 20).map((item) => (
+            <tr key={item.id}><td><b>{item.title}</b><small className="muted"> {item.area}</small></td>
+              <td>{Math.round((item.confidence || 0) * 100)}%</td>
+              <td><span className={`status-pill ${item.status === "approved" ? "approved" : "rejected"}`}>{item.status}</span></td>
+              <td>{item.decided_by || "—"}</td></tr>
+          ))}
+        </tbody></table></div>
+      </section>}
+
+      {isAdmin && issues && <section className="panel">
+        <div className="panel-heading"><div><div className="section-kicker">ISSUES LOG (ai.solutions only)</div><h3>Sync &amp; audit errors</h3></div><ShieldCheck size={19} className="muted" /></div>
+        <div className="table-wrap"><table><thead><tr><th>Type</th><th>Name</th><th>Status</th><th>Detail</th><th>When</th></tr></thead><tbody>
+          {(issues.sync_failures || []).map((f) => (
+            <tr key={`sync-${f.id}`}><td>sync</td><td><b>{f.job}</b></td><td><span className="status-pill rejected">{f.status}</span></td><td>{f.detail}</td><td>{f.finished_at ? String(f.finished_at).slice(0, 19).replace("T", " ") : "—"}</td></tr>
+          ))}
+          {(issues.audit_errors || []).map((e) => (
+            <tr key={`audit-${e.id}`}><td>audit</td><td><b>{e.action}</b></td><td><span className="status-pill rejected">{e.status}</span></td><td>{e.resource_type}</td><td>{String(e.created_at).slice(0, 19).replace("T", " ")}</td></tr>
+          ))}
+          {!(issues.sync_failures || []).length && !(issues.audit_errors || []).length && (
+            <tr><td colSpan={5}><div className="empty-state"><Check size={22} /><p>No issues recorded.</p></div></td></tr>
+          )}
+        </tbody></table></div>
+      </section>}
+    </div>
+  );
+}

@@ -110,3 +110,19 @@ def _ensure_columns() -> None:
                             f"ALTER COLUMN {column} TYPE VARCHAR(255)"
                         )
                     )
+    if "message_templates" in insp.get_table_names():
+        # Older databases were created before strategy/funnel_stage/variables
+        # existed; create_all never alters existing tables, so add them here.
+        json_default = "'[]'::json" if engine.dialect.name == "postgresql" else "'[]'"
+        cols = {c["name"] for c in insp.get_columns("message_templates")}
+        for column, ddl in (
+            ("strategy", "VARCHAR(32) DEFAULT 'cold_outreach'"),
+            ("funnel_stage", "VARCHAR(32) DEFAULT 'awareness'"),
+            ("subject", "VARCHAR(255) DEFAULT ''"),
+            ("body", "TEXT DEFAULT ''"),
+            ("variables", f"JSON DEFAULT {json_default}"),
+            ("is_active", "BOOLEAN DEFAULT TRUE"),
+        ):
+            if column not in cols:
+                with engine.begin() as conn:
+                    conn.execute(text(f"ALTER TABLE message_templates ADD COLUMN {column} {ddl}"))

@@ -1,4 +1,5 @@
 from .ai import router as ai_router
+from .approvals import router as approvals_router
 from .auth import router as auth_router
 from .campaigns import router as campaigns_router
 from .catalog import router as catalog_router
@@ -18,6 +19,7 @@ from .ops import router as ops_router
 from .sales import router as sales_router
 from .scheduler import router as scheduler_router
 from .social import router as social_router
+from .sync import router as sync_router
 from .system import router as system_router
 from .tally import router as tally_router
 from .team import router as team_router
@@ -29,6 +31,7 @@ from .whatsapp import router as whatsapp_router
 
 __all__ = [
     "ai_router",
+    "approvals_router",
     "auth_router",
     "campaigns_router",
     "catalog_router",
@@ -49,6 +52,7 @@ __all__ = [
     "sales_router",
     "scheduler_router",
     "social_router",
+    "sync_router",
     "system_router",
     "tally_router",
     "team_router",

@@ -119,6 +119,11 @@ STANDARD_TASKS: List[Dict[str, Any]] = [
         "description": "Nightly: networkx graph preprocessing (contacts x domains x intents x chats x ERP customers) -> nodes/edges/gexf for future graph DB",
     },
     {"name": "kpi_snapshot", "cron": "0 23 * * *", "description": "Nightly business-KPI snapshot"},
+    {
+        "name": "sync_all_data",
+        "cron": "0 */2 * * *",
+        "description": "Every 2h: refresh ERP dispatch/orders + Tally sales + marketing companies from GCS (POST /api/sync/all)",
+    },
 ]
 
 _QUEUE_KEY = "sales:cron"

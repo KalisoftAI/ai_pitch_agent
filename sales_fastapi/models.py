@@ -635,3 +635,27 @@ class MarketingCompany(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now()
     )
+
+
+class TaskApproval(Base):
+    """A backend subtask awaiting human acceptance before it is processed.
+
+    Subtasks are proposed either by the system (LLM-driven data-refinement
+    suggestions, with a model confidence score) or by a user, and only run after
+    an admin (ai.solutions) approves them. This keeps the cost-effective Gemma /
+    Gemini-Flash pipeline under human review.
+    """
+
+    __tablename__ = "task_approvals"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    title: Mapped[str] = mapped_column(String(255), default="")
+    area: Mapped[str] = mapped_column(String(64), index=True, default="")
+    detail: Mapped[str] = mapped_column(Text, default="")
+    confidence: Mapped[float] = mapped_column(Float, default=0.0)
+    source: Mapped[str] = mapped_column(String(32), default="user")  # user | llm | system
+    status: Mapped[str] = mapped_column(String(16), index=True, default="pending")
+    decided_by: Mapped[str] = mapped_column(String(255), default="")
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

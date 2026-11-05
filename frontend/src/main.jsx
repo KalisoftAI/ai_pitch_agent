@@ -7,7 +7,7 @@ import {
   Truck, TrendingUp, Calculator, Save, Package, FileDown, Bot, Paperclip,
 } from "lucide-react";
 import "./styles.css";
-import { SalesBi, Catalogue, CompanyVisits, InstoreMails, SocialAi, Access, TallySalesPanel, MarketingCompanies, Templates, CampaignManager } from "./features";
+import { SalesBi, Catalogue, CompanyVisits, InstoreMails, SocialAi, Access, TallySalesPanel, MarketingCompanies, Templates, CampaignManager, ReviewHub } from "./features";
 import { KALISOFT_LOGO, KALIKA_LOGO } from "./branding";
 
 const API = "/api";
@@ -38,6 +38,7 @@ const TAB_TITLES = {
   erp: "ERP & sales forecast", salesbi: "Sales analytics & BI", catalog: "Catalogue & rates",
   visits: "Field / company history", socialai: "Social & AI insights", access: "Users & access",
   uat: "UAT & operations", changelog: "Recent changes", outreach: "Outreach",
+  future: "Future scope & review",
   marketing: "Marketing companies",
   templates: "Message templates",
   campaigns: "Email campaigns",
@@ -84,6 +85,7 @@ const NAV_GROUPS = [
       { tab: "kpis", label: "Business KPIs", icon: BarChart3 },
       { tab: "socialai", label: "Social & AI", icon: Bot },
       { tab: "access", label: "Access", icon: Users },
+      { tab: "future", label: "Future scope", icon: Sparkles, adminOnly: true },
       { tab: "uat", label: "UAT & ops", icon: ShieldCheck },
       { tab: "changelog", label: "Recent changes", icon: Star },
     ],
@@ -124,6 +126,7 @@ function App() {
 
   const logout = () => { sessionStorage.removeItem("sales_token"); setUser(null); };
   const isKalikaUser = user.email === "kalikaenterprises@gmail.com";
+  const isAdmin = (user.email || "").toLowerCase() === "ai.solutions@kalisoftai.in" || (user.role || "").toLowerCase() === "admin";
   const brandLogo = isKalikaUser ? KALIKA_LOGO : KALISOFT_LOGO;
   const brandName = isKalikaUser ? "Kalika" : "Kalisoft";
   const brandSubtext = isKalikaUser ? "Enterprises" : <b>AI</b>;
@@ -136,7 +139,7 @@ function App() {
           {NAV_GROUPS.map((group) => (
             <div className="nav-group" key={group.label}>
               <div className="nav-group-label">{group.label}</div>
-              {group.items.map(({ tab: itemTab, label, icon }) => (
+              {group.items.filter(({ adminOnly }) => !adminOnly || isAdmin).map(({ tab: itemTab, label, icon }) => (
                 <NavItem
                   key={itemTab}
                   icon={icon}
@@ -156,7 +159,7 @@ function App() {
       {mobileNav && <button className="scrim" aria-label="Close menu" onClick={() => setMobileNav(false)} />}
       <main className="main">
         <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open menu"><Menu size={20} /></button><div><div className="eyebrow">{isKalikaUser ? "KALIKA ENTERPRISES" : "KALISOFT AI"} / SALES PIPELINE</div><h1>{TAB_TITLES[tab] || "Outreach"}</h1></div><div className="topbar-actions"><button className="assistant-launch" onClick={() => setAssistantOpen(true)}><img src={KALIKA_LOGO} alt="" /><Bot size={16} /><span>Kalika AI</span></button><EnvBadge env={health?.env} /><button className="text-button" onClick={() => setTour(true)}><Sparkles size={15} /> Take the tour</button><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Settings"><Settings2 size={18} /></button></div></header>
-        {tab === "dash" && <KalikaDash onNavigate={setTab} onNotice={setNotice} />}
+        {tab === "dash" && <KalikaDash onNavigate={setTab} onNotice={setNotice} user={user} />}
         {tab === "instore" && <InstoreMails onNotice={setNotice} />}
         {tab === "field" && <FieldDesk onNotice={setNotice} user={user} onNavigate={setTab} />}
         {tab === "overview" && <Overview onNavigate={setTab} onNotice={setNotice} health={health} setHealth={setHealth} />}
@@ -179,6 +182,7 @@ function App() {
         {tab === "socialai" && <SocialAi onNotice={setNotice} />}
         {tab === "access" && <Access onNotice={setNotice} user={user} />}
         {tab === "uat" && <UatOps onNotice={setNotice} />}
+        {tab === "future" && isAdmin && <ReviewHub onNotice={setNotice} user={user} />}
         {tab === "changelog" && <RecentChanges />}
       </main>
       {tour && <Walkthrough onClose={() => setTour(false)} />}
@@ -2523,11 +2527,13 @@ function UatOps({ onNotice }) {
 const fmtNum = (v) => Number(v || 0).toLocaleString("en-IN");
 const fmtInr = (v) => "₹" + Number(v || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
-function KalikaDash({ onNavigate, onNotice }) {
+function KalikaDash({ onNavigate, onNotice, user }) {
   const [dash, setDash] = useState(null);
   const [team, setTeam] = useState(null);
   const [chatBody, setChatBody] = useState("");
   const [busy, setBusy] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const isAdmin = (user?.email || "").toLowerCase() === "ai.solutions@kalisoftai.in" || (user?.role || "").toLowerCase() === "admin";
 
   const load = async () => {
     try {
@@ -2536,6 +2542,16 @@ function KalikaDash({ onNavigate, onNotice }) {
     } catch (error) { onNotice({ type: "error", text: error.message }); }
   };
   useEffect(() => { load(); const timer = setInterval(load, 60000); return () => clearInterval(timer); }, []);
+
+  const syncAll = async () => {
+    setSyncing(true);
+    try {
+      const result = await request("/sync/all", { method: "POST" });
+      onNotice({ type: result.ok === false ? "error" : "success", text: result.ok === false ? "Sync finished with errors — see Future scope." : "All data synced from GCS (ERP · Tally · marketing)." });
+      await load();
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+    finally { setSyncing(false); }
+  };
 
   const postChat = async (event) => {
     event.preventDefault();
@@ -2562,7 +2578,10 @@ function KalikaDash({ onNavigate, onNotice }) {
           <h2>Command center</h2>
           <p className="muted">ERP sales data, platform health, social signals and field updates — one screen. Refreshes every minute.</p>
         </div>
-        <button className="secondary-button" onClick={load}><RefreshCw size={15} /> Refresh</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          {isAdmin && <button className="primary-button" onClick={syncAll} disabled={syncing}><RefreshCw size={15} /> {syncing ? "Syncing…" : "Sync all data"}</button>}
+          <button className="secondary-button" onClick={load}><RefreshCw size={15} /> Refresh</button>
+        </div>
       </div>
 
       <div className="live-strip">

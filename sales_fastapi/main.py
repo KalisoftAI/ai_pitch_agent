@@ -12,6 +12,7 @@ from .database import init_db
 from .guardrails import RequestGuardrailsMiddleware
 from .routers import (
     ai_router,
+    approvals_router,
     auth_router,
     campaigns_router,
     catalog_router,
@@ -32,6 +33,7 @@ from .routers import (
     sales_router,
     scheduler_router,
     social_router,
+    sync_router,
     system_router,
     tally_router,
     team_router,
@@ -107,6 +109,8 @@ app.include_router(instore_router, prefix=api_prefix)
 app.include_router(team_router, prefix=api_prefix)
 app.include_router(visits_router, prefix=api_prefix)
 app.include_router(users_router, prefix=api_prefix)
+app.include_router(sync_router, prefix=api_prefix)
+app.include_router(approvals_router, prefix=api_prefix)
 
 
 @app.get("//api/email/google/callback", include_in_schema=False)

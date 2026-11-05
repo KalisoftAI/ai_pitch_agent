@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 # ---------- Auth ----------
@@ -244,6 +244,26 @@ class TemplateBase(BaseModel):
     body: str = Field(default="", max_length=20_000)
     variables: list[str] = Field(default_factory=list)
     is_active: bool = True
+
+    @field_validator("variables", mode="before")
+    @classmethod
+    def _coerce_variables(cls, value):
+        """Legacy rows may store variables as a comma string; normalise to list."""
+        if value is None:
+            return []
+        if isinstance(value, str):
+            import json
+
+            try:
+                parsed = json.loads(value)
+                if isinstance(parsed, list):
+                    return [str(v) for v in parsed]
+            except (ValueError, TypeError):
+                pass
+            return [v.strip() for v in value.split(",") if v.strip()]
+        if isinstance(value, (list, tuple)):
+            return [str(v) for v in value]
+        return []
 
 
 class TemplateCreate(TemplateBase):

@@ -27,7 +27,7 @@ from ..erp_sync import (
     sync_erp_report,
 )
 from ..models import ErpDispatch, ErpOrder, IntegrationSetting, SyncRun, User
-from ..security import get_current_user, require_admin
+from ..security import get_current_user, is_admin_user, require_admin
 from ..services import GCSStorage
 
 router = APIRouter(prefix="/erp", tags=["erp"])
@@ -99,7 +99,7 @@ def erp_status(user: User = Depends(get_current_user), db: Session = Depends(get
         }
         if last_run
         else None,
-        "is_admin": (user.email or "").lower() in settings.admin_emails,
+        "is_admin": is_admin_user(user),
         "youtube": {
             "data_api_configured": bool(_youtube_key(db)),
             "analytics_api": "requires OAuth (next scope)",
