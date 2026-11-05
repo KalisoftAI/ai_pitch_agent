@@ -183,15 +183,21 @@ def set_user_password(
     db: Session = Depends(get_db),
 ):
     """Set password for a specific user (for setup purposes)."""
-    user = db.query(User).filter(User.email == email).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    from .security import hash_password
-    user.password_hash = hash_password(password)
-    db.commit()
-    
-    return {"ok": True, "email": email, "message": "Password updated"}
+    try:
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            raise HTTPException(status_code=404, detail=f"User not found: {email}")
+        
+        from .security import hash_password
+        user.password_hash = hash_password(password)
+        db.commit()
+        
+        return {"ok": True, "email": email, "message": "Password updated", "user_id": user.id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to set password: {str(e)}")
 
 
 @router.get("/setup/list-users")
