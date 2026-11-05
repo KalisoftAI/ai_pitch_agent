@@ -255,7 +255,6 @@ class Settings(BaseSettings):
                 )
             required = {
                 "GOOGLE_CLIENT_ID": self.GOOGLE_CLIENT_ID,
-                "GOOGLE_ALLOWED_DOMAINS": self.GOOGLE_ALLOWED_DOMAINS,
                 "GOOGLE_CLOUD_PROJECT": self.GOOGLE_CLOUD_PROJECT,
             }
             missing = [name for name, value in required.items() if not value.strip()]
