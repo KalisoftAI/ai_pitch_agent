@@ -82,11 +82,13 @@ def _parse_workbook(raw: bytes) -> list[dict[str, Any]]:
         if not sheet_name:
             continue
         sheet = workbook[sheet_name]
-        rows = list(sheet.iter_rows(values_only=True))
-        if not rows:
+        row_iter = sheet.iter_rows(values_only=True)
+        try:
+            header_row = next(row_iter)
+        except StopIteration:
             continue
-        headers = [_cell(value).lower() for value in rows[0]]
-        for index, row in enumerate(rows[1:], start=2):
+        headers = [_cell(value).lower() for value in header_row]
+        for index, row in enumerate(row_iter, start=2):
             record = mapper(headers, row)
             if not record:
                 continue
@@ -94,6 +96,7 @@ def _parse_workbook(raw: bytes) -> list[dict[str, Any]]:
             record["source_row"] = index
             out.append(record)
 
+    workbook.close()
     return out
 
 
@@ -176,7 +179,19 @@ def _upsert_rows(
     Returns ``(imported, updated, skipped)`` counts.
     """
     imported = updated = skipped = 0
-    pending: dict[str, MarketingCompany] = {}
+
+    # Load every existing row for this user in a single query instead of one
+    # SELECT per company. Large marketing workbooks otherwise spend most of the
+    # request budget on round trips and hit the Cloud Run timeout.
+    existing_rows = (
+        db.query(MarketingCompany)
+        .filter(MarketingCompany.user_id == user_id)
+        .all()
+    )
+    by_key: dict[str, MarketingCompany] = {
+        row.company_key: row for row in existing_rows
+    }
+    pending: set[str] = set()
 
     for row in rows:
         company = (row.get("company") or "").strip()
@@ -185,36 +200,26 @@ def _upsert_rows(
             continue
         company_key = _normalise_company_key(company)
 
-        if company_key in pending:
-            target = pending[company_key]
-        else:
-            existing = (
-                db.query(MarketingCompany)
-                .filter(
-                    MarketingCompany.user_id == user_id,
-                    MarketingCompany.company_key == company_key,
-                )
-                .first()
+        target = by_key.get(company_key)
+        if target is None:
+            target = MarketingCompany(
+                user_id=user_id,
+                company=company,
+                company_key=company_key,
+                contact_name=row.get("contact_name") or "",
+                phone=row.get("phone") or "",
+                email=row.get("email") or "",
+                category=row.get("category") or "",
+                call_status=row.get("call_status") or "",
+                requirements=row.get("requirements") or "",
+                source_sheet=row.get("source_sheet") or "",
+                source_row=int(row.get("source_row") or 0),
             )
-            if existing is None:
-                target = MarketingCompany(
-                    user_id=user_id,
-                    company=company,
-                    company_key=company_key,
-                    contact_name=row.get("contact_name") or "",
-                    phone=row.get("phone") or "",
-                    email=row.get("email") or "",
-                    category=row.get("category") or "",
-                    call_status=row.get("call_status") or "",
-                    requirements=row.get("requirements") or "",
-                    source_sheet=row.get("source_sheet") or "",
-                    source_row=int(row.get("source_row") or 0),
-                )
-                db.add(target)
-                pending[company_key] = target
-                imported += 1
-                continue
-            target = existing
+            db.add(target)
+            by_key[company_key] = target
+            pending.add(company_key)
+            imported += 1
+            continue
 
         changed = False
         for field in (

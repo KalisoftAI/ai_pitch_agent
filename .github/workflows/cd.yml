@@ -75,9 +75,9 @@ jobs:
             --min-instances=0 \
             --max-instances="${{ needs.resolve.outputs.max_instances }}" \
             --cpu=1 \
-            --memory=512Mi \
+            --memory=1Gi \
             --concurrency=80 \
-            --timeout=300 \
+            --timeout=900 \
             --cpu-throttling
 
       - name: Smoke test

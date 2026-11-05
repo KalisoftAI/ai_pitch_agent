@@ -1591,3 +1591,33 @@ nav { min-height: 0; overflow-y: auto; padding-right: 2px; scrollbar-width: thin
   .studio-phone input { min-width: 0; width: 100%; }
   .funnel-fill-row { grid-template-columns: 90px 1fr 48px 38px; gap: 6px; }
 }
+
+/* ---------------------------------------------------------------- Mobile refinements */
+@media (max-width: 700px) {
+  .studio-panel .panel-heading { flex-wrap: wrap; align-items: stretch; }
+  .studio-phone { width: 100%; }
+  .studio-phone input { width: 100%; min-width: 0; }
+  .studio-chips {
+    flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .studio-chips::-webkit-scrollbar { display: none; }
+  .chip { flex: 0 0 auto; }
+  .studio-actions { flex-wrap: wrap; }
+  .studio-actions .primary-button,
+  .studio-actions .secondary-button { flex: 1; }
+  .studio-video { flex-wrap: wrap; align-items: flex-start; }
+  .studio-video .button-row { width: 100%; justify-content: flex-end; }
+  .studio-text { max-height: none; }
+  .funnel-fill-row { grid-template-columns: 1fr auto; row-gap: 2px; }
+  .funnel-fill-row .bar-track { grid-column: 1 / -1; order: 3; }
+  .funnel-fill-row small { display: none; }
+  .table-toolbar select { width: 100%; }
+  .table-toolbar .muted { width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .studio-card { padding: 12px; }
+  .studio-video { padding: 10px; }
+  .content.dash .page-heading .button-row { flex-wrap: wrap; }
+}
