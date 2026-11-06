@@ -339,6 +339,7 @@ class CampaignMessage(Base):
     campaign_id: Mapped[int] = mapped_column(Integer, index=True)
     user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
     contact_id: Mapped[int] = mapped_column(Integer, default=0)
+    contact_name: Mapped[str] = mapped_column(String(255), default="")
     to_address: Mapped[str] = mapped_column(String(320), default="")
     rendered_subject: Mapped[str] = mapped_column(String(255), default="")
     rendered_body: Mapped[str] = mapped_column(Text, default="")
@@ -346,6 +347,7 @@ class CampaignMessage(Base):
     error: Mapped[str] = mapped_column(String(512), default="")
     provider_id: Mapped[str] = mapped_column(String(128), default="")
     sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    opened_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 

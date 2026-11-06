@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  Activity, ArrowUpRight, BarChart3, Bell, BriefcaseBusiness, CalendarDays, Check, ChevronDown,
-  CircleAlert, Clock, Database, FileText, Link2, LogOut, Mail, MapPin, Menu, MessageSquarePlus, Plus, RefreshCw,
-  Search, Send, Settings2, ShieldCheck, Sparkles, Star, Trash2, UploadCloud, Users, Video, X,
+  Activity, ArrowUpRight, BarChart3, Bell, Bot, BriefcaseBusiness, Calculator, CalendarDays, Check, ChevronDown,
+  CircleAlert, Clock, Database, FileText, Link2, LogOut, Mail, MapPin, Menu, MessageSquarePlus, Mic, Plus, RefreshCw,
+  Search, Send, Settings2, ShieldCheck, Sparkles, Square, Star, Trash2, UploadCloud, Users, Video, X,
 } from "lucide-react";
-import { InstoreSummaryCard, KnowledgeGraphReview, MarketingCompanies, SalesBi, TallySalesPanel, Templates } from "./features.jsx";
+import { InstoreSummaryCard, KnowledgeGraphReview, MarketingCompanies, SalesBi, TallySalesPanel } from "./features.jsx";
 import { KALIKA_LOGO, KALISOFT_LOGO } from "./branding.js";
 import "./styles.css";
 
@@ -88,17 +88,18 @@ function App() {
         <nav>
           <NavItem icon={Activity} label="Overview" active={tab === "overview"} onClick={() => { setTab("overview"); setMobileNav(false); }} />
           <NavItem icon={BarChart3} label="Sales analytics" active={tab === "sales-bi"} onClick={() => { setTab("sales-bi"); setMobileNav(false); }} />
-          <NavItem icon={BriefcaseBusiness} label="Marketing companies" active={tab === "marketing"} onClick={() => { setTab("marketing"); setMobileNav(false); }} />
-          <NavItem icon={FileText} label="Templates" active={tab === "templates"} onClick={() => { setTab("templates"); setMobileNav(false); }} />
+          <NavItem icon={Send} label="Outreach" active={tab === "outreach"} onClick={() => { setTab("outreach"); setMobileNav(false); }} />
           {config.knowledge_graph_review_enabled && <NavItem icon={Link2} label="Graph review" active={tab === "graph-review"} onClick={() => { setTab("graph-review"); setMobileNav(false); }} />}
           <NavItem icon={Users} label="Contacts" active={tab === "contacts"} onClick={() => { setTab("contacts"); setMobileNav(false); }} />
           <NavItem icon={CalendarDays} label="Events" active={tab === "events"} onClick={() => { setTab("events"); setMobileNav(false); }} />
           <NavItem icon={Mail} label="Email connections" active={tab === "email"} onClick={() => { setTab("email"); setMobileNav(false); }} />
+          <NavItem icon={BriefcaseBusiness} label="Marketing companies" active={tab === "marketing"} onClick={() => { setTab("marketing"); setMobileNav(false); }} />
           <NavItem icon={BriefcaseBusiness} label="Signal desk" active={tab === "signals"} onClick={() => { setTab("signals"); setMobileNav(false); }} />
-          <NavItem icon={Send} label="Outreach" active={tab === "outreach"} onClick={() => { setTab("outreach"); setMobileNav(false); }} />
           <NavItem icon={Clock} label="Scheduler" active={tab === "scheduler"} onClick={() => { setTab("scheduler"); setMobileNav(false); }} />
           <NavItem icon={BarChart3} label="KPIs" active={tab === "kpis"} onClick={() => { setTab("kpis"); setMobileNav(false); }} />
           <NavItem icon={MessageSquarePlus} label="Feedback" active={tab === "feedback"} onClick={() => { setTab("feedback"); setMobileNav(false); }} />
+          <NavItem icon={Mic} label="Field desk" active={tab === "field"} onClick={() => { setTab("field"); setMobileNav(false); }} />
+          {config.knowledge_graph_review_enabled && <NavItem icon={ShieldCheck} label="UAT & ops" active={tab === "uat"} onClick={() => { setTab("uat"); setMobileNav(false); }} />}
         </nav>
         <div className="sidebar-bottom">
           <div className="security-note"><ShieldCheck size={16} /><span>Private workspace<br /><small>Google verified access</small></span></div>
@@ -107,12 +108,10 @@ function App() {
       </aside>
       {mobileNav && <button className="scrim" aria-label="Close menu" onClick={() => setMobileNav(false)} />}
       <main className="main">
-        <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open navigation menu"><Menu size={25} /><span>Menu</span></button><div className="topbar-title"><div className="eyebrow">{isKalikaUser ? "KALIKA ENTERPRISES" : "KALISOFT AI"} / SALES PIPELINE</div><h1>{tab === "overview" ? "Good work starts with a clear signal." : tab === "sales-bi" ? "Sales analytics & BI" : tab === "marketing" ? "Marketing companies" : tab === "templates" ? "Message templates" : tab === "graph-review" ? "Knowledge graph review" : tab === "contacts" ? "Contacts" : tab === "email" ? "Email connections" : tab === "events" ? "Events" : tab === "signals" ? "Signal desk" : tab === "scheduler" ? "Scheduler" : tab === "kpis" ? "Business KPIs" : tab === "feedback" ? "Feedback" : "Outreach"}</h1></div><div className="topbar-actions"><EnvBadge env={health?.env} /><button className="text-button" onClick={() => setTour(true)}><Sparkles size={15} /> Take the tour</button><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Settings"><Settings2 size={18} /></button></div></header>
+        <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open navigation menu"><Menu size={25} /><span>Menu</span></button><div className="topbar-title"><div className="eyebrow">{isKalikaUser ? "KALIKA ENTERPRISES" : "KALISOFT AI"} / SALES PIPELINE</div><h1>{tab === "overview" ? "Good work starts with a clear signal." : tab === "sales-bi" ? "Sales analytics & BI" : tab === "marketing" ? "Marketing companies · Templates · Mail" : tab === "graph-review" ? "Knowledge graph review" : tab === "contacts" ? "Contacts" : tab === "email" ? "Email connections" : tab === "events" ? "Events" : tab === "signals" ? "Signal desk" : tab === "scheduler" ? "Scheduler" : tab === "kpis" ? "Business KPIs" : tab === "feedback" ? "Feedback" : tab === "field" ? "Field desk" : tab === "uat" ? "UAT & operations" : "Outreach"}</h1></div><div className="topbar-actions"><EnvBadge env={health?.env} /><button className="text-button" onClick={() => setTour(true)}><Sparkles size={15} /> Take the tour</button><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Settings"><Settings2 size={18} /></button></div></header>
         {tab === "overview" && <Overview onNavigate={setTab} onNotice={setNotice} health={health} setHealth={setHealth} />}
         {tab === "sales-bi" && <SalesBi onNotice={setNotice} />}
         {tab === "marketing" && <MarketingCompanies onNotice={setNotice} />}
-        {tab === "templates" && <Templates onNotice={setNotice} />}
-          {tab === "graph-review" && config.knowledge_graph_review_enabled && <KnowledgeGraphReview onNotice={setNotice} user={user} config={config} />}
         {tab === "graph-review" && config.knowledge_graph_review_enabled && <KnowledgeGraphReview onNotice={setNotice} user={user} config={config} />}
         {tab === "contacts" && <Contacts onNotice={setNotice} />}
         {tab === "email" && <EmailConnections onNotice={setNotice} config={config} />}
@@ -122,6 +121,8 @@ function App() {
         {tab === "scheduler" && <Scheduler onNotice={setNotice} />}
         {tab === "kpis" && <Kpis onNotice={setNotice} />}
         {tab === "feedback" && <Feedback onNotice={setNotice} />}
+        {tab === "field" && <FieldDesk onNotice={setNotice} user={user} onNavigate={setTab} />}
+        {tab === "uat" && config.knowledge_graph_review_enabled && <UatOps onNotice={setNotice} />}
       </main>
       {tour && <Walkthrough onClose={() => setTour(false)} />}
       {notice && <div className={`toast ${notice.type === "error" ? "error" : ""}`}><span>{notice.type === "error" ? <CircleAlert size={17} /> : <Check size={17} />}</span>{notice.text}<button onClick={() => setNotice(null)} aria-label="Dismiss"><X size={15} /></button></div>}
@@ -960,6 +961,476 @@ function Kpis({ onNotice }) {
   );
 }
 
+function UatOps({ onNotice }) {
+  const [uat, setUat] = useState(null);
+  const [models, setModels] = useState(null);
+  const [prompts, setPrompts] = useState(null);
+  const [selectedPrompt, setSelectedPrompt] = useState("");
+  const [stories, setStories] = useState([]);
+  const [beh, setBeh] = useState(null);
+  const [logs, setLogs] = useState(null);
+  const [preflight, setPreflight] = useState(null);
+  const [reviews, setReviews] = useState({ items: [], pending: 0, is_admin: false });
+  const [reviewForm, setReviewForm] = useState({ comment: "", proposed_change: "" });
+  const [reviewBusy, setReviewBusy] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatBody, setChatBody] = useState("");
+  const [chatModel, setChatModel] = useState("");
+  const [chatBusy, setChatBusy] = useState(false);
+  const chatEndRef = React.useRef(null);
+
+  const load = async () => {
+    try {
+      const [u, m, p, s, b, l, r] = await Promise.all([
+        request("/ops/uat"), request("/ops/models"), request("/ops/prompt-samples"),
+        request("/journey/stories?limit=8"), request("/journey/behaviours?days=30"),
+        request("/ops/logs?limit=12"), request("/ops/prompt-reviews?limit=20"),
+      ]);
+      setUat(u); setModels(m); setPrompts(p); setStories(s); setBeh(b); setLogs(l); setReviews(r);
+      setSelectedPrompt((cur) => cur || p.prompts?.[0]?.id || "");
+      setChatModel((cur) => cur || m.chat_default || m.default || "");
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+  };
+  useEffect(() => { load(); }, []);
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chatMessages, chatBusy]);
+
+  const sendChat = async (event) => {
+    event.preventDefault();
+    const text = chatBody.trim();
+    if (!text || chatBusy) return;
+    const history = chatMessages.map((m) => ({ role: m.role, content: m.content }));
+    setChatMessages((prev) => [...prev, { role: "user", content: text, at: new Date().toISOString() }]);
+    setChatBody("");
+    setChatBusy(true);
+    try {
+      const r = await request("/ops/chat", { method: "POST", body: JSON.stringify({ message: text, model: chatModel, history }) });
+      setChatMessages((prev) => [...prev, { role: "assistant", content: r.reply, meta: r, at: new Date().toISOString() }]);
+      if (r.notice) onNotice({ type: "error", text: r.notice });
+    } catch (error) {
+      onNotice({ type: "error", text: error.message });
+      setChatMessages((prev) => [...prev, { role: "assistant", content: `Could not answer: ${error.message}`, meta: { error: true }, at: new Date().toISOString() }]);
+    } finally { setChatBusy(false); }
+  };
+
+  const runChecks = async () => {
+    setBusy(true);
+    try {
+      const r = await request("/ops/run-checks", { method: "POST" });
+      setPreflight(r);
+      onNotice({ type: r.summary.ready ? "success" : "error",
+        text: `Checks: ${r.summary.pass} pass · ${r.summary.warn} warn · ${r.summary.fail} fail` });
+      load();
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+    finally { setBusy(false); }
+  };
+
+  const submitReview = async (event) => {
+    event.preventDefault();
+    if (!selectedPrompt || !reviewForm.comment.trim()) return;
+    setReviewBusy(true);
+    try {
+      await request("/ops/prompt-reviews", {
+        method: "POST",
+        body: JSON.stringify({ prompt_id: selectedPrompt, ...reviewForm }),
+      });
+      setReviewForm({ comment: "", proposed_change: "" });
+      onNotice({ type: "success", text: "Prompt comment sent for human review." });
+      await load();
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+    finally { setReviewBusy(false); }
+  };
+
+  const decideReview = async (id, status) => {
+    setReviewBusy(true);
+    try {
+      await request(`/ops/prompt-reviews/${id}/review`, {
+        method: "POST",
+        body: JSON.stringify({ status, review_note: status === "approved" ? "Approved in UAT." : "Rejected in UAT." }),
+      });
+      onNotice({ type: "success", text: `Prompt review ${status}.` });
+      await load();
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+    finally { setReviewBusy(false); }
+  };
+
+  const prompt = prompts?.prompts?.find((p) => p.id === selectedPrompt);
+  const enabledFeatures = uat ? uat.features.filter((f) => f.status === "enabled").length : 0;
+  const totalFeatures = uat?.features?.length || 0;
+  const nextScope = totalFeatures - enabledFeatures;
+  const checksPass = preflight?.summary?.pass;
+
+  return (
+    <div className="content">
+      <div className="page-heading">
+        <div>
+          <div className="section-kicker">PHASE · ERP-UAT</div>
+          <h2>UAT &amp; operations</h2>
+          <p className="muted">Guardrail checks, model selection, prompt samples, journey stories and logs.</p>
+        </div>
+        <div className="button-row">
+          <button className="icon-button" onClick={load} aria-label="Refresh"><RefreshCw size={17} /></button>
+          {uat?.is_admin && <button className="primary-button" onClick={runChecks} disabled={busy}><ShieldCheck size={16} /> {busy ? "Checking..." : "Run guardrail checks"}</button>}
+        </div>
+      </div>
+
+      {uat && (
+        <div className="kpi-strip">
+          <div className="kpi brand"><div className="k-label">UAT window</div><div className="k-value">{uat.days_left ?? "—"}<span className="k-unit"> days</span></div><div className="k-sub">until {uat.enabled_until}</div></div>
+          <div className="kpi"><div className="k-label">Features enabled</div><div className="k-value">{enabledFeatures}/{totalFeatures}</div><div className="k-sub">{nextScope} in next scope</div></div>
+          <div className="kpi"><div className="k-label">Catalog models</div><div className="k-value">{models?.models?.length ?? "—"}</div><div className="k-sub">default SLM {models?.chat_default || "—"}</div></div>
+          <div className="kpi"><div className="k-label">Guardrail checks</div><div className="k-value">{checksPass != null ? `${checksPass}/${preflight?.checks?.length ?? 0}` : "not run"}</div><div className="k-sub">{preflight ? (preflight.summary.ready ? "ready to deploy" : "needs attention") : "run to verify"}</div></div>
+        </div>
+      )}
+
+      {uat && (
+        <div className="panel" style={{ marginBottom: 14 }}>
+          <div className="panel-heading">
+            <div>
+              <div className="section-kicker">ROLLOUT</div>
+              <h3>{uat.uat_active ? "UAT active" : "UAT closed"} · {uat.deploy_env} · {uat.erp_master}</h3>
+              <p className="muted" style={{ margin: "4px 0 0" }}>{uat.features.filter((f) => f.status === "enabled").length} of {uat.features.length} features enabled · window ends {uat.enabled_until}</p>
+            </div>
+            <span className={uat.uat_active ? "pill-ok" : "pill-warn"}>{uat.days_left ?? "?"} day(s) left · until {uat.enabled_until}</span>
+          </div>
+          <div className="uat-progress">
+            <div className="bar-track"><div className="bar-fill" style={{ width: `${Math.max(0, Math.min(100, ((uat.days_left ?? 0) / 7) * 100))}%` }} /></div>
+            <small>{uat.days_left ?? 0} of 7 days remaining</small>
+          </div>
+          <div className="funnel" style={{ marginTop: 10 }}>
+            {uat.features.map((f) => (
+              <div className={`funnel-step feature-chip ${f.status === "enabled" ? "on" : "next"}`} key={f.name}>
+                <small>{f.status}</small><b style={{ fontSize: 12.5 }}>{f.name}</b>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="two-column">
+        <section className="panel">
+          <div className="panel-heading"><div><div className="section-kicker">MODEL SELECTION</div><h3>Models &amp; human review</h3></div><Sparkles size={16} className="muted" /></div>
+          <p className="muted" style={{ fontSize: 11, marginTop: -4 }}>Default: <b>{models?.default}</b> · human review {models?.human_review_required ? "required" : "optional"}</p>
+          <div className="contact-list">
+            {(models?.models || []).map((m) => (
+              <div className="contact-row" key={m.id}>
+                <span className="contact-avatar">{m.provider.slice(0, 1).toUpperCase()}</span>
+                <span className="contact-main">
+                  <b>{m.label}{m.id === models?.default && <span className="default-badge">default</span>}</b>
+                  <small>{m.tier} · {m.context} context · {m.best_for.join(" · ")}</small>
+                  <small>₹{m.cost_inr_per_1k[0]}/₹{m.cost_inr_per_1k[1]} per 1K in/out · PII {m.pii_allowed ? "allowed" : "blocked"}</small>
+                </span>
+                <span className={m.human_review ? "pill-warn" : "pill-ok"}>{m.human_review ? "review" : "auto"}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="panel">
+          <div className="panel-heading"><div><div className="section-kicker">PROMPT SAMPLES · {prompts?.version}</div><h3>Weekly prompts (20:00–22:00 IST)</h3></div><Database size={16} className="muted" /></div>
+          <select value={selectedPrompt} onChange={(e) => setSelectedPrompt(e.target.value)}>
+            {(prompts?.prompts || []).map((p) => <option key={p.id} value={p.id}>{p.id} — {p.task}</option>)}
+          </select>
+          {prompts?.schedule && (
+            <p className="muted prompt-meta">
+              Schedule <b>{prompts.schedule.window}</b> ({prompts.schedule.timezone}) · default <b>{prompts.models?.default}</b> · fallback {prompts.models?.fallback_chain?.join(" → ")}
+            </p>
+          )}
+          {prompt && (
+            <>
+              <div className="muted" style={{ fontSize: 11, margin: "8px 0 4px" }}>
+                model <b>{prompt.model}</b> · {prompt.tier} · json {prompt.json_mode ? "yes" : "no"} · human review {prompt.human_review ? "yes" : "no"}
+              </div>
+              <pre className="message-preview" style={{ maxHeight: 140, overflow: "auto" }}>{prompt.template}</pre>
+              <div className="section-kicker" style={{ marginTop: 8 }}>SAMPLE INPUT</div>
+              <pre className="message-preview" style={{ maxHeight: 110, overflow: "auto", fontSize: 11 }}>{JSON.stringify(prompt.sample_input, null, 1)}</pre>
+              <div className="section-kicker" style={{ marginTop: 8 }}>EXPECTED OUTPUT</div>
+              <pre className="message-preview" style={{ maxHeight: 130, overflow: "auto", fontSize: 11 }}>{JSON.stringify(prompt.expected_output, null, 1)}</pre>
+              <div className="section-kicker" style={{ marginTop: 12 }}>HUMAN REVIEW / REFINEMENT</div>
+              <form onSubmit={submitReview}>
+                <textarea className="voice-text" rows={2} placeholder="What should change in this prompt?" value={reviewForm.comment} onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })} />
+                <input placeholder="Proposed change (optional)" value={reviewForm.proposed_change} onChange={(e) => setReviewForm({ ...reviewForm, proposed_change: e.target.value })} />
+                <button className="secondary-button" disabled={reviewBusy || !reviewForm.comment.trim()}><Send size={14} /> {reviewBusy ? "Sending..." : "Send comment"}</button>
+              </form>
+              <div className="section-kicker" style={{ marginTop: 12 }}>REVIEW QUEUE ({reviews.pending || 0} pending)</div>
+              {(reviews.items || []).slice(0, 4).map((item) => (
+                <div className="review-card" key={item.id}>
+                  <div className="chat-head"><b>{item.prompt_id} / {item.status}</b><small>{String(item.created_at).slice(0, 16)}</small></div>
+                  <p>{item.comment}</p>
+                  {item.proposed_change && <small className="muted">{item.proposed_change}</small>}
+                  <small className="muted">by {item.submitted_by}{item.reviewed_by ? ` / reviewed by ${item.reviewed_by}` : ""}</small>
+                  {uat?.is_admin && item.status === "pending" && (
+                    <div className="button-row" style={{ marginTop: 8 }}>
+                      <button className="primary-button" onClick={() => decideReview(item.id, "approved")} disabled={reviewBusy}><Check size={14} /> Approve</button>
+                      <button className="secondary-button danger-button" onClick={() => decideReview(item.id, "rejected")} disabled={reviewBusy}><X size={14} /> Reject</button>
+                    </div>
+                  )}
+                </div>
+              ))}
+              {!(reviews.items || []).length && <small className="muted">No prompt comments yet.</small>}
+            </>
+          )}
+        </section>
+      </div>
+
+      {uat?.is_admin && (
+        <section className="panel chat-panel" style={{ marginTop: 14 }}>
+          <div className="panel-heading">
+            <div>
+              <div className="section-kicker">DAILY RATE CHAT</div>
+              <h3>Ask the sales copilot</h3>
+              <p className="muted chat-sub">Signed-in Kalika users can ask about rates, film costing and dispatch. The Gemma local SLM runs first; pick a cloud model only when needed.</p>
+            </div>
+            <div className="chat-model-picker">
+              <label htmlFor="uat-chat-model">Model</label>
+              <select id="uat-chat-model" value={chatModel} onChange={(e) => setChatModel(e.target.value)} disabled={chatBusy}>
+                {(models?.models || []).map((m) => (
+                  <option key={m.id} value={m.id}>{m.label}{m.is_default ? " · default SLM" : ""}{m.available ? "" : " · offline"}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="chat-status-row">
+            <span className={models?.providers?.ollama ? "pill-ok" : "pill-warn"}>Ollama {models?.providers?.ollama ? "live" : "offline"}</span>
+            <span className={models?.providers?.gemini ? "pill-ok" : "pill-warn"}>Gemini {models?.providers?.gemini ? "configured" : "not configured"}</span>
+            <span className={models?.providers?.gemma ? "pill-ok" : "pill-warn"}>Gemma {models?.providers?.gemma ? "configured" : "not configured"}</span>
+            <span className="chat-hint">PII is redacted by guardrails before any prompt leaves the server.</span>
+          </div>
+          <div className="uat-chat-thread">
+            {!chatMessages.length && (
+              <div className="chat-welcome">
+                <Bot size={22} />
+                <div><b>Try a live prompt</b><p>“Which dispatch lines need follow-up today?” · “Draft a short rate follow-up for a packaging buyer.”</p></div>
+              </div>
+            )}
+            {chatMessages.map((m, i) => (
+              <div className={`uat-chat-msg ${m.role}`} key={i}>
+                <span className="chat-avatar">{m.role === "user" ? "You" : "AI"}</span>
+                <div className="uat-chat-bubble">
+                  <div className="uat-chat-meta">
+                    <b>{m.role === "user" ? "You" : (m.meta?.model || "Assistant")}</b>
+                    <span>{m.role === "user" ? "admin" : (m.meta?.provider || "")}{m.meta?.latency_ms ? ` · ${m.meta.latency_ms}ms` : ""}</span>
+                    {m.meta?.fallback_used && <span className="status-pill pending">fallback</span>}
+                  </div>
+                  <p>{m.content}</p>
+                  {m.meta && !m.meta.error && (
+                    <div className="uat-chat-facts">
+                      <span>in {m.meta.input_tokens ?? "—"} tok</span>
+                      <span>out {m.meta.output_tokens ?? "—"} tok</span>
+                      <span>cost ${((m.meta.cost_micros || 0) / 1e6).toFixed(4)}</span>
+                      {m.meta?.guardrails?.prompt?.pii?.length > 0 && <span className="pill-warn">PII redacted</span>}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+            {chatBusy && <div className="uat-chat-msg assistant"><span className="chat-avatar">AI</span><div className="uat-chat-bubble typing"><i /><i /><i /></div></div>}
+            <div ref={chatEndRef} />
+          </div>
+          <form className="uat-chat-input" onSubmit={sendChat}>
+            <input value={chatBody} onChange={(e) => setChatBody(e.target.value)} placeholder="Ask about dispatch, orders, rates, field updates..." disabled={chatBusy} />
+            <button className="primary-button" disabled={chatBusy || !chatBody.trim()}><Send size={15} /> {chatBusy ? "Thinking..." : "Send"}</button>
+            <button type="button" className="secondary-button" onClick={() => setChatMessages([])} disabled={chatBusy || !chatMessages.length}>Clear</button>
+          </form>
+        </section>
+      )}
+
+      {preflight && (
+        <section className="panel table-panel" style={{ marginTop: 14 }}>
+          <div className="table-toolbar">
+            <div><div className="section-kicker">GUARDRAIL CHECKS</div><h3>{preflight.summary.pass} pass · {preflight.summary.warn} warn · {preflight.summary.fail} fail</h3></div>
+            <span className={preflight.summary.ready ? "pill-ok" : "pill-warn"}>{preflight.summary.ready ? "ready to deploy" : "needs attention"}</span>
+          </div>
+          <div className="check-summary">
+            <span className="check-tile pass"><b>{preflight.summary.pass}</b> pass</span>
+            <span className="check-tile warn"><b>{preflight.summary.warn}</b> warn</span>
+            <span className="check-tile fail"><b>{preflight.summary.fail}</b> fail</span>
+            <span className="check-tile total"><b>{preflight.checks.length}</b> total checks</span>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Layer</th><th>Check</th><th>Status</th><th>Detail</th><th>Remediation</th></tr></thead>
+              <tbody>
+                {preflight.checks.map((c) => (
+                  <tr key={c.layer + c.id}>
+                    <td>{c.layer}</td><td className="table-person">{c.id}</td>
+                    <td><span className={c.status === "pass" ? "pill-ok" : "pill-warn"}>{c.status}</span></td>
+                    <td><small>{c.detail}</small></td>
+                    <td><small className="muted">{c.remediation || "—"}</small></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      <div className="two-column" style={{ marginTop: 14 }}>
+        <section className="panel">
+          <div className="panel-heading"><div><div className="section-kicker">CUSTOMER JOURNEY</div><h3>Recent stories</h3></div><span className="muted">{beh?.total ?? 0} events / {beh?.days ?? 30}d</span></div>
+          <div className="contact-list">
+            {stories.map((s) => (
+              <div className="contact-row" key={s.contact_id}>
+                <span className="contact-avatar">{(s.customer_type_label || "?")[0]}</span>
+                <span className="contact-main">
+                  <b>{s.customer_type_label} · contact #{s.contact_id}</b>
+                  <small>{s.current_stage} · next: {s.next_action_template || "—"} · {s.timeline.length} events</small>
+                  <small className="muted">{s.feedback_prompt}</small>
+                </span>
+              </div>
+            ))}
+            {!stories.length && <div className="empty-state"><Users size={20} /><p>No journey events yet.</p><small>Events are recorded from the feedback pipeline and manual logging.</small></div>}
+          </div>
+        </section>
+
+        <section className="panel table-panel">
+          <div className="table-toolbar"><div><div className="section-kicker">LOGS</div><h3>Sync runs &amp; model usage</h3></div></div>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Type</th><th>Job / model</th><th>Status</th><th>When</th></tr></thead>
+              <tbody>
+                {(logs?.sync_runs || []).slice(0, 6).map((r) => (
+                  <tr key={"s" + r.id}><td>sync</td><td className="table-person">{r.job}</td><td>{r.status}</td><td><small>{r.finished_at || r.started_at}</small></td></tr>
+                ))}
+                {(logs?.model_usage || []).slice(0, 6).map((u) => (
+                  <tr key={"u" + u.id}><td>llm</td><td className="table-person">{u.model} · {u.task}</td><td>{u.fallback_used === "True" ? "fallback" : "ok"}</td><td><small>{u.created_at}</small></td></tr>
+                ))}
+                {(logs?.audit || []).slice(0, 4).map((a) => (
+                  <tr key={"a" + a.id}><td>audit</td><td className="table-person">{a.action}{a.resource_type ? ` · ${a.resource_type}` : ""}</td><td>{a.status}</td><td><small>{a.created_at}</small></td></tr>
+                ))}
+                {!(logs?.sync_runs?.length || logs?.model_usage?.length || logs?.audit?.length) && <tr><td colSpan={4}><small className="muted">No logs yet — run checks or use the pipeline.</small></td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function FieldDesk({ onNotice, user, onNavigate }) {
+  const [team, setTeam] = useState(null);
+  const [note, setNote] = useState("");
+  const [recording, setRecording] = useState(false);
+  const [recSupported, setRecSupported] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const recogRef = React.useRef(null);
+
+  const load = async () => {
+    try { setTeam(await request("/team/messages?limit=40")); }
+    catch (error) { onNotice({ type: "error", text: error.message }); }
+  };
+  useEffect(() => { load(); }, []);
+
+  const startVoice = () => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { setRecSupported(false); onNotice({ type: "error", text: "Speech-to-text not supported in this browser — type the update instead." }); return; }
+    const recog = new SR();
+    recog.lang = "en-IN"; recog.interimResults = true; recog.continuous = true;
+    recog.onresult = (event) => {
+      let text = "";
+      for (const result of event.results) text += result[0].transcript + " ";
+      setNote(text.trim());
+    };
+    recog.onerror = () => { setRecording(false); };
+    recog.onend = () => setRecording(false);
+    recogRef.current = recog;
+    recog.start();
+    setRecording(true);
+  };
+  const stopVoice = () => { recogRef.current?.stop(); setRecording(false); };
+
+  const submit = async (event) => {
+    event.preventDefault();
+    if (!note.trim()) return;
+    setBusy(true);
+    try {
+      await request("/team/messages", { method: "POST", body: JSON.stringify({ kind: "field_update", body: note.trim(), meta: { source: "field_desk", via: recording ? "voice" : "voice-or-text" } }) });
+      setNote("");
+      onNotice({ type: "success", text: "Field update sent for approval." });
+      load();
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+    finally { setBusy(false); }
+  };
+
+  const review = async (id, decision) => {
+    try {
+      await request(`/team/messages/${id}/review`, { method: "POST", body: JSON.stringify({ decision }) });
+      onNotice({ type: "success", text: `Update ${decision}.` });
+      load();
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+  };
+
+  const isField = (user?.email || "").startsWith("field@");
+  const pending = (team?.messages || []).filter((m) => m.status === "pending");
+  const reviewed = (team?.messages || []).filter((m) => m.status !== "pending");
+
+  return (
+    <div className="content dash">
+      <div className="page-heading">
+        <div><div className="section-kicker">FIELD → SALES · VOICE ENABLED</div>
+          <h2>Field desk</h2>
+          <p className="muted">Record a voice update from the field — it converts to text, then a sales executive approves or rejects it before it reaches the team.</p>
+        </div>
+        <div className="button-row"><button className="secondary-button" onClick={() => onNavigate?.("visits")}><MapPin size={15} /> Company history</button><button className="secondary-button" onClick={() => onNavigate?.("erp")}><Calculator size={15} /> Rate calculator</button><button className="secondary-button" onClick={load}><RefreshCw size={15} /> Refresh</button></div>
+      </div>
+
+      <div className="two-column">
+        <section className="panel">
+          <div className="panel-heading"><div><div className="section-kicker">NEW FIELD UPDATE</div><h3>Voice note → text</h3></div><Mic size={19} className="muted" /></div>
+          <form onSubmit={submit}>
+            <div className="voice-recorder">
+              <button type="button" className={`record-button ${recording ? "recording" : ""}`} onClick={recording ? stopVoice : startVoice}>
+                {recording ? <Square size={20} /> : <Mic size={20} />}
+              </button>
+              <div>
+                <b>{recording ? "Listening... speak now" : "Tap to record"}</b>
+                <p className="muted">{recSupported ? "Speech converts to text below — edit before sending." : "Browser speech-to-text unavailable — type below."}</p>
+              </div>
+            </div>
+            <textarea className="voice-text" rows={5} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Visited Mahindra Accelo, Supa — met SCM head, they need 2,000 kg HDPE rolls by next Friday..." />
+            <div className="button-row">
+              <button className="primary-button" disabled={busy || !note.trim()}><Send size={15} /> Send for approval</button>
+              <button type="button" className="secondary-button" onClick={() => setNote("")}>Clear</button>
+            </div>
+          </form>
+
+          <div className="panel-heading" style={{ marginTop: 22 }}><div><div className="section-kicker">REVIEW QUEUE · TWO-OPTION</div><h3>Pending approval ({pending.length})</h3></div><ShieldCheck size={19} className="muted" /></div>
+          {pending.map((m) => (
+            <div className="review-card" key={m.id}>
+              <div className="chat-head"><b>{m.author_name}</b><small>{String(m.created_at).slice(5, 16)}</small></div>
+              <p>{m.body}</p>
+              {m.meta?.transcript && <small className="chat-transcript">🎙 {m.meta.transcript.slice(0, 200)}</small>}
+              <div className="button-row" style={{ marginTop: 10 }}>
+                <button className="primary-button" onClick={() => review(m.id, "approved")}><Check size={15} /> Approve</button>
+                <button className="secondary-button danger-button" onClick={() => review(m.id, "rejected")}><X size={15} /> Reject</button>
+              </div>
+            </div>
+          ))}
+          {!pending.length && <div className="empty-state"><Check size={22} /><p>Queue is clear.</p><small>{isField ? "Your updates will appear here until approved." : "New field updates land here for your review."}</small></div>}
+        </section>
+
+        <section className="panel">
+          <div className="panel-heading"><div><div className="section-kicker">TEAM FEED</div><h3>Reviewed updates</h3></div><Users size={19} className="muted" /></div>
+          <div className="chat-thread">
+            {reviewed.map((m) => (
+              <div className={`chat-row kind-${m.kind}`} key={m.id}>
+                <span className="contact-avatar small">{(m.author_name || "?")[0].toUpperCase()}</span>
+                <div className="chat-main">
+                  <div className="chat-head"><b>{m.author_name}</b><small>{String(m.created_at).slice(5, 16)}</small><span className={`status-pill ${m.status}`}>{m.status}</span></div>
+                  <p>{m.body}</p>
+                  {m.reviewed_by && <small className="muted">reviewed by {m.reviewed_by}</small>}
+                </div>
+              </div>
+            ))}
+            {!reviewed.length && <div className="empty-state"><Users size={22} /><p>Nothing reviewed yet.</p></div>}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
 function Outreach({ onNotice }) {
   const [templates, setTemplates] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
@@ -1096,7 +1567,8 @@ function Outreach({ onNotice }) {
             <h3>Review — {detail.name} (#{detail.id})</h3>
             <span className="contact-tag">{detail.status}</span>
           </div>
-          <p className="campaign-recipient-count">{detail.messages.length} of {detail.total} attached recipients loaded for review.</p>
+          <p className="campaign-recipient-count">{Math.min(detail.sent_count + detail.failed_count, detail.total)}/{detail.total} sent · Viewed {detail.opened_count || 0} ({detail.sent_count ? Math.round(((detail.opened_count || 0) / detail.sent_count) * 100) : 0}%)</p>
+          <div className="bar-track" style={{ margin: "4px 0 8px" }}><div className="bar-fill" style={{ width: `${detail.total ? Math.min(100, Math.round(((detail.sent_count + detail.failed_count) / detail.total) * 100)) : 0}%` }} /></div>
           <div className="button-row" style={{ marginBottom: 10 }}>
             <button className="secondary-button" onClick={approve} disabled={busy || detail.status !== "pending_review"}>Approve all</button>
             <button className="primary-button" onClick={send} disabled={busy || detail.status !== "approved"}><Send size={16} /> Send approved</button>
@@ -1104,10 +1576,11 @@ function Outreach({ onNotice }) {
           <div className="campaign-recipient-list" role="list">
             {detail.messages.map((message) => (
               <details className="campaign-recipient" key={message.id} role="listitem">
-                <summary><span><b>{message.to_address || "(no address)"}</b><small>Contact #{message.contact_id}</small></span><span className="contact-tag">{message.status}</span></summary>
+                <summary><span><b>{message.contact_name || "(no name)"}</b><small>{message.to_address || "(no address)"}</small></span><span className="contact-tag">{message.status}</span>{message.status === "opened" && <span className="contact-tag">viewed {message.opened_at ? String(message.opened_at).slice(0, 16) : ""}</span>}</summary>
                 <div className="campaign-message-detail">
                   <b>{message.rendered_subject || "(no subject)"}</b>
-                  <p>{message.rendered_body}</p>
+                  <p style={{ whiteSpace: "pre-wrap" }}>{message.rendered_body}</p>
+                  <small className="muted">Sent: {message.sent_at ? String(message.sent_at).slice(0, 16) : "—"} · Viewed: {message.opened_at ? `${String(message.opened_at).slice(0, 16)} sighted` : "not yet"}</small>
                   {message.error && <small className="message-error">{message.error}</small>}
                 </div>
               </details>
@@ -1121,7 +1594,7 @@ function Outreach({ onNotice }) {
         <div className="contact-list" role="list">
           {campaigns.map((campaign) => (
             <button key={campaign.id} role="listitem" className="contact-row" style={{ width: "100%", textAlign: "left", border: 0, background: "transparent" }} onClick={() => openCampaign(campaign.id)}>
-              <span className="contact-main"><b>{campaign.name}</b><small>{campaign.channel} · {campaign.strategy} · {campaign.total} messages</small></span>
+              <span className="contact-main"><b>{campaign.name}</b><small>{campaign.channel} · {campaign.strategy} · {campaign.total} messages · viewed {campaign.opened_count || 0}</small><span className="bar-track" style={{ display: "block", marginTop: 4 }}><span className="bar-fill" style={{ width: `${campaign.total ? Math.min(100, Math.round((campaign.sent_count / campaign.total) * 100)) : 0}%` }} /></span></span>
               <span className="contact-tag">{campaign.status}</span>
               <span className="contact-tag">{campaign.sent_count} sent · {campaign.failed_count} failed</span>
             </button>

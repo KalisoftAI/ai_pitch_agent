@@ -166,7 +166,10 @@ def create_campaign(
     model_used = "template"
     for contact in contacts:
         subject = render(template.subject, {**SENDER_CONTEXT, **contact_context(contact)})
-        model_name, body = _ai_personalise(template, contact, payload.channel)
+        if payload.use_ai:
+            model_name, body = _ai_personalise(template, contact, payload.channel)
+        else:
+            model_name, body = "template", template.body
         if model_name != "template":
             model_used = model_name
         db.add(
@@ -174,6 +177,7 @@ def create_campaign(
                 campaign_id=campaign.id,
                 user_id=user.id,
                 contact_id=contact.id,
+                contact_name=(getattr(contact, "name", "") or ""),
                 to_address=contact.phone if phone_channel else contact.email,
                 rendered_subject=subject,
                 rendered_body=body,
@@ -206,8 +210,10 @@ def _detail(db: Session, campaign: Campaign) -> CampaignDetail:
         .limit(1000)
         .all()
     )
+    opened = sum(1 for m in messages if m.status == "opened")
     return CampaignDetail(
         **CampaignOut.model_validate(campaign).model_dump(),
+        opened_count=opened,
         messages=[CampaignMessageOut.model_validate(message) for message in messages],
     )
 
@@ -294,7 +300,7 @@ def approve_campaign(
 
 @router.post("/{campaign_id}/send", response_model=CampaignSendResult)
 def send_campaign(
-    campaign_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+    campaign_id: int, request: Request, user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     campaign = (
         db.query(Campaign).filter(Campaign.id == campaign_id, Campaign.user_id == user.id).first()
@@ -318,6 +324,12 @@ def send_campaign(
                     raise RuntimeError("no email connection configured")
                 from ..security import decrypt_secret
 
+                host = request.headers.get("host", "localhost")
+                track_url = f"http://{host}/api/campaigns/{campaign.id}/open/{message.id}"
+                body_html = message.rendered_body or ""
+                pixel = f'<img src="{track_url}" width="1" height="1" style="display:none;" alt="" />'
+                if "<html" in body_html.lower() or "<body" in body_html.lower():
+                    body_html = body_html.replace("</body>", pixel + "</body>") if "</body>" in body_html.lower() else body_html + pixel
                 MailSender(
                     email_connection.smtp_host,
                     email_connection.smtp_port,
@@ -326,7 +338,7 @@ def send_campaign(
                 ).send(
                     message.to_address,
                     message.rendered_subject or campaign.name,
-                    message.rendered_body,
+                    body_html,
                 )
                 message.status = "sent"
                 sent += 1
@@ -366,6 +378,23 @@ def send_campaign(
     return CampaignSendResult(
         campaign_id=campaign.id, status=campaign.status, sent=sent, failed=failed, skipped=skipped
     )
+
+
+@router.get("/{campaign_id}/open/{message_id}")
+def mark_opened(campaign_id: int, message_id: int, db: Session = Depends(get_db)):
+    from fastapi.responses import Response
+
+    message = (
+        db.query(CampaignMessage)
+        .filter(CampaignMessage.id == message_id, CampaignMessage.campaign_id == campaign_id)
+        .first()
+    )
+    if message is not None and message.status in {"sent", "opened"}:
+        message.status = "opened"
+        message.opened_at = datetime.utcnow()
+        db.commit()
+    pixel = bytes.fromhex("89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000a49444154789c63000100000500010d0a2db40000000049454e44ae426082")
+    return Response(content=pixel, media_type="image/png")
 
 
 @router.delete("/{campaign_id}", status_code=204)

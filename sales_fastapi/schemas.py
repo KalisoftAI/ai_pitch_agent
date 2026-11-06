@@ -316,6 +316,7 @@ class CampaignMessageOut(BaseModel):
     id: int
     campaign_id: int
     contact_id: int
+    contact_name: str = ""
     to_address: str
     rendered_subject: str
     rendered_body: str
@@ -323,6 +324,7 @@ class CampaignMessageOut(BaseModel):
     error: str
     provider_id: str
     sent_at: Optional[datetime] = None
+    opened_at: Optional[datetime] = None
     created_at: datetime
 
 
@@ -345,6 +347,7 @@ class CampaignOut(BaseModel):
     total: int
     sent_count: int
     failed_count: int
+    opened_count: int = 0
     created_at: datetime
     updated_at: datetime
 
