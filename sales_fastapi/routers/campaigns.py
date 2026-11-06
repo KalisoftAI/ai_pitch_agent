@@ -98,7 +98,43 @@ def create_campaign(
         raise HTTPException(status_code=404, detail="Template not found")
 
     phone_channel = payload.channel in {"whatsapp", "wechat"}
-    if payload.filter.contact_type == "marketing_companies":
+    if payload.filter.contact_ids:
+        contact_ids = list(dict.fromkeys(int(x) for x in payload.filter.contact_ids if x))
+        if payload.filter.contact_type == "marketing_companies":
+            records = (
+                db.query(MarketingCompany)
+                .filter(MarketingCompany.user_id == user.id, MarketingCompany.id.in_(contact_ids))
+                .order_by(MarketingCompany.company.asc())
+                .limit(payload.filter.limit)
+                .all()
+            )
+            contacts = [
+                SimpleNamespace(
+                    id=record.id,
+                    company=record.company,
+                    name=record.contact_name,
+                    email=record.email,
+                    phone=record.phone,
+                    intent=record.category,
+                    domain="",
+                    context=record.requirements,
+                )
+                for record in records
+                if (record.phone if phone_channel else record.email)
+            ]
+        else:
+            contacts = (
+                db.query(Contact)
+                .filter(Contact.user_id == user.id, Contact.id.in_(contact_ids))
+                .order_by(Contact.created_at.desc())
+                .limit(payload.filter.limit)
+                .all()
+            )
+            if phone_channel:
+                contacts = [c for c in contacts if c.phone]
+            else:
+                contacts = [c for c in contacts if c.email]
+    elif payload.filter.contact_type == "marketing_companies":
         query = db.query(MarketingCompany).filter(MarketingCompany.user_id == user.id)
         if payload.filter.category:
             query = query.filter(MarketingCompany.category.ilike(f"%{payload.filter.category}%"))

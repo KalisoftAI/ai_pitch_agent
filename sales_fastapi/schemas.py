@@ -299,6 +299,7 @@ class CampaignFilter(BaseModel):
     call_status: str = ""
     funnel_stage: str = ""
     limit: int = Field(default=50, ge=1, le=1000)
+    contact_ids: list[int] = Field(default_factory=list)
 
 
 class CampaignCreate(BaseModel):

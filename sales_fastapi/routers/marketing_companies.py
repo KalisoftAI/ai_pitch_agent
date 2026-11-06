@@ -30,7 +30,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..governance.audit import log_event
-from ..models import MarketingCompany, User
+from ..models import Campaign, CampaignMessage, MarketingCompany, User
 from ..schemas import MarketingCompanyOut, MarketingCompanyUpdate, MarketingImportResult
 from ..security import get_current_user
 from ..services import GCSStorage
@@ -323,6 +323,7 @@ def list_marketing_companies(
     sales_progress: str | None = Query(default=None),
     due_follow_up: bool = False,
     requirements_only: bool = False,
+    sort: str = Query(default="company"),
     limit: int = Query(default=500, ge=1, le=5000),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -352,11 +353,15 @@ def list_marketing_companies(
         )
     if requirements_only:
         query = query.filter(MarketingCompany.requirements != "")
-    return (
-        query.order_by(MarketingCompany.company.asc())
-        .limit(limit)
-        .all()
-    )
+    order_by = {
+        "company": MarketingCompany.company.asc(),
+        "follow_up": MarketingCompany.follow_up_date.asc(),
+        "progress": MarketingCompany.sales_progress.asc(),
+        "category": MarketingCompany.category.asc(),
+        "contact": MarketingCompany.contact_name.asc(),
+        "updated": MarketingCompany.updated_at.desc(),
+    }.get(sort, MarketingCompany.company.asc())
+    return query.order_by(order_by).limit(limit).all()
 
 
 @router.get("/stats")
@@ -390,6 +395,63 @@ def marketing_company_stats(
         ).count(),
         "by_source": group(MarketingCompany.source_sheet),
     }
+
+
+@router.get("/activity")
+def marketing_company_activity(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Per-contact mail/campaign activity: sent, opened/viewed, failed, last touch."""
+    rows = (
+        db.query(CampaignMessage, Campaign.name, Campaign.channel, Campaign.created_at)
+        .join(Campaign, Campaign.id == CampaignMessage.campaign_id)
+        .filter(
+            Campaign.user_id == user.id,
+            CampaignMessage.user_id == user.id,
+            CampaignMessage.contact_id != 0,
+        )
+        .order_by(CampaignMessage.id.desc())
+        .all()
+    )
+    activity: dict[int, dict[str, Any]] = {}
+    for message, campaign_name, channel, created_at in rows:
+        item = activity.setdefault(
+            message.contact_id,
+            {
+                "contact_id": message.contact_id,
+                "sent": 0,
+                "opened": 0,
+                "failed": 0,
+                "queued": 0,
+                "last_status": "",
+                "last_channel": "",
+                "last_campaign": "",
+                "last_subject": "",
+                "last_sent_at": "",
+                "last_opened_at": "",
+                "last_touch_at": "",
+            },
+        )
+        status = (message.status or "").lower()
+        if status in {"sent", "opened"}:
+            item["sent"] += 1
+        if status == "opened":
+            item["opened"] += 1
+        if status == "failed":
+            item["failed"] += 1
+        if status in {"pending_review", "approved", "queued"}:
+            item["queued"] += 1
+        if not item["last_status"]:
+            item["last_status"] = status
+            item["last_channel"] = channel or ""
+            item["last_campaign"] = campaign_name or ""
+            item["last_subject"] = message.rendered_subject or ""
+            item["last_sent_at"] = str(message.sent_at or "")
+            item["last_touch_at"] = str(message.sent_at or created_at or "")
+        if message.opened_at and not item["last_opened_at"]:
+            item["last_opened_at"] = str(message.opened_at)
+    return list(activity.values())
 
 
 @router.patch("/{company_id}", response_model=MarketingCompanyOut)
@@ -510,21 +572,32 @@ def marketing_source_info(user: User = Depends(get_current_user)):
 @router.post("/sync")
 def sync_marketing_companies(
     source: str = Query(default="all"),
+    path: str = Query(default=""),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Sync the latest marketing workbook and/or customers CSV from GCS."""
+    """Sync the latest marketing workbook and/or customers CSV from GCS.
+
+    Pass ``path`` to override the default workbook object key with your own
+    upload path (e.g. ``sales-contacts/my_updated_list.xlsx``).
+    """
     if source not in {"all", "marketing", "customers"}:
         raise HTTPException(status_code=400, detail="Source must be all, marketing, or customers")
     gcs = GCSStorage(bucket_name=DEFAULT_BUCKET)
     if not gcs.available:
         raise HTTPException(status_code=503, detail="GCS is not available")
 
+    custom_path = (path or "").strip()
     paths = []
-    if source in {"all", "marketing"}:
-        paths.append((DEFAULT_PATH, _parse_workbook))
-    if source in {"all", "customers"}:
-        paths.append((DEFAULT_CUSTOMERS_PATH, _parse_customers_csv))
+    if custom_path:
+        parser = _parse_customers_csv if custom_path.lower().endswith(".csv") else _parse_workbook
+        paths.append((custom_path, parser))
+        source = "custom"
+    else:
+        if source in {"all", "marketing"}:
+            paths.append((DEFAULT_PATH, _parse_workbook))
+        if source in {"all", "customers"}:
+            paths.append((DEFAULT_CUSTOMERS_PATH, _parse_customers_csv))
     rows: list[dict[str, Any]] = []
     synced_sources: list[str] = []
     errors: list[str] = []

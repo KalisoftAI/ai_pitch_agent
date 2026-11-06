@@ -306,15 +306,22 @@ nav { display: grid; gap: 4px; }
     min-height: 40px;
     padding: 10px 14px;
   }
+
+  .icon-button, .menu-button {
+    pointer-events: auto;
+    min-width: 40px;
+    min-height: 40px;
+  }
   
   /* Compact button rows */
   .button-row {
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
     gap: 8px;
   }
   
   .button-row button {
-    width: 100%;
+    width: auto;
   }
   
   /* Improve sidebar nav on mobile */
@@ -1903,3 +1910,11 @@ html, body, #root { width: 100%; max-width: 100%; overflow-x: clip; }
 .marketing-send-modal .modal-body { display: flex; flex-direction: column; gap: 12px; }
 .marketing-send-modal label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; }
 .marketing-send-modal input, .marketing-send-modal select, .marketing-send-modal textarea { width: 100%; }
+
+.tick-mark { display: inline-flex; align-items: center; justify-content: center; width: 22px; min-width: 22px; font-weight: 700; color: #187a2f; font-size: 16px; }
+.tick-selected { outline: 2px solid #187a2f; outline-offset: 2px; }
+.send-bar { display: flex; gap: 10px; align-items: center; padding: 10px 19px; border-top: 1px solid #edf0eb; background: #fafaf5; border-radius: 0 0 8px 8px; margin-top: 8px; }
+.send-bar .primary-button { height: auto; min-height: auto; padding: 8px 14px; font-size: 12px; }
+.send-bar select { border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; background: #fff; font-size: 12px; }
+.activity-badges { display: inline-flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.failed-tag { background: #fde2d8; color: #9a4527; }

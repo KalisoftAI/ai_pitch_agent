@@ -71,6 +71,21 @@ def seed() -> None:
             kuser.role = role
             db.commit()
 
+        # Keep the Kalika Enterprises email sign-in consistent with the
+        # documented kalika123 password across local/dev and deployed DBs.
+        ke = db.query(User).filter(User.email == "kalikaenterprises@gmail.com").first()
+        if ke is None:
+            ke = User(
+                google_sub="pwd-kalikaenterprises",
+                email="kalikaenterprises@gmail.com",
+                name="Kalikaenterprises",
+                domain="gmail.com",
+            )
+            db.add(ke)
+        ke.password_hash = hash_password("kalika123")
+        ke.role = "admin"
+        db.commit()
+
         created = 0
         for item in SEED_CONTACTS:
             exists = (

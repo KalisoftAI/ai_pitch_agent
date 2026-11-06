@@ -1299,6 +1299,7 @@ export function MarketingCompanies({ onNotice }) {
     if (salesProgressFilter) params.set("sales_progress", salesProgressFilter);
     if (dueFollowupsOnly) params.set("due_follow_up", "true");
     if (requirementsOnly) params.set("requirements_only", "true");
+    if (sortBy) params.set("sort", sortBy);
     params.set("limit", String(limit));
     try {
       const [nextRows, nextStats] = await Promise.all([
@@ -1312,7 +1313,7 @@ export function MarketingCompanies({ onNotice }) {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); loadActivity(); }, []);
 
   useEffect(() => {
     request("/templates")
@@ -1324,7 +1325,7 @@ export function MarketingCompanies({ onNotice }) {
   useEffect(() => {
     const id = setTimeout(() => load(), 250);
     return () => clearTimeout(id);
-  }, [debounced, categoryFilter, statusFilter, funnelStageFilter, salesProgressFilter, dueFollowupsOnly, requirementsOnly, limit]);
+  }, [debounced, categoryFilter, statusFilter, funnelStageFilter, salesProgressFilter, dueFollowupsOnly, requirementsOnly, limit, sortBy]);
 
   const updateField = async (id, field, value) => {
     try {
@@ -1394,12 +1395,15 @@ export function MarketingCompanies({ onNotice }) {
   const syncFromGCS = async () => {
     setBusy(true);
     try {
-      const result = await request("/marketing-companies/sync", { method: "POST" });
+      const params = new URLSearchParams();
+      if (syncPath.trim()) params.set("path", syncPath.trim());
+      const suffix = params.toString() ? `?${params.toString()}` : "";
+      const result = await request(`/marketing-companies/sync${suffix}`, { method: "POST" });
       onNotice({
         type: result.ok ? "success" : "error",
         text: `Synced ${result.sources?.length || 0} GCS file(s): ${result.imported} new, ${result.updated} refreshed, ${result.skipped} unchanged.${result.warnings?.length ? ` ${result.warnings.join("; ")}` : ""}`,
       });
-      await load();
+      await load(); await loadActivity();
     } catch (error) {
       onNotice({ type: "error", text: error.message });
     } finally {
@@ -1466,6 +1470,18 @@ export function MarketingCompanies({ onNotice }) {
   const [cLimit, setCLimit] = useState(50);
   const [cDetail, setCDetail] = useState(null);
   const [cBusy, setCBusy] = useState(false);
+  const [sortBy, setSortBy] = useState("company");
+  const [syncPath, setSyncPath] = useState("");
+  const [activity, setActivity] = useState({});
+
+  const loadActivity = async () => {
+    try {
+      const rows = await request("/marketing-companies/activity");
+      const map = {};
+      (Array.isArray(rows) ? rows : []).forEach((a) => { map[a.contact_id] = a; });
+      setActivity(map);
+    } catch { /* activity is best-effort */ }
+  };
 
   const loadCampaigns = async () => {
     try {
@@ -1495,7 +1511,19 @@ export function MarketingCompanies({ onNotice }) {
     catch (e) { onNotice({ type: "error", text: e.message }); } finally { setCBusy(false); }
   };
 
-  const createCampaign = async () => {
+  const fillSendArea = (row) => {
+    const t = templates.find((x) => x.channel === "email") || templates[0];
+    if (t) {
+      pickTemplate(t);
+      setSendTemplateId(String(t.id));
+      setSendSubject(t.subject || "");
+      setSendText(t.body ? htmlToText(t.body) : "");
+    }
+    setActiveRow(row);
+    setSendTarget(row);
+  };
+
+  const createCampaign = async (targetRows) => {
     if (!selTemplate) return onNotice({ type: "error", text: "Select a template first." });
     setCBusy(true);
     try {
@@ -1504,11 +1532,21 @@ export function MarketingCompanies({ onNotice }) {
         body: JSON.stringify({
           name: cName, channel: cChannel, strategy: cStrategy,
           template_id: selTemplate.id, use_ai: useAi,
-          filter: { limit: Number(cLimit) || 50, contact_type: "marketing_companies", q: query, category: categoryFilter, call_status: statusFilter, funnel_stage: funnelStageFilter },
+          filter: {
+            limit: Math.min(Number(cLimit) || (targetRows?.length || 50), targetRows?.length || Number(cLimit) || 50),
+            contact_type: "marketing_companies",
+            q: query, category: categoryFilter, call_status: statusFilter, funnel_stage: funnelStageFilter,
+            contact_ids: (targetRows || []).map((r) => r.id),
+          },
         }),
       });
       setCDetail(detail); onNotice({ type: "success", text: `Generated ${detail.total} messages for review.` }); loadCampaigns();
     } catch (e) { onNotice({ type: "error", text: e.message }); } finally { setCBusy(false); }
+  };
+  const createSelectedCampaign = async () => {
+    if (!selTemplate) return onNotice({ type: "error", text: "Select a template first." });
+    if (!selectedRows.length) return onNotice({ type: "error", text: "Tick at least one contact checkbox, or use Select for a single contact." });
+    await createCampaign(selectedRows);
   };
   const openCampaign = async (id) => { try { setCDetail(await request(`/campaigns/${id}`)); } catch (e) { onNotice({ type: "error", text: e.message }); } };
   const approveCampaign = async () => {
@@ -1528,16 +1566,30 @@ export function MarketingCompanies({ onNotice }) {
   };
   const progressPct = cDetail && cDetail.total ? Math.round(((cDetail.sent_count + cDetail.failed_count) / cDetail.total) * 100) : 0;
   const openRate = cDetail && cDetail.sent_count ? Math.round(((cDetail.opened_count || 0) / cDetail.sent_count) * 100) : 0;
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [activeRow, setActiveRow] = useState(null);
+  const toggleSelect = (id) => setSelectedIds((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const selectedRows = rows.filter((r) => selectedIds.has(r.id));
+  const selectedEmail = selectedRows.filter((r) => r.email).length;
+  const selectedPhone = selectedRows.filter((r) => r.phone).length;
+  const selectedForChannel = cChannel === "email" ? selectedEmail : selectedPhone;
+  const selectRowForSend = (row) => fillSendArea(row);
+  const sumWith = (key) => stats ? (stats[key] || 0) : 0;
+  const totalCompanies = stats?.total || 0;
   return (
     <div className="content">
       <div className="page-heading">
         <div>
-          <div className="section-kicker">KALIKA MARKETING LIST · TEMPLATES · MAIL</div>
-          <h2>Marketing companies</h2>
-          <p className="muted">Contacts with name + email. Filter a group, pick a template, send — then see progress, who viewed and mail details.</p>
+          <div className="section-kicker">OUTREACH · TEMPLATES · CONTACTS · MAIL</div>
+          <h2>Outreach &amp; marketing</h2>
+          <p className="muted">Pick a template (view / edit / send), choose contacts by category or filter, then send via email or WhatsApp and track who opened it.</p>
         </div>
         <div className="button-row">
-          <button className="secondary-button" onClick={load}><RefreshCw size={16} /> Refresh</button>
+          <button className="secondary-button" onClick={() => { load(); loadActivity(); }}><RefreshCw size={16} /> Refresh</button>
           <label className="secondary-button" style={{ cursor: busy ? "wait" : "pointer" }}>
             <UploadCloud size={16} />{busy ? "Uploading..." : "Upload File"}
             <input
@@ -1549,14 +1601,84 @@ export function MarketingCompanies({ onNotice }) {
               style={{ display: "none" }}
             />
           </label>
-          <button className="secondary-button" onClick={syncFromGCS} disabled={busy}>
-            <Database size={16} />{busy ? "Syncing..." : "Sync GCS files"}
-          </button>
-          <button className="primary-button" onClick={runImport} disabled={busy}>
-            <Database size={16} />{busy ? "Importing..." : "Import Default"}
-          </button>
         </div>
       </div>
+      <section className="panel" style={{ marginBottom: 14 }}>
+        <div className="table-toolbar">
+          <div className="search-field"><Database size={17} /><input value={syncPath} onChange={(e) => setSyncPath(e.target.value)} placeholder="GCS path to sync (optional) e.g. sales-contacts/my_list.xlsx" /></div>
+          <button className="secondary-button" onClick={syncFromGCS} disabled={busy}><Database size={16} />{busy ? "Syncing..." : "Sync this path"}</button>
+          <button className="secondary-button" onClick={runImport} disabled={busy}><Database size={16} />{busy ? "Importing..." : "Import default"}</button>
+        </div>
+        <small className="muted">Leave the path blank to sync the default marketing workbook + customers CSV. Upload an .xlsx / .csv above to update immediately, then sync to merge.</small>
+      </section>
+      {/* --- Templates first: pick one (green tick ✓ = selected) --- */}
+      <section className="panel studio-panel">
+        <div className="panel-heading">
+          <div><div className="section-kicker">TEMPLATES · SELECT FOR GROUP SEND</div><h3>Templates ({templates.length})</h3></div>
+          <button className="secondary-button" onClick={syncTemplates} disabled={cBusy}><Database size={15} /> Sync from GCS</button>
+          {templates.length > 0 && <span className="muted">Tap a template to select (tick ✓ = selected). Then select contacts below and send.</span>}
+        </div>
+        <div className="contact-list" role="list">
+          {templates.map((t) => (
+            <button key={t.id} role="listitem" className={`contact-row ${selTemplate?.id === t.id ? "selected tick-selected" : ""}`} style={{ width: "100%", textAlign: "left", border: 0, background: selTemplate?.id === t.id ? "#eef6ef" : "transparent" }} onClick={() => (selTemplate?.id === t.id ? setSelTemplate(null) : pickTemplate(t))} aria-pressed={selTemplate?.id === t.id}>
+              <span className="tick-mark">{selTemplate?.id === t.id ? "✓" : ""}</span>
+              <span className="contact-main"><b>{t.name}</b><small>{t.subject || String(t.body || "").slice(0, 90)}</small></span>
+              <span className="contact-tag">{t.channel}</span>
+              <span className="contact-tag">{t.strategy || "general"}</span>
+              <span className="button-row">
+                <span className="icon-button" role="button" tabIndex={0} title="Preview" onClick={(e) => { e.stopPropagation(); setPreviewTemplate(t); }}><Eye size={16} /></span>
+                <span className="icon-button" role="button" tabIndex={0} title="Edit" onClick={(e) => { e.stopPropagation(); setEditTemplate(t); }}><Edit2 size={16} /></span>
+                <span className="icon-button danger" role="button" tabIndex={0} title="Delete" onClick={(e) => { e.stopPropagation(); deleteTemplate(t.id); }}><Trash2 size={16} /></span>
+              </span>
+            </button>
+          ))}
+          {!templates.length && <div className="empty-state"><FileText size={22} /><p>No templates yet.</p><small>Sync from GCS to import HTML templates.</small></div>}
+        </div>
+        {selTemplate && (
+          <details className="outreach-template-preview">
+            <summary><span>View selected template</span><b>{selTemplate.name}</b></summary>
+            <div className="template-preview-body">
+              {selTemplate.subject && <p><b>Subject:</b> {selTemplate.subject}</p>}
+              <pre>{selTemplate.body}</pre>
+              {!!selTemplate.variables?.length && <small>Personalization fields: {selTemplate.variables.join(", ")}</small>}
+            </div>
+          </details>
+        )}
+      </section>
+      <section className="panel studio-panel">
+        <div className="panel-heading">
+          <div><div className="section-kicker">MARKETING HIGH-LEVEL</div><h3>Exact details for sending</h3></div>
+          <span className="muted">{stats ? `${fmtNum(totalCompanies)} companies · ${sumWith("with_email")} with email · ${sumWith("with_phone")} with phone` : `${templates.length} templates`}</span>
+        </div>
+        <div className="marketing-stat-grid">
+          {stats ? [
+            ["Companies", stats.total],
+            ["Name + email", sumWith("with_email")],
+            ["Phone", sumWith("with_phone")],
+            ["Templates", templates.length],
+            ["Follow-ups due", sumWith("follow_up_due")],
+            ["With requirements", sumWith("with_requirements")],
+          ].map(([label, value]) => {
+            const pct = totalCompanies ? Math.round((value / totalCompanies) * 100) : 0;
+            return (
+              <div className="marketing-stat" key={label}>
+                <small>{label}</small>
+                <b>{fmtNum(value)}</b>
+                <span>{pct}%</span>
+              </div>
+            );
+          }) : [<div className="marketing-stat" key="tpl"><small>Templates</small><b>{templates.length}</b><span>—</span></div>]}
+        </div>
+        <details className="marketing-breakdown">
+          <summary>Category / funnel / progress breakdown</summary>
+          <div className="marketing-breakdown-grid">
+            <div><b>Category</b>{Object.entries(stats?.by_category || {}).map(([label, count]) => <span key={label}>{label}<strong>{fmtNum(count)}</strong></span>)}</div>
+            <div><b>Funnel stage</b>{Object.entries(stats?.by_funnel_stage || {}).map(([label, count]) => <span key={label}>{label}<strong>{fmtNum(count)}</strong></span>)}</div>
+            <div><b>Progress</b>{Object.entries(stats?.by_sales_progress || {}).map(([label, count]) => <span key={label}>{label.replaceAll("_", " ")}<strong>{fmtNum(count)}</strong></span>)}</div>
+            <div><b>Call status / source</b>{Object.entries(stats?.by_call_status || {}).map(([label, count]) => <span key={label}>{label}<strong>{fmtNum(count)}</strong></span>)}{Object.entries(stats?.by_source || {}).map(([label, count]) => <span key={label}>{label}<strong>{fmtNum(count)}</strong></span>)}</div>
+          </div>
+        </details>
+      </section>
       <section className="panel table-panel">
         <div className="table-toolbar">
           <div className="search-field"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search company, contact, email or requirements" /></div>
@@ -1576,38 +1698,50 @@ export function MarketingCompanies({ onNotice }) {
           </select>
           <label className="follow-up-toggle"><input type="checkbox" checked={dueFollowupsOnly} onChange={(event) => setDueFollowupsOnly(event.target.checked)} /> Follow-ups due</label>
           <label className="follow-up-toggle"><input type="checkbox" checked={requirementsOnly} onChange={(event) => setRequirementsOnly(event.target.checked)} /> With requirements</label>
+          <select value={sortBy} onChange={(event) => setSortBy(event.target.value)} aria-label="Sort contacts">
+            <option value="company">Sort: company</option>
+            <option value="contact">Sort: contact</option>
+            <option value="category">Sort: category</option>
+            <option value="progress">Sort: progress</option>
+            <option value="follow_up">Sort: follow-up</option>
+            <option value="updated">Sort: recently updated</option>
+          </select>
           <select value={limit} onChange={(event) => setLimit(Number(event.target.value))} aria-label="Rows to show">
             {[100, 250, 500, 1000, 2500].map((size) => <option key={size} value={size}>{size} rows</option>)}
           </select>
-          <span className="muted">{rows.length} shown{stats?.total > rows.length ? ` of ${fmtNum(stats.total)}` : ""}</span>
+          <span className="muted">{rows.length} shown{totalCompanies > rows.length ? ` of ${fmtNum(totalCompanies)}` : ""} · {selectedRows.length} selected</span>
         </div>
         <div className="table-wrap marketing-desktop-table">
           <table>
             <thead>
               <tr>
+                <th></th>
                 <th>Company</th>
                 <th>Contact</th>
                 <th>Category</th>
-                <th>Call status</th>
+                <th>Call comments</th>
                 <th>Funnel</th>
                 <th>Progress</th>
                 <th>Follow-up</th>
                 <th>Requirements</th>
+                <th>Mail / viewed</th>
                 <th>Message</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => {
                 const editingRequirements = (editing[row.id]?.requirements ?? row.requirements) || "";
+                const act = activity[row.id];
                 return (
                   <tr key={row.id}>
+                    <td><input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleSelect(row.id)} aria-label={`Select ${row.company}`} /></td>
                     <td><b>{row.company}</b></td>
                     <td className="table-person">
                       <span>{row.contact_name || "-"}</span>
-                      <small>{row.phone || row.email || ""}</small>
+                      <small>{row.email || ""}{row.phone ? ` · ${row.phone}` : ""}</small>
                     </td>
                     <td>{row.category || "-"}</td>
-                    <td>{row.call_status || "-"}</td>
+                    <td><input value={editing[row.id]?.call_status ?? row.call_status ?? ""} onChange={(event) => setEditing((previous) => ({ ...previous, [row.id]: { ...(previous[row.id] || {}), call_status: event.target.value } }))} onBlur={(event) => { if (event.target.value !== row.call_status) updateField(row.id, "call_status", event.target.value); }} placeholder="Call comment" aria-label={`Call comment for ${row.company}`} style={{ minWidth: 120 }} /></td>
                     <td><select value={row.funnel_stage || "awareness"} onChange={(event) => updateField(row.id, "funnel_stage", event.target.value)} aria-label={`Funnel stage for ${row.company}`}>{funnelStages.map((stage) => <option key={stage} value={stage}>{stage}</option>)}</select></td>
                     <td><select value={row.sales_progress || "new"} onChange={(event) => updateField(row.id, "sales_progress", event.target.value)} aria-label={`Sales progress for ${row.company}`}>{progressOptions.map((progress) => <option key={progress} value={progress}>{progress.replaceAll("_", " ")}</option>)}</select></td>
                     <td><input aria-label={`Follow-up date for ${row.company}`} type="date" value={row.follow_up_date || ""} onChange={(event) => updateField(row.id, "follow_up_date", event.target.value)} /></td>
@@ -1627,11 +1761,21 @@ export function MarketingCompanies({ onNotice }) {
                         />
                       </details>
                     </td>
-                    <td><button className="secondary-button" onClick={() => { const t = templates.find((x) => x.channel === "email") || templates[0]; if (t) pickTemplate(t); setSelTemplate(t || null); setSendTarget(row); setSendTemplateId(t?.id ? String(t.id) : ""); setSendSubject(t?.subject || ""); setSendText(t?.body ? htmlToText(t.body) : ""); }}><MessageCircle size={16} /> Send</button></td>
+                    <td>
+                      {act ? (
+                        <span className="activity-badges" title={`Last: ${act.last_status || "-"}${act.last_subject ? ` · ${act.last_subject}` : ""}`}>
+                          <span className="contact-tag">✉ {act.sent}</span>
+                          <span className="contact-tag">👁 {act.opened}</span>
+                          {act.failed > 0 && <span className="contact-tag failed-tag">✕ {act.failed}</span>}
+                          {act.last_opened_at && <small className="muted">viewed {String(act.last_opened_at).slice(5, 16)}</small>}
+                        </span>
+                      ) : <small className="muted">not mailed</small>}
+                    </td>
+                    <td><button className="secondary-button" onClick={() => selectRowForSend(row)}><MessageCircle size={16} /> Select</button></td>
                   </tr>
                 );
               })}
-              {!rows.length && <tr><td colSpan={9}><div className="empty-state"><BriefcaseBusiness size={22} /><p>No marketing companies yet.</p><small>Sync the latest marketing workbook and customers CSV from GCS.</small></div></td></tr>}
+              {!rows.length && <tr><td colSpan={11}><div className="empty-state"><BriefcaseBusiness size={22} /><p>No marketing companies yet.</p><small>Sync the latest marketing workbook and customers CSV from GCS.</small></div></td></tr>}
             </tbody>
           </table>
         </div>
@@ -1646,13 +1790,22 @@ export function MarketingCompanies({ onNotice }) {
                   <span className="contact-tag">{row.funnel_stage || "awareness"}</span>
                 </div>
                 <div className="marketing-company-meta"><span>{row.category || "Uncategorized"}</span><span>{row.call_status || "No call status"}</span><span>{(row.sales_progress || "new").replaceAll("_", " ")}</span>{row.follow_up_date && <span>Follow-up {row.follow_up_date}</span>}</div>
+                {activity[row.id] && (
+                  <div className="marketing-company-meta">
+                    <span>✉ {activity[row.id].sent} sent</span>
+                    <span>👁 {activity[row.id].opened} viewed</span>
+                    {activity[row.id].failed > 0 && <span>✕ {activity[row.id].failed} failed</span>}
+                    {activity[row.id].last_opened_at && <span>last view {String(activity[row.id].last_opened_at).slice(5, 16)}</span>}
+                  </div>
+                )}
                 <div className="marketing-company-actions">
                   {row.phone && <>
                     <a className="secondary-button" href={`tel:${phoneHref}`} aria-label={`Call ${row.phone}`}><PhoneCall size={16} /> Call</a>
                     <button className="icon-button" type="button" title="Copy phone number" aria-label={`Copy ${row.phone}`} onClick={() => copyPhone(row.phone)}><Copy size={17} /></button>
                   </>}
                   {row.email && <a className="secondary-button" href={`mailto:${row.email}`}><Mail size={16} /> Email</a>}
-                  <button className="primary-button" type="button" onClick={() => { const t = templates.find((x) => x.channel === "email") || templates[0]; if (t) pickTemplate(t); setSelTemplate(t || null); setSendTarget(row); setSendTemplateId(t?.id ? String(t.id) : ""); setSendSubject(t?.subject || ""); setSendText(t?.body ? htmlToText(t.body) : ""); }}><MessageCircle size={16} /> Message</button>
+                  <label className="secondary-button"><input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleSelect(row.id)} /> Select</label>
+                  <button className="primary-button" type="button" onClick={() => selectRowForSend(row)}><MessageCircle size={16} /> Message</button>
                 </div>
                 <details className="marketing-company-details">
                   <summary>Progress, follow-up and contact details</summary>
@@ -1712,37 +1865,18 @@ export function MarketingCompanies({ onNotice }) {
           </div>
         </div>
       )}
-      {/* --- Templates (folded in from the Templates tab) --- */}
-      <section className="panel" style={{ marginTop: 16 }}>
-        <div className="panel-heading"><div><div className="section-kicker">TEMPLATES · SELECT FOR GROUP SEND</div><h3>Templates ({templates.length})</h3></div><button className="secondary-button" onClick={syncTemplates} disabled={cBusy}><Database size={15} /> Sync from GCS</button></div>
-        <div className="contact-list" role="list">
-          {templates.map((t) => (
-            <button key={t.id} role="listitem" className={`contact-row ${selTemplate?.id === t.id ? "selected" : ""}`} style={{ width: "100%", textAlign: "left", border: 0, background: selTemplate?.id === t.id ? "#eef6ef" : "transparent" }} onClick={() => pickTemplate(t)} aria-pressed={selTemplate?.id === t.id}>
-              <span className="contact-main"><b>{t.name}</b><small>{t.subject || String(t.body || "").slice(0, 80)}</small></span>
-              <span className="contact-tag">{t.channel}</span>
-              <span className="contact-tag">{t.strategy || "general"}</span>
-              <span className="button-row">
-                <span className="icon-button" role="button" tabIndex={0} title="Preview" onClick={(e) => { e.stopPropagation(); setPreviewTemplate(t); }}><Eye size={16} /></span>
-                <span className="icon-button" role="button" tabIndex={0} title="Edit" onClick={(e) => { e.stopPropagation(); setEditTemplate(t); }}><Edit2 size={16} /></span>
-                <span className="icon-button danger" role="button" tabIndex={0} title="Delete" onClick={(e) => { e.stopPropagation(); deleteTemplate(t.id); }}><Trash2 size={16} /></span>
-              </span>
-            </button>
-          ))}
-          {!templates.length && <div className="empty-state"><FileText size={22} /><p>No templates yet.</p><small>Sync from GCS to import HTML templates.</small></div>}
+      {/* --- Send bar: template ✓ + contacts ✓ → create campaign --- */}
+      {selTemplate && selectedRows.length > 0 && (
+        <div className="send-bar">
+          <span className="muted">{selectedRows.length} selected · {selectedEmail} with email · {selectedPhone} with phone · Template: {selTemplate.name}</span>
+          <select value={cChannel} onChange={(e) => setCChannel(e.target.value)} aria-label="Send channel">
+            <option value="email">Email ({selectedEmail})</option>
+            <option value="whatsapp">WhatsApp ({selectedPhone})</option>
+            <option value="wechat">WeChat ({selectedPhone})</option>
+          </select>
+          <button className="primary-button" onClick={createSelectedCampaign} disabled={cBusy || selectedForChannel === 0}>{cBusy ? "Working..." : `Send to ${selectedForChannel} via ${cChannel}`}</button>
         </div>
-        {selTemplate && (
-          <details className="outreach-template-preview">
-            <summary><span>View selected template</span><b>{selTemplate.name}</b></summary>
-            <div className="template-preview-body">
-              {selTemplate.subject && <p><b>Subject:</b> {selTemplate.subject}</p>}
-              <pre>{selTemplate.body}</pre>
-              {!!selTemplate.variables?.length && <small>Personalization fields: {selTemplate.variables.join(", ")}</small>}
-            </div>
-          </details>
-        )}
-      </section>
-
-      {/* --- Build a group campaign (was Outreach builder) --- */}
+      )}
       <section className="panel" style={{ marginTop: 16 }} aria-label="Build campaign">
         <div className="panel-heading"><h3>Send to filtered group</h3><span className="muted">{selTemplate ? `Using: ${selTemplate.name}` : "Select a template above"} · {rows.length} in current filter · name + email</span></div>
         <div className="form-grid">
