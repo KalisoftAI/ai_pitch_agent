@@ -122,6 +122,20 @@ def _ensure_columns() -> None:
                     conn.execute(
                         text(f"ALTER TABLE marketing_companies ADD COLUMN {column} {ddl}")
                     )
+    if "campaign_messages" in insp.get_table_names():
+        # Older campaign_messages predate contact_name/opened_at tracking.
+        cols = {c["name"] for c in insp.get_columns("campaign_messages")}
+        for column, ddl in (
+            ("contact_name", "VARCHAR(255) DEFAULT ''"),
+            ("sent_at", "TIMESTAMP"),
+            ("opened_at", "TIMESTAMP"),
+        ):
+            if column not in cols:
+                with engine.begin() as conn:
+                    conn.execute(text(f"ALTER TABLE campaign_messages ADD COLUMN {column} {ddl}"))
+        if "status" not in cols:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE campaign_messages ADD COLUMN status VARCHAR(32) DEFAULT 'pending_review'"))
     if "message_templates" in insp.get_table_names():
         # Older databases were created before strategy/funnel_stage/variables
         # existed; create_all never alters existing tables, so add them here.
