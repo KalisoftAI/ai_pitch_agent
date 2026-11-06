@@ -130,6 +130,13 @@ def password_login(
         if len(matches) == 1:
             user = matches[0]
             email_address = user.email
+    if user is None and "@" not in username:
+        # Accept the local part of an email as a username (for example
+        # "kalikaenterprises" -> kalikaenterprises@gmail.com) when unique.
+        matches = db.query(User).filter(User.email.ilike(f"{username}@%")).limit(2).all()
+        if len(matches) == 1:
+            user = matches[0]
+            email_address = user.email
     if (
         user is None
         or not user.password_hash

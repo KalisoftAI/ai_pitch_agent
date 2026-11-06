@@ -6,7 +6,7 @@ import {
   Search, Send, Settings2, ShieldCheck, Sparkles, Star, Trash2, UploadCloud, Users, Video, X,
 } from "lucide-react";
 import { InstoreSummaryCard, KnowledgeGraphReview, MarketingCompanies, SalesBi, TallySalesPanel, Templates } from "./features.jsx";
-import { KALISOFT_LOGO } from "./branding.js";
+import { KALIKA_LOGO, KALISOFT_LOGO } from "./branding.js";
 import "./styles.css";
 
 const API = "/api";
@@ -72,11 +72,16 @@ function App() {
   if (!user) return <SignInPage config={config} onLogin={setUser} onNotice={setNotice} />;
 
   const logout = () => { sessionStorage.removeItem("sales_token"); setUser(null); };
+  const userEmail = (user.email || "").toLowerCase();
+  const isKalikaUser = userEmail === "kalikaenterprises@gmail.com" || userEmail.endsWith("@kalika.local");
+  const brandLogo = isKalikaUser ? KALIKA_LOGO : KALISOFT_LOGO;
+  const brandName = isKalikaUser ? "Kalika" : "Kalisoft";
+  const brandSubtext = isKalikaUser ? "Enterprises" : "AI";
   return (
     <div className="shell">
       <aside className={`sidebar ${mobileNav ? "open" : ""}`}>
         <div className="sidebar-brand-row">
-          <div className="brand"><img src={KALISOFT_LOGO} alt="Kalisoft AI" className="brand-logo" /><span>Kalisoft <b>AI</b></span></div>
+          <div className="brand"><img src={brandLogo} alt={brandName} className="brand-logo" /><span>{brandName} <b>{brandSubtext}</b></span></div>
           <button className="icon-button sidebar-close" onClick={() => setMobileNav(false)} aria-label="Close menu"><X size={22} /></button>
         </div>
         <div className="workspace-label">Revenue workspace</div>
@@ -102,7 +107,7 @@ function App() {
       </aside>
       {mobileNav && <button className="scrim" aria-label="Close menu" onClick={() => setMobileNav(false)} />}
       <main className="main">
-        <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open navigation menu"><Menu size={25} /><span>Menu</span></button><div className="topbar-title"><div className="eyebrow">KALISOFT AI / SALES PIPELINE</div><h1>{tab === "overview" ? "Good work starts with a clear signal." : tab === "sales-bi" ? "Sales analytics & BI" : tab === "marketing" ? "Marketing companies" : tab === "templates" ? "Message templates" : tab === "graph-review" ? "Knowledge graph review" : tab === "contacts" ? "Contacts" : tab === "email" ? "Email connections" : tab === "events" ? "Events" : tab === "signals" ? "Signal desk" : tab === "scheduler" ? "Scheduler" : tab === "kpis" ? "Business KPIs" : tab === "feedback" ? "Feedback" : "Outreach"}</h1></div><div className="topbar-actions"><EnvBadge env={health?.env} /><button className="text-button" onClick={() => setTour(true)}><Sparkles size={15} /> Take the tour</button><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Settings"><Settings2 size={18} /></button></div></header>
+        <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open navigation menu"><Menu size={25} /><span>Menu</span></button><div className="topbar-title"><div className="eyebrow">{isKalikaUser ? "KALIKA ENTERPRISES" : "KALISOFT AI"} / SALES PIPELINE</div><h1>{tab === "overview" ? "Good work starts with a clear signal." : tab === "sales-bi" ? "Sales analytics & BI" : tab === "marketing" ? "Marketing companies" : tab === "templates" ? "Message templates" : tab === "graph-review" ? "Knowledge graph review" : tab === "contacts" ? "Contacts" : tab === "email" ? "Email connections" : tab === "events" ? "Events" : tab === "signals" ? "Signal desk" : tab === "scheduler" ? "Scheduler" : tab === "kpis" ? "Business KPIs" : tab === "feedback" ? "Feedback" : "Outreach"}</h1></div><div className="topbar-actions"><EnvBadge env={health?.env} /><button className="text-button" onClick={() => setTour(true)}><Sparkles size={15} /> Take the tour</button><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Settings"><Settings2 size={18} /></button></div></header>
         {tab === "overview" && <Overview onNavigate={setTab} onNotice={setNotice} health={health} setHealth={setHealth} />}
         {tab === "sales-bi" && <SalesBi onNotice={setNotice} />}
         {tab === "marketing" && <MarketingCompanies onNotice={setNotice} />}
@@ -131,25 +136,121 @@ function LoadingScreen() { return <div className="loading-screen"><img src={KALI
 function Login({ config, onLogin, onNotice }) {
   const [email, setEmail] = useState("ai.solutions@kalisoftai.in");
   const [busy, setBusy] = useState(false);
+  const [pwForm, setPwForm] = useState({ username: "", password: "" });
+  const [pwBusy, setPwBusy] = useState(false);
+  const [gisFailed, setGisFailed] = useState(false);
   const login = async (idToken) => {
     setBusy(true);
     try { const result = await request("/auth/google", { method: "POST", body: JSON.stringify({ id_token: idToken }) }); sessionStorage.setItem("sales_token", result.access_token); onLogin(await request("/auth/me")); }
     catch (error) { onNotice({ type: "error", text: error.message }); }
     finally { setBusy(false); }
   };
+  const passwordLogin = async (event) => {
+    event.preventDefault();
+    setPwBusy(true);
+    try {
+      const result = await request("/auth/password", { method: "POST", body: JSON.stringify(pwForm) });
+      sessionStorage.setItem("sales_token", result.access_token);
+      onLogin(await request("/auth/me"));
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+    finally { setPwBusy(false); }
+  };
   useEffect(() => {
     if (!config.google_client_id) return undefined;
-    const renderGoogleButton = () => {
-      if (!window.google?.accounts?.id) return;
-      window.google.accounts.id.initialize({ client_id: config.google_client_id, callback: (response) => login(response.credential) });
-      window.google.accounts.id.renderButton(document.getElementById("google-button"), { theme: "outline", size: "large", width: 320, shape: "rectangular" });
+    if (!document.querySelector('script[src*="accounts.google.com/gsi/client"]')) {
+      const script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      script.onerror = () => setGisFailed(true);
+      document.head.appendChild(script);
+    }
+    let cancelled = false;
+    let attempts = 0;
+    let timer;
+    const tryRender = () => {
+      if (cancelled) return;
+      if (!window.google?.accounts?.id) {
+        attempts += 1;
+        if (attempts > 300) { setGisFailed(true); return; }
+        timer = window.setTimeout(tryRender, 100);
+        return;
+      }
+      window.google.accounts.id.initialize({ client_id: config.google_client_id, callback: (response) => login(response.credential), ux_mode: "popup" });
+      const el = document.getElementById("google-button");
+      if (el && !el.hasChildNodes()) {
+        const width = Math.max(200, Math.min(400, el.parentElement?.clientWidth || 320));
+        window.google.accounts.id.renderButton(el, { theme: "outline", size: "large", width, shape: "pill", text: "signin_with", logo_alignment: "center" });
+      }
     };
-    renderGoogleButton();
-    const poll = window.setInterval(renderGoogleButton, 100);
-    const stop = window.setTimeout(() => window.clearInterval(poll), 10000);
-    return () => { window.clearInterval(poll); window.clearTimeout(stop); };
+    tryRender();
+    return () => { cancelled = true; if (timer) window.clearTimeout(timer); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.google_client_id]);
-  return <div className="login-page"><div className="login-art"><div className="art-grid" /><div className="art-copy"><div className="brand"><img src={KALISOFT_LOGO} alt="Kalisoft AI" className="brand-logo" /><span>Kalisoft <b>AI</b></span></div><h1>Turn scattered signals into your next best conversation.</h1><p>A focused workspace for the people, companies, and market cues that move your pipeline forward.</p><div className="art-stat"><span><b>01</b> verified workspace</span><span><b>02</b> live signal streams</span></div></div></div><section className="login-panel"><div className="panel-inner"><div className="eyebrow">PRIVATE SALES WORKSPACE</div><h2>Welcome back.</h2><p className="muted">Sign in with your verified Google account to continue.</p><div id="google-button" className={config.google_client_id ? "google-button" : "hidden"} />{!config.google_client_id && <div className="config-warning"><CircleAlert size={18} /><span>Google Sign-In is not configured on this environment.</span></div>}{config.dev_mode && <div className="dev-login"><label>Local development access</label><div className="input-action"><input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" /><button onClick={() => login(`dev:${email}`)} disabled={busy}>{busy ? "Checking..." : "Enter"}<ArrowUpRight size={16} /></button></div><small>Enabled only when AUTH_DEV_MODE is true.</small></div>}<div className="login-footer"><ShieldCheck size={16} /> Your session is protected with short-lived tokens.</div></div></section></div>;
+  return (
+    <div className="login-page">
+      <div className="login-art">
+        <div className="art-grid" />
+        <div className="art-copy">
+          <div className="brand">
+            <img src={KALISOFT_LOGO} alt="Kalisoft AI" className="brand-logo" />
+            <span>Kalisoft <b>AI</b></span>
+            <span className="brand-divider" />
+            <img src={KALIKA_LOGO} alt="Kalika Enterprises" className="brand-logo kalika-mark" />
+            <span className="kalika-word">Kalika</span>
+          </div>
+          <h1>Turn scattered signals into your next best conversation.</h1>
+          <p>A focused workspace for the people, companies, and market cues that move your pipeline forward.</p>
+          <div className="art-stat"><span><b>01</b> verified workspace</span><span><b>02</b> live signal streams</span></div>
+        </div>
+      </div>
+      <section className="login-panel">
+        <div className="panel-inner">
+          <div className="eyebrow">PRIVATE SALES WORKSPACE</div>
+          <h2>Welcome back.</h2>
+          <p className="muted">Sign in with your Kalika username &amp; password, or a verified Google account.</p>
+          {config.google_client_id ? (
+            <>
+              <div className={`gsi-wrap${busy ? " busy" : ""}`}>
+                <div className="gsi-custom" aria-hidden="true">
+                  <svg className="gsi-logo" viewBox="0 0 18 18">
+                    <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.58 2.68-3.9 2.68-6.62z" />
+                    <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z" />
+                    <path fill="#FBBC05" d="M3.97 10.72a5.41 5.41 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33z" />
+                    <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.42 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z" />
+                  </svg>
+                  <span>{busy ? "Signing in..." : "Sign in with Google"}</span>
+                </div>
+                <div id="google-button" className="gsi-native" />
+              </div>
+              {gisFailed && <div className="config-warning"><CircleAlert size={18} /><span>Google Sign-In could not load. Check your network/ad-blocker, or use username &amp; password below.</span></div>}
+            </>
+          ) : (
+            <div className="config-warning"><CircleAlert size={18} /><span>Google Sign-In is not configured on this environment. Use username &amp; password below.</span></div>
+          )}
+          <form className="pw-login" onSubmit={passwordLogin}>
+            <label>Username or email</label>
+            <input value={pwForm.username} onChange={(event) => setPwForm({ ...pwForm, username: event.target.value })} placeholder="kalikaenterprises@gmail.com" autoComplete="username" required />
+            <label>Password</label>
+            <input type="password" value={pwForm.password} onChange={(event) => setPwForm({ ...pwForm, password: event.target.value })} placeholder="password" autoComplete="current-password" required />
+            <button className="primary-button" type="submit" disabled={pwBusy}>{pwBusy ? "Signing in..." : "Sign in"}</button>
+            <small>Use your Kalika email or account name.</small>
+          </form>
+          {config.dev_mode && (
+            <div className="dev-login">
+              <label>Local development access</label>
+              <div className="input-action">
+                <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" />
+                <button onClick={() => login(`dev:${email}`)} disabled={busy}>{busy ? "Checking..." : "Enter"}<ArrowUpRight size={16} /></button>
+              </div>
+              <small>Enabled only when AUTH_DEV_MODE is true.</small>
+            </div>
+          )}
+          <div className="login-footer"><ShieldCheck size={16} /> Your session is protected with short-lived tokens.</div>
+        </div>
+      </section>
+    </div>
+  );
 }
 
 function NavItem({ icon: Icon, label, active, onClick }) { return <button className={`nav-item ${active ? "active" : ""}`} onClick={onClick}><Icon size={18} /><span>{label}</span>{active && <ChevronDown size={15} className="nav-caret" />}</button>; }

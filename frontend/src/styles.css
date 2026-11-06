@@ -622,6 +622,7 @@ h3 { letter-spacing: -0.015em; }
 /* ---------- Kalika command center (vibrant) ---------- */
 .kalika-mark { border-radius: 12px 12px 12px 4px; }
 .kalika-word { color: var(--orange); font-weight: 800; letter-spacing: -.03em; }
+.brand-divider { width: 1px; height: 22px; background: var(--line); margin: 0 6px; flex-shrink: 0; }
 .pw-login { border-top: 1px solid var(--line); margin-top: 24px; padding-top: 18px; display: grid; gap: 8px; }
 .pw-login label { font-size: 12px; font-weight: 700; }
 .pw-login input { width: 100%; background: #fafaf5; border: 1px solid var(--line); border-radius: 6px; padding: 11px 12px; color: var(--ink); outline: 0; }
