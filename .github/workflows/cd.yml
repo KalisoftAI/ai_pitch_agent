@@ -121,39 +121,40 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
+          set -euo pipefail
           P="${{ vars.GCP_PROJECT_ID }}"
-          echo "== Secret Manager secrets (names only) =="
-          gcloud secrets list --project "$P" --format="value(name)" 2>&1 || true
-          echo "== Current prod secret refs (names only) =="
-          gcloud run services describe kalisoft-sales --project "$P" --region "${{ vars.GCP_REGION }}" \
-            --format="value(spec.template.spec.containers[0].env[].name)" 2>&1 || true
-          # Signing key and database URL are required. Optional service credentials
-          # are bound only when present; no secret values are printed.
-          for REQUIRED_SECRET in SALES_SECRET_KEY SALES_DATABASE_URL; do
-            if ! gcloud secrets describe "$REQUIRED_SECRET" --project "$P" >/dev/null 2>&1; then
-              echo "::warning::Secret not describable or missing: $REQUIRED_SECRET (continuing to reveal real name below)"
-            fi
-          done
+          R="${{ vars.GCP_REGION }}"
+          SVC="${{ needs.resolve.outputs.service }}"
+
+          # The deployer SA can bind secrets (versions.access) but cannot list or
+          # describe them, so probe with `versions access` (value discarded).
           SECRETS="SECRET_KEY=SALES_SECRET_KEY:latest,DATABASE_URL=SALES_DATABASE_URL:latest"
           add_optional_secret() {  # $1 = env var name, $2 = Secret Manager secret name
-            if gcloud secrets describe "$2" --project "${{ vars.GCP_PROJECT_ID }}" >/dev/null 2>&1; then
+            if gcloud secrets versions access latest --secret "$2" --project "$P" >/dev/null 2>&1; then
               SECRETS="${SECRETS:+$SECRETS,}$1=$2:latest"
             else
-              echo "Optional secret is not configured: $2"
+              echo "Optional secret not accessible/configured: $2"
             fi
           }
           add_optional_secret GEMINI_API_KEY GEMINI_API_KEY
           add_optional_secret GOOGLE_CLIENT_SECRET GOOGLE_CLIENT_SECRET
           add_optional_secret SMTP_PASSWORD SMTP_PASSWORD
 
-          gcloud run deploy "${{ needs.resolve.outputs.service }}" \
+          # TrustedHost must accept the service's own Cloud Run host. Hash-based
+          # URLs are not predictable, so read the existing URL and append its host.
+          HOSTS="${{ needs.resolve.outputs.allowed_hosts }}"
+          EXISTING_URL=$(gcloud run services describe "$SVC" --project "$P" --region "$R" --format='value(status.url)' 2>/dev/null || true)
+          EXISTING_HOST=$(printf '%s' "$EXISTING_URL" | sed -E 's#^https?://##; s#/$##')
+          if [ -n "$EXISTING_HOST" ]; then HOSTS="$HOSTS,$EXISTING_HOST"; fi
+
+          gcloud run deploy "$SVC" \
             --image "${IMAGE_BASE}:${GITHUB_SHA}" \
-            --project "${{ vars.GCP_PROJECT_ID }}" \
-            --region "${{ vars.GCP_REGION }}" \
+            --project "$P" \
+            --region "$R" \
             --platform managed \
             --allow-unauthenticated \
             --add-cloudsql-instances "${{ vars.CLOUD_SQL_INSTANCE }}" \
-            --set-env-vars "^@^ENV=${{ needs.resolve.outputs.app_env }}@DEPLOY_ENV=${{ needs.resolve.outputs.deploy_env }}@GOOGLE_CLOUD_PROJECT=${{ vars.GCP_PROJECT_ID }}@GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}@GOOGLE_ALLOWED_DOMAINS=${{ vars.GOOGLE_ALLOWED_DOMAINS }}@ALLOWED_HOSTS=${{ needs.resolve.outputs.allowed_hosts }}@CORS_ORIGINS=${{ needs.resolve.outputs.cors }}@GCS_BUCKET_CONTACTS=${{ vars.GCS_BUCKET }}@GCS_PATH_CONTACTS=${{ vars.GCS_PATH }}@KNOWLEDGE_GRAPH_GCS_PREFIX=sales-app/knowledge_graph/@KNOWLEDGE_GRAPH_REFRESH_DAYS=7@KNOWLEDGE_GRAPH_CHAT_ENABLED=${{ needs.resolve.outputs.graph_chat_enabled }}@CLOUD_SQL_CONNECTION_NAME=${{ vars.CLOUD_SQL_INSTANCE }}@RATE_LIMIT_ENABLED=true@AUTH_DEV_MODE=false@GEMMA_MODEL=${{ vars.GEMMA_MODEL || 'gemma-4-27b-it' }}@LLM_GEMMA_MODEL=${{ vars.LLM_GEMMA_MODEL || 'gemma-4-27b-it' }}@FRONTEND_URL=${{ needs.resolve.outputs.frontend_url }}" \
+            --set-env-vars "^@^ENV=${{ needs.resolve.outputs.app_env }}@DEPLOY_ENV=${{ needs.resolve.outputs.deploy_env }}@GOOGLE_CLOUD_PROJECT=$P@GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}@GOOGLE_ALLOWED_DOMAINS=${{ vars.GOOGLE_ALLOWED_DOMAINS }}@ALLOWED_HOSTS=$HOSTS@CORS_ORIGINS=${{ needs.resolve.outputs.cors }}@GCS_BUCKET_CONTACTS=${{ vars.GCS_BUCKET }}@GCS_PATH_CONTACTS=${{ vars.GCS_PATH }}@KNOWLEDGE_GRAPH_GCS_PREFIX=sales-app/knowledge_graph/@KNOWLEDGE_GRAPH_REFRESH_DAYS=7@KNOWLEDGE_GRAPH_CHAT_ENABLED=${{ needs.resolve.outputs.graph_chat_enabled }}@CLOUD_SQL_CONNECTION_NAME=${{ vars.CLOUD_SQL_INSTANCE }}@RATE_LIMIT_ENABLED=true@AUTH_DEV_MODE=false@GEMMA_MODEL=${{ vars.GEMMA_MODEL || 'gemma-4-27b-it' }}@LLM_GEMMA_MODEL=${{ vars.LLM_GEMMA_MODEL || 'gemma-4-27b-it' }}@FRONTEND_URL=${{ needs.resolve.outputs.frontend_url }}" \
             --update-secrets "$SECRETS" \
             --min-instances=0 \
             --max-instances="${{ needs.resolve.outputs.max_instances }}" \
@@ -163,6 +164,15 @@ jobs:
             --timeout=900 \
             --cpu-throttling
 
+          # First deploy of a brand-new service: its URL did not exist before the
+          # deploy, so add the actual host and wait for the new revision.
+          ACTUAL_URL=$(gcloud run services describe "$SVC" --project "$P" --region "$R" --format='value(status.url)')
+          ACTUAL_HOST=$(printf '%s' "$ACTUAL_URL" | sed -E 's#^https?://##; s#/$##')
+          case ",$HOSTS," in
+            *",$ACTUAL_HOST,"*) ;;
+            *) gcloud run services update "$SVC" --project "$P" --region "$R" --update-env-vars "ALLOWED_HOSTS=$HOSTS,$ACTUAL_HOST" ;;
+          esac
+
       - name: Smoke test
         run: |
           URL=$(gcloud run services describe "${{ needs.resolve.outputs.service }}" \
@@ -170,4 +180,8 @@ jobs:
             --region "${{ vars.GCP_REGION }}" \
             --format='value(status.url)')
           echo "Deployed: $URL"
-          curl -fsS "$URL/api/health" || (echo "Health check failed" && exit 1)
+          for i in $(seq 1 12); do
+            if curl -fsS "$URL/api/health"; then echo; echo "healthy"; exit 0; fi
+            echo "attempt $i failed; retrying in 10s"; sleep 10
+          done
+          echo "Health check failed"; exit 1
