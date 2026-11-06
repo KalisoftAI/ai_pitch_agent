@@ -559,6 +559,20 @@ class MarketingCompanyOut(BaseModel):
     updated_at: datetime
 
 
+class MarketingCompanyCreate(BaseModel):
+    company: str = Field(..., min_length=1, max_length=255)
+    contact_name: str = ""
+    phone: str = ""
+    email: str = ""
+    category: str = ""
+    call_status: str = ""
+    requirements: str = ""
+    funnel_stage: str = "awareness"
+    sales_progress: str = "new"
+    next_action: str = ""
+    follow_up_date: str = ""
+
+
 class MarketingCompanyUpdate(BaseModel):
     contact_name: Optional[str] = None
     phone: Optional[str] = None

@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -27,6 +27,80 @@ router = APIRouter(prefix="/templates", tags=["templates"])
 
 GCS_BUCKET = "kalika_enterprises"
 GCS_PATH = "Mail_templates/"
+ALLOWED_TEMPLATE_EXTENSIONS = (".html", ".htm", ".txt", ".md")
+
+
+@router.post("/upload")
+async def upload_template(
+    file: UploadFile,
+    name: str | None = Query(default=None),
+    channel: str | None = Query(default=None),
+    strategy: str | None = Query(default=None),
+    subject: str | None = Query(default=None),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Create a template by uploading its file body (HTML/txt/md).
+
+    The file is also stored to ``kalika_enterprises/Mail_templates/`` so a
+    later Sync from GCS will pick it up again.
+    """
+    filename = (file.filename or "").strip()
+    if not filename.lower().endswith(ALLOWED_TEMPLATE_EXTENSIONS):
+        raise HTTPException(status_code=400, detail="Template file must be .html, .htm, .txt or .md")
+    raw = await file.read()
+    if not raw:
+        raise HTTPException(status_code=400, detail="Uploaded template file is empty")
+    try:
+        body = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        body = raw.decode("latin-1")
+
+    tpl_name = (name or filename.rsplit(".", 1)[0].replace("_", " ").replace("-", " ").strip() or "Uploaded template")[:128]
+    tpl_channel = (channel or "").strip().lower() or ("whatsapp" if "whatsapp" in filename.lower() else "email")
+    tpl_strategy = (strategy or "").strip().lower() or "cold_outreach"
+    tpl_subject = (subject or "").strip() or tpl_name
+    variables = variables_used(tpl_subject + " " + body)
+
+    template = MessageTemplate(
+        user_id=user.id,
+        name=tpl_name,
+        channel=tpl_channel,
+        strategy=tpl_strategy,
+        funnel_stage="awareness",
+        subject=tpl_subject,
+        body=body,
+        variables=variables,
+        is_active=True,
+    )
+    db.add(template)
+    db.commit()
+    db.refresh(template)
+
+    path = f"{GCS_PATH}{filename.rsplit('.', 1)[0]}.html"
+    gcs = GCSStorage(bucket_name=GCS_BUCKET)
+    stored = gcs.upload_bytes(path, body.encode("utf-8"), content_type="text/html") if gcs.available else False
+
+    log_event(
+        db,
+        action="template.upload",
+        actor_user_id=user.id,
+        resource_type="template",
+        resource_id=str(template.id),
+        tenant_id=user.domain,
+        detail={"filename": filename, "gcs_path": path if stored else "", "channel": tpl_channel},
+        commit=True,
+    )
+    return {"template": template, "gcs_path": path if stored else "", "message": f"Uploaded template {tpl_name}"}
+
+
+@router.post("/store-gcs-paths")
+def store_template_gcs_paths(paths: list[str], user: User = Depends(get_current_user)):
+    """Return info about template files stored under Mail_templates/ for UI sync use."""
+    gcs = GCSStorage(bucket_name=GCS_BUCKET)
+    if not gcs.available:
+        raise HTTPException(status_code=503, detail="GCS is not available")
+    return gcs.list_blobs(prefix=GCS_PATH)
 
 
 @router.get("/meta")

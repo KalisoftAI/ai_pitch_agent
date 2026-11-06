@@ -10,12 +10,14 @@ from .erp import router as erp_router
 from .events import router as events_router
 from .feedback import router as feedback_router
 from .feedback_pipeline import router as feedback_pipeline_router
+from .google_analytics import router as google_analytics_router
 from .google_email import router as google_email_router
 from .governance import governance_router, llm_router
 from .instore import router as instore_router
 from .journey import router as journey_router
 from .knowledge_graph import router as knowledge_graph_router
 from .marketing_companies import router as marketing_companies_router
+from .media import router as media_router
 from .ops import router as ops_router
 from .sales import router as sales_router
 from .scheduler import router as scheduler_router
@@ -43,6 +45,7 @@ __all__ = [
     "events_router",
     "feedback_router",
     "feedback_pipeline_router",
+    "google_analytics_router",
     "google_email_router",
     "journey_router",
     "ops_router",
@@ -51,6 +54,7 @@ __all__ = [
     "knowledge_graph_router",
     "llm_router",
     "marketing_companies_router",
+    "media_router",
     "sales_router",
     "scheduler_router",
     "social_router",

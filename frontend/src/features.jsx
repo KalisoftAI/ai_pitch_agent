@@ -1495,6 +1495,29 @@ export function MarketingCompanies({ onNotice }) {
   // Templates tab content (preview/edit/delete) folded in, minus the giant page heading
   const [previewTemplate, setPreviewTemplate] = useState(null);
   const [editTemplate, setEditTemplate] = useState(null);
+  const [newTemplate, setNewTemplate] = useState(null);
+  const [newContact, setNewContact] = useState(null);
+  const [defaultVideos, setDefaultVideos] = useState([]);
+  const [ga, setGa] = useState(null);
+  const tplUploadRef = React.useRef(null);
+  const mediaUploadRef = React.useRef(null);
+  const mediaKindRef = React.useRef("image");
+
+  const loadDefaultVideos = async () => {
+    try { setDefaultVideos(await request("/media/default-videos")); } catch { setDefaultVideos([]); }
+  };
+  const loadGa = async () => {
+    try { setGa(await request("/analytics/google")); } catch (e) { setGa({ data_available: false, message: e.message, insights: [], stats: {} }); }
+  };
+  useEffect(() => { loadDefaultVideos(); loadGa(); }, []);
+  const pickDefaultVideo = (video) => {
+    const url = video?.url || "";
+    setSendText((prev) => {
+      if (!url || (prev || "").includes(url)) return prev || "";
+      return prev ? `${prev}\n\nWatch our manufacturing process: ${url}` : `Watch our manufacturing process: ${url}`;
+    });
+    onNotice({ type: "success", text: "Default video link added to the message." });
+  };
   const deleteTemplate = async (id) => {
     if (!window.confirm("Delete this template?")) return;
     try { await request(`/templates/${id}`, { method: "DELETE" }); onNotice({ type: "success", text: "Template deleted" }); loadCampaigns(); }
@@ -1503,6 +1526,95 @@ export function MarketingCompanies({ onNotice }) {
   const updateTemplate = async (id, updates) => {
     try { await request(`/templates/${id}`, { method: "PATCH", body: JSON.stringify(updates) }); onNotice({ type: "success", text: "Template updated" }); setEditTemplate(null); loadCampaigns(); }
     catch (e) { onNotice({ type: "error", text: e.message }); }
+  };
+  const createTemplateFromForm = async (e) => {
+    e.preventDefault();
+    const form = newTemplate || {};
+    if (!form.name?.trim() || !form.body?.trim()) return onNotice({ type: "error", text: "Template name and body are required." });
+    setCBusy(true);
+    try {
+      const created = await request("/templates", {
+        method: "POST",
+        body: JSON.stringify({
+          name: form.name.trim(), channel: form.channel || "email", strategy: form.strategy || "cold_outreach",
+          funnel_stage: "awareness", subject: form.subject || "", body: form.body,
+        }),
+      });
+      onNotice({ type: "success", text: `Template "${created.name}" created. Uploading it to Mail_templates on next sync keeps it in GCS.` });
+      setNewTemplate(null); loadCampaigns();
+    } catch (e) { onNotice({ type: "error", text: e.message }); } finally { setCBusy(false); }
+  };
+  const uploadTemplateFile = async (ev) => {
+    const file = ev.target.files?.[0];
+    if (!file) return;
+    const fd = new FormData(); fd.append("file", file);
+    const token = sessionStorage.getItem("sales_token") || "";
+    setCBusy(true);
+    try {
+      const res = await fetch(`${API}/templates/upload?channel=${encodeURIComponent((newTemplate?.channel || "email"))}`, {
+        method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {}, body: fd,
+      });
+      if (!res.ok) { let m = "Template upload failed"; try { m = (await res.json()).detail || m; } catch {} throw new Error(m); }
+      const data = await res.json();
+      onNotice({ type: "success", text: `${data.message || "Template uploaded"}${data.gcs_path ? ` · stored ${data.gcs_path}` : ""}` });
+      setNewTemplate(null); loadCampaigns();
+    } catch (e) { onNotice({ type: "error", text: e.message }); } finally {
+      setCBusy(false); if (tplUploadRef.current) tplUploadRef.current.value = "";
+    }
+  };
+  const uploadMedia = async (ev) => {
+    const file = ev.target.files?.[0];
+    if (!file) return;
+    const kind = mediaKindRef.current || "image";
+    const fd = new FormData(); fd.append("file", file);
+    const token = sessionStorage.getItem("sales_token") || "";
+    setBusy(true);
+    try {
+      const res = await fetch(`${API}/media/upload?kind=${encodeURIComponent(kind)}`, {
+        method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {}, body: fd,
+      });
+      if (!res.ok) { let m = "Media upload failed"; try { m = (await res.json()).detail || m; } catch {} throw new Error(m); }
+      const data = await res.json();
+      setSendText((prev) => {
+        const url = data.url || data.gcs_path || "";
+        if (!url) return prev || "";
+        return prev ? `${prev}\n${url}` : url;
+      });
+      onNotice({ type: "success", text: `Uploaded to ${data.gcs_path}` });
+    } catch (e) { onNotice({ type: "error", text: e.message }); } finally {
+      setBusy(false); if (mediaUploadRef.current) mediaUploadRef.current.value = "";
+    }
+  };
+  const addContactManually = async (e) => {
+    e.preventDefault();
+    const form = newContact || {};
+    if (!form.company?.trim()) return onNotice({ type: "error", text: "Company is required." });
+    setBusy(true);
+    try {
+      await request("/marketing-companies", {
+        method: "POST",
+        body: JSON.stringify({
+          company: form.company.trim(), contact_name: form.contact_name || "", phone: form.phone || "", email: form.email || "",
+          category: form.category || "", call_status: form.call_status || "", requirements: form.requirements || "",
+          follow_up_date: form.follow_up_date || "", next_action: form.next_action || "",
+        }),
+      });
+      onNotice({ type: "success", text: "Contact added manually." });
+      setNewContact(null); load(); loadActivity();
+    } catch (e) { onNotice({ type: "error", text: e.message }); } finally { setBusy(false); }
+  };
+  const runTaskPreset = async (type) => {
+    if (!selTemplate) return onNotice({ type: "error", text: "Select a template first." });
+    if (!selectedRows.length) return onNotice({ type: "error", text: "Select contacts (checkbox) first, or the table filters will be used." });
+    const presets = {
+      bulk: { name: "Bulk marketing", strategy: "cold_outreach" },
+      followup: { name: "Follow-up", strategy: "follow_up" },
+      catalog: { name: "Product catalog", strategy: "catalog" },
+      video: { name: "Manufacturing video", strategy: "manufacturing_video" },
+    };
+    const p = presets[type] || presets.bulk;
+    setCName(p.name); setCStrategy(p.strategy);
+    await createCampaign(selectedRows);
   };
   const syncTemplates = async () => {
     setCBusy(true);
@@ -1607,16 +1719,62 @@ export function MarketingCompanies({ onNotice }) {
           <div className="search-field"><Database size={17} /><input value={syncPath} onChange={(e) => setSyncPath(e.target.value)} placeholder="GCS path to sync (optional) e.g. sales-contacts/my_list.xlsx" /></div>
           <button className="secondary-button" onClick={syncFromGCS} disabled={busy}><Database size={16} />{busy ? "Syncing..." : "Sync this path"}</button>
           <button className="secondary-button" onClick={runImport} disabled={busy}><Database size={16} />{busy ? "Importing..." : "Import default"}</button>
+          <button className="primary-button" onClick={() => setNewContact({ company: "", contact_name: "", phone: "", email: "", category: "", call_status: "", requirements: "", follow_up_date: "", next_action: "" })}>Add contact manually</button>
         </div>
         <small className="muted">Leave the path blank to sync the default marketing workbook + customers CSV. Upload an .xlsx / .csv above to update immediately, then sync to merge.</small>
+        {newContact && (
+          <form className="form-grid" onSubmit={addContactManually} style={{ borderTop: "1px solid #edf0eb", paddingTop: 12, marginTop: 12 }}>
+            <label>Company*<input value={newContact.company || ""} onChange={(e) => setNewContact({ ...newContact, company: e.target.value })} required /></label>
+            <label>Contact<input value={newContact.contact_name || ""} onChange={(e) => setNewContact({ ...newContact, contact_name: e.target.value })} /></label>
+            <label>Email<input value={newContact.email || ""} onChange={(e) => setNewContact({ ...newContact, email: e.target.value })} /></label>
+            <label>Phone<input value={newContact.phone || ""} onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })} /></label>
+            <label>Category<input value={newContact.category || ""} onChange={(e) => setNewContact({ ...newContact, category: e.target.value })} /></label>
+            <label>Call status<input value={newContact.call_status || ""} onChange={(e) => setNewContact({ ...newContact, call_status: e.target.value })} placeholder="e.g. not called yet" /></label>
+            <label>Follow-up date<input type="date" value={newContact.follow_up_date || ""} onChange={(e) => setNewContact({ ...newContact, follow_up_date: e.target.value })} /></label>
+            <label>Requirements<textarea rows={2} value={newContact.requirements || ""} onChange={(e) => setNewContact({ ...newContact, requirements: e.target.value })} /></label>
+            <div className="button-row"><button type="submit" className="primary-button" disabled={busy}>{busy ? "Saving..." : "Add contact"}</button><button type="button" className="secondary-button" onClick={() => setNewContact(null)}>Cancel</button></div>
+          </form>
+        )}
       </section>
       {/* --- Templates first: pick one (green tick ✓ = selected) --- */}
       <section className="panel studio-panel">
         <div className="panel-heading">
           <div><div className="section-kicker">TEMPLATES · SELECT FOR GROUP SEND</div><h3>Templates ({templates.length})</h3></div>
           <button className="secondary-button" onClick={syncTemplates} disabled={cBusy}><Database size={15} /> Sync from GCS</button>
+          <button className="secondary-button" onClick={() => setNewTemplate({ name: "", channel: "email", strategy: "cold_outreach", subject: "", body: "" })}>Create template</button>
           {templates.length > 0 && <span className="muted">Tap a template to select (tick ✓ = selected). Then select contacts below and send.</span>}
         </div>
+        {newTemplate && (
+          <form className="form-grid" onSubmit={createTemplateFromForm} style={{ borderTop: "1px solid #edf0eb", paddingTop: 12, marginTop: 12 }}>
+            <label>Name<input value={newTemplate.name || ""} onChange={(e) => setNewTemplate({ ...newTemplate, name: e.target.value })} placeholder="e.g. Bulk marketing – packaging film" required /></label>
+            <label>Channel
+              <select value={newTemplate.channel || "email"} onChange={(e) => setNewTemplate({ ...newTemplate, channel: e.target.value })}>
+                <option value="email">email</option><option value="whatsapp">whatsapp</option><option value="linkedin">linkedin</option><option value="wechat">wechat</option>
+              </select>
+            </label>
+            <label>Strategy
+              <select value={newTemplate.strategy || "cold_outreach"} onChange={(e) => setNewTemplate({ ...newTemplate, strategy: e.target.value })}>
+                <option value="cold_outreach">cold_outreach (bulk marketing)</option>
+                <option value="follow_up">follow_up</option>
+                <option value="catalog">catalog (product catalog)</option>
+                <option value="manufacturing_video">manufacturing_video</option>
+                <option value="nurture">nurture</option>
+              </select>
+            </label>
+            <label>Subject<input value={newTemplate.subject || ""} onChange={(e) => setNewTemplate({ ...newTemplate, subject: e.target.value })} placeholder="Email subject (optional)" /></label>
+            <label style={{ gridColumn: "1 / -1" }}>Body / message (paste here)
+              <textarea rows={4} value={newTemplate.body || ""} onChange={(e) => setNewTemplate({ ...newTemplate, body: e.target.value })} placeholder="Paste HTML or plain message…" required />
+            </label>
+            <div className="button-row">
+              <button type="submit" className="primary-button" disabled={cBusy}>{cBusy ? "Saving..." : "Create template"}</button>
+              <label className="secondary-button"><UploadCloud size={15} /> Upload file (.html/.txt)
+                <input ref={tplUploadRef} type="file" accept=".html,.htm,.txt,.md" onChange={uploadTemplateFile} style={{ display: "none" }} />
+              </label>
+              <button type="button" className="secondary-button" onClick={() => setNewTemplate(null)}>Cancel</button>
+            </div>
+            <small className="muted">Created templates are stored in GCS ``kalika_enterprises/Mail_templates/`` on next sync and appear in the UI.</small>
+          </form>
+        )}
         <div className="contact-list" role="list">
           {templates.map((t) => (
             <button key={t.id} role="listitem" className={`contact-row ${selTemplate?.id === t.id ? "selected tick-selected" : ""}`} style={{ width: "100%", textAlign: "left", border: 0, background: selTemplate?.id === t.id ? "#eef6ef" : "transparent" }} onClick={() => (selTemplate?.id === t.id ? setSelTemplate(null) : pickTemplate(t))} aria-pressed={selTemplate?.id === t.id}>
@@ -1856,6 +2014,21 @@ export function MarketingCompanies({ onNotice }) {
               <label>Subject<input value={sendSubject} onChange={(event) => setSendSubject(event.target.value)} placeholder="Email subject" /></label>
               <label>Message<textarea rows={8} value={sendText} onChange={(event) => setSendText(event.target.value)} placeholder="Write the WhatsApp message or email body…" /></label>
               <div className="button-row">
+                <label className="secondary-button"><UploadCloud size={15} /> Add image
+                  <input ref={mediaUploadRef} type="file" accept="image/*" onChange={(e) => { mediaKindRef.current = "image"; uploadMedia(e); }} style={{ display: "none" }} />
+                </label>
+                <label className="secondary-button"><UploadCloud size={15} /> Add video
+                  <input type="file" accept="video/*" onChange={(e) => { mediaKindRef.current = "video"; uploadMedia(e); }} style={{ display: "none" }} />
+                </label>
+                {defaultVideos.length > 0 && (
+                  <select aria-label="Default video" onChange={(e) => { const v = defaultVideos.find((x) => x.url === e.target.value); if (v) pickDefaultVideo(v); e.target.value = ""; }}>
+                    <option value="">Use default video…</option>
+                    {defaultVideos.map((v) => <option key={v.id} value={v.url}>{v.name}</option>)}
+                  </select>
+                )}
+              </div>
+              <small className="muted">Images are stored in GCS ``kalika_enterprises/images/`` and videos in ``kalika_enterprises/videos/``; uploaded URLs get appended to the message. Default Instagram manufacturing reels are selectable above.</small>
+              <div className="button-row">
                 <button className="secondary-button" onClick={copySendText}><Copy size={15} /> Copy</button>
                 <button className="secondary-button" disabled={!sendTarget.email} onClick={sendEmail}><Mail size={15} /> Email</button>
                 <button className="primary-button" disabled={!sendTarget.phone} onClick={sendWhatsApp}><MessageCircle size={15} /> WhatsApp</button>
@@ -1876,6 +2049,36 @@ export function MarketingCompanies({ onNotice }) {
           <button className="primary-button" onClick={createSelectedCampaign} disabled={cBusy || selectedForChannel === 0}>{cBusy ? "Working..." : `Send to ${selectedForChannel} via ${cChannel}`}</button>
         </div>
       )}
+      <section className="panel" style={{ marginTop: 16 }} aria-label="Task presets">
+        <div className="panel-heading"><div><div className="section-kicker">PERFORM A TASK</div><h3>Bulk tasks for selected contacts</h3></div><span className="muted">Select contacts (checkbox) + template, then run a preset</span></div>
+        <div className="button-row">
+          <button className="secondary-button" onClick={() => runTaskPreset("bulk")} disabled={cBusy}>Bulk marketing</button>
+          <button className="secondary-button" onClick={() => runTaskPreset("followup")} disabled={cBusy}>Follow-up</button>
+          <button className="secondary-button" onClick={() => runTaskPreset("catalog")} disabled={cBusy}>Product catalog</button>
+          <button className="secondary-button" onClick={() => runTaskPreset("video")} disabled={cBusy}>Manufacturing video</button>
+        </div>
+        <small className="muted">Presets set the campaign name + strategy for the selected contacts and template above. Manufacturing video messages include the default Instagram reel link when a whatsapp template is used.</small>
+      </section>
+      <section className="panel studio-panel" style={{ marginTop: 16 }} aria-label="Google Analytics insights">
+        <div className="panel-heading">
+          <div><div className="section-kicker">GOOGLE ANALYTICS SYNC</div><h3>Insights &amp; stats</h3></div>
+          <button className="secondary-button" onClick={loadGa}><RefreshCw size={15} /> Sync again</button>
+        </div>
+        {ga ? (
+          <>
+            <p className="muted">{ga.data_available ? `Latest: ${ga.latest_file} · ${ga.rows} rows · synced ${String(ga.synced_at || "").slice(0, 16)}` : ga.message}</p>
+            <div className="marketing-stat-grid">
+              {Object.entries(ga.stats || {}).slice(0, 8).map(([label, value]) => (
+                <div className="marketing-stat" key={label}><small>{label}</small><b>{String(value)}</b><span>GA</span></div>
+              ))}
+              {!Object.keys(ga.stats || {}).length && <div className="marketing-stat"><small>Rows</small><b>{ga.rows || 0}</b><span>GA</span></div>}
+            </div>
+            {(ga.insights || []).slice(0, 6).map((text, i) => <p key={i} className="muted" style={{ margin: "4px 0" }}>• {text}</p>)}
+            {(ga.files || []).length > 1 && <details className="marketing-breakdown"><summary>Synced files ({(ga.files || []).length})</summary><div className="marketing-breakdown-grid"><div><b>Exports</b>{(ga.files || []).map((f) => <span key={f.name}>{f.name}<strong>{f.updated ? String(f.updated).slice(0, 16) : ""}</strong></span>)}</div></div></details>}
+            <small className="muted">Exports are read from ``kalika_enterprises/docs/kalika-google-analytics/``.</small>
+          </>
+        ) : <p className="muted">Loading Google Analytics insights…</p>}
+      </section>
       <section className="panel" style={{ marginTop: 16 }} aria-label="Build campaign">
         <div className="panel-heading"><h3>Send to filtered group</h3><span className="muted">{selTemplate ? `Using: ${selTemplate.name}` : "Select a template above"} · {rows.length} in current filter · name + email</span></div>
         <div className="form-grid">

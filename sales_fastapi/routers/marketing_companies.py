@@ -31,7 +31,12 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..governance.audit import log_event
 from ..models import Campaign, CampaignMessage, MarketingCompany, User
-from ..schemas import MarketingCompanyOut, MarketingCompanyUpdate, MarketingImportResult
+from ..schemas import (
+    MarketingCompanyCreate,
+    MarketingCompanyOut,
+    MarketingCompanyUpdate,
+    MarketingImportResult,
+)
 from ..security import get_current_user
 from ..services import GCSStorage
 
@@ -493,6 +498,53 @@ def update_marketing_company(
     )
     db.commit()
     db.refresh(company)
+    return company
+
+
+@router.post("", response_model=MarketingCompanyOut, status_code=201)
+def create_marketing_company(
+    payload: MarketingCompanyCreate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if payload.funnel_stage not in FUNNEL_STAGES:
+        raise HTTPException(status_code=422, detail="Invalid funnel stage")
+    if payload.sales_progress not in SALES_PROGRESS:
+        raise HTTPException(status_code=422, detail="Invalid sales progress")
+    if payload.follow_up_date and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", payload.follow_up_date):
+        raise HTTPException(status_code=422, detail="Follow-up date must use YYYY-MM-DD")
+    company_key = _normalise_company_key(payload.company)
+    if not company_key:
+        raise HTTPException(status_code=422, detail="Company name is required")
+
+    company = MarketingCompany(
+        user_id=user.id,
+        company=payload.company.strip(),
+        company_key=company_key,
+        contact_name=payload.contact_name.strip(),
+        phone=payload.phone.strip(),
+        email=payload.email.strip(),
+        category=payload.category.strip(),
+        call_status=payload.call_status.strip(),
+        requirements=payload.requirements.strip(),
+        funnel_stage=payload.funnel_stage or "awareness",
+        sales_progress=payload.sales_progress or "new",
+        next_action=payload.next_action.strip(),
+        follow_up_date=payload.follow_up_date or "",
+        source_sheet="manual",
+    )
+    db.add(company)
+    db.commit()
+    db.refresh(company)
+    log_event(
+        db,
+        action="marketing_company.create",
+        actor_user_id=user.id,
+        resource_type="marketing_company",
+        resource_id=str(company.id),
+        tenant_id=user.domain,
+        detail={"company": company.company},
+    )
     return company
 
 

@@ -23,6 +23,7 @@ from .routers import (
     events_router,
     feedback_pipeline_router,
     feedback_router,
+    google_analytics_router,
     google_email_router,
     governance_router,
     instore_router,
@@ -30,6 +31,7 @@ from .routers import (
     knowledge_graph_router,
     llm_router,
     marketing_companies_router,
+    media_router,
     ops_router,
     sales_router,
     scheduler_router,
@@ -92,6 +94,7 @@ app.include_router(social_router, prefix=api_prefix)
 app.include_router(governance_router, prefix=api_prefix)
 app.include_router(llm_router, prefix=api_prefix)
 app.include_router(marketing_companies_router, prefix=api_prefix)
+app.include_router(media_router, prefix=api_prefix)
 app.include_router(whatsapp_router, prefix=api_prefix)
 app.include_router(voice_router, prefix=api_prefix)
 app.include_router(templates_router, prefix=api_prefix)
@@ -101,6 +104,7 @@ app.include_router(scheduler_router, prefix=api_prefix)
 app.include_router(feedback_router, prefix=api_prefix)
 app.include_router(feedback_pipeline_router, prefix=api_prefix)
 app.include_router(google_email_router, prefix=api_prefix)
+app.include_router(google_analytics_router, prefix=api_prefix)
 app.include_router(journey_router, prefix=api_prefix)
 app.include_router(ops_router, prefix=api_prefix)
 app.include_router(events_router, prefix=api_prefix)
