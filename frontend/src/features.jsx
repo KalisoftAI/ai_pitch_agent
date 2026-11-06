@@ -1288,6 +1288,18 @@ export function MarketingCompanies({ onNotice }) {
   const [sendTemplateId, setSendTemplateId] = useState("");
   const [sendSubject, setSendSubject] = useState("");
   const [sendText, setSendText] = useState("");
+  const [sortBy, setSortBy] = useState("company");
+  const [syncPath, setSyncPath] = useState("");
+  const [activity, setActivity] = useState({});
+
+  const loadActivity = async () => {
+    try {
+      const rows = await request("/marketing-companies/activity");
+      const map = {};
+      (Array.isArray(rows) ? rows : []).forEach((a) => { map[a.contact_id] = a; });
+      setActivity(map);
+    } catch { /* activity is best-effort */ }
+  };
   const fileInputRef = React.useRef(null);
 
   const load = async () => {
@@ -1470,19 +1482,6 @@ export function MarketingCompanies({ onNotice }) {
   const [cLimit, setCLimit] = useState(50);
   const [cDetail, setCDetail] = useState(null);
   const [cBusy, setCBusy] = useState(false);
-  const [sortBy, setSortBy] = useState("company");
-  const [syncPath, setSyncPath] = useState("");
-  const [activity, setActivity] = useState({});
-
-  const loadActivity = async () => {
-    try {
-      const rows = await request("/marketing-companies/activity");
-      const map = {};
-      (Array.isArray(rows) ? rows : []).forEach((a) => { map[a.contact_id] = a; });
-      setActivity(map);
-    } catch { /* activity is best-effort */ }
-  };
-
   const loadCampaigns = async () => {
     try {
       const [camps, m] = await Promise.all([request("/campaigns"), request("/templates/meta")]);
