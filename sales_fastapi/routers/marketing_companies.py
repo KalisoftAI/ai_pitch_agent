@@ -322,6 +322,7 @@ def list_marketing_companies(
     funnel_stage: str | None = Query(default=None),
     sales_progress: str | None = Query(default=None),
     due_follow_up: bool = False,
+    requirements_only: bool = False,
     limit: int = Query(default=500, ge=1, le=5000),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -349,6 +350,8 @@ def list_marketing_companies(
             MarketingCompany.follow_up_date != "",
             MarketingCompany.follow_up_date <= datetime.now().date().isoformat(),
         )
+    if requirements_only:
+        query = query.filter(MarketingCompany.requirements != "")
     return (
         query.order_by(MarketingCompany.company.asc())
         .limit(limit)

@@ -204,6 +204,49 @@ export function TallySalesPanel({ onNotice, compact = false }) {
   );
 }
 
+// ---------------------------------------------------------------- Instore summary card
+export function InstoreSummaryCard({ onNotice }) {
+  const [summary, setSummary] = useState(null);
+  const [mails, setMails] = useState([]);
+  useEffect(() => {
+    Promise.all([request("/instore/summary"), request("/instore/mails?limit=3")])
+      .then(([nextSummary, nextMails]) => { setSummary(nextSummary); setMails(nextMails.mails || []); })
+      .catch((error) => onNotice({ type: "error", text: error.message }));
+  }, []);
+  const insights = summary?.insights || {};
+  const missing = summary?.missing_links || {};
+  const intents = Object.entries(insights.by_intent || {}).sort((a, b) => b[1] - a[1]).slice(0, 4);
+  return (
+    <section className="panel instore-summary-card">
+      <div className="panel-heading">
+        <div><div className="section-kicker">INSTORE / MAIL DESK</div><h3>Instore mails</h3></div>
+        <Mail size={19} className="muted" />
+      </div>
+      {!summary?.data_available && <div className="empty-state compact"><Mail size={22} /><p>No mail snapshot yet.</p><small>Sync the mail desk to link senders to contacts.</small></div>}
+      {summary?.data_available && (
+        <>
+          <div className="mini-stats">
+            <span><b>{fmtNum(insights.total)}</b> mails</span>
+            <span><b>{fmtNum(insights.linked)}</b> linked</span>
+            <span><b>{fmtNum(missing.count || 0)}</b> missing</span>
+            <span><b>{fmtNum(insights.high_priority)}</b> high priority</span>
+          </div>
+          <div className="mini-stats">
+            {intents.map(([intent, count]) => <span key={intent}><b>{fmtNum(count)}</b> {intent}</span>)}
+          </div>
+          {mails.map((mail) => (
+            <div className="connection-row" key={mail.id}>
+              <span className="mail-icon"><Mail size={16} /></span>
+              <span><b>{mail.working_title || mail.subject || "(no subject)"}</b><small>{mail.client_name || mail.from_email || "unknown sender"} · {mail.intent || "general"}</small></span>
+              <span className={`status-pill ${mail.contact_id ? "approved" : "rejected"}`}>{mail.contact_id ? "linked" : "missing"}</span>
+            </div>
+          ))}
+        </>
+      )}
+    </section>
+  );
+}
+
 // ---------------------------------------------------------------- Sales BI
 export function SalesBi({ onNotice }) {
   const [data, setData] = useState(null);
@@ -240,47 +283,72 @@ export function SalesBi({ onNotice }) {
   return (
     <div className="content dash">
       <div className="page-heading">
-        <div><div className="section-kicker">REAL ERP DATA / SALES INTELLIGENCE</div><h2>Sales analytics &amp; BI</h2>
-          <p className="muted">Orders, value, dispatch completion and company mix from the latest synced ERP report.</p></div>
+        <div><div className="section-kicker">DELIVERY / PLANT VIEW</div><h2>Sales analytics &amp; BI</h2>
+          <p className="muted">Plant-wise dispatch completion from the latest synced ERP report.</p></div>
         <div className="button-row">
           <button className="secondary-button" onClick={load} disabled={busy}><RefreshCw size={15} className={busy ? "spin" : ""} /> Refresh</button>
           <button className="secondary-button" onClick={() => download("companies", "xlsx")}><FileDown size={15} /> XLSX</button>
           <button className="secondary-button" onClick={() => download("companies", "pdf")}><FileDown size={15} /> PDF</button>
         </div>
       </div>
-      
-      {/* ERP Sales Data - shown first */}
+
       {!overview.data_available && <div className="empty-state"><Database size={22} /><p>No ERP report synced yet.</p><small>Run ERP sync from the ERP tab to populate real analytics.</small></div>}
+
+      <section className="panel delivery-hero">
+        <div className="panel-heading">
+          <div><div className="section-kicker">DELIVERY / PLANT VIEW</div><h3>Dispatch status</h3></div>
+          <Truck size={19} className="muted" />
+        </div>
+        <div className="delivery-hero-grid">
+          <div className="delivery-hero-main">
+            <b>{totals.completion_pct || 0}%</b>
+            <span>Dispatch / {fmtNum(totals.dispatched_qty)} kg</span>
+            <small>{fmtNum(totals.scheduled_qty)} kg scheduled · {fmtNum(totals.pending_dispatch)} pending lines</small>
+          </div>
+          <div className="delivery-hero-plants">
+            {(delivery.plants || []).map((plant) => (
+              <span key={plant.plant}><b>{plant.completion_pct}%</b>{plant.plant} / {fmtNum(plant.dispatched_qty)} kg</span>
+            ))}
+            {!(delivery.plants || []).length && <span className="muted">No plant totals in the latest report.</span>}
+          </div>
+        </div>
+        {!!delivery.pending?.length && (
+          <details className="pending-dispatch-details">
+            <summary>Pending dispatch <span>{delivery.pending.length} lines</span></summary>
+            {delivery.pending.slice(0, 8).map((row) => (
+              <div className="connection-row" key={row.dispatch_no}>
+                <span className="mail-icon"><Truck size={16} /></span>
+                <span><b>{row.customer}</b><small>{row.dispatch_no} / balance {fmtNum(row.balance_qty)} kg / {row.plant}</small></span>
+                <span className="status"><i />{row.status}</span>
+              </div>
+            ))}
+          </details>
+        )}
+        {!(delivery.pending || []).length && <div className="empty-state compact"><Check size={22} /><p>No pending dispatch lines.</p></div>}
+      </section>
+
       <div className="metric-grid dash-grid">
         <Metric icon={BriefcaseBusiness} label="Orders" value={fmtNum(totals.orders)} detail={`${fmtNum(totals.customers)} companies`} accent />
         <Metric icon={TrendingUp} label="Orders value" value={fmtMoney(totals.orders_value)} detail={`avg ${fmtMoney(totals.average_order_value)}`} />
         <Metric icon={Truck} label="Dispatched" value={fmtNum(totals.dispatched_qty)} detail={`${fmtNum(totals.scheduled_qty)} scheduled`} />
         <Metric icon={BarChart3} label="Completion" value={`${totals.completion_pct || 0}%`} detail={`${totals.pending_dispatch || 0} pending lines`} accent />
       </div>
-      <div className="two-column">
-        <section className="panel">
-          <div className="panel-heading"><div><div className="section-kicker">COMPANY MIX</div><h3>Top companies by order value</h3></div><BriefcaseBusiness size={19} className="muted" /></div>
-          <div className="table-wrap sales-bi-desktop-table"><table><thead><tr><th>Company</th><th>Orders</th><th>Value</th><th>Completion</th></tr></thead><tbody>
-            {(companies || []).map((row) => <tr key={row.company}><td className="table-person"><b>{row.company}</b><div className="bar-track"><div className="bar-fill" style={{ width: `${Math.min(100, (row.orders_value / maxValue) * 100)}%` }} /></div></td><td>{fmtNum(row.orders)}</td><td>{fmtMoney(row.orders_value)}</td><td>{row.completion_pct}%</td></tr>)}
-            {!(companies || []).length && <tr><td colSpan={4}><small className="muted">No companies in the latest report.</small></td></tr>}
-          </tbody></table></div>
-          <div className="sales-bi-mobile-list">
-            {(companies || []).map((row) => <details className="tally-mobile-row" key={row.company}>
-              <summary><span><b>{row.company}</b><small>{fmtNum(row.orders)} orders</small></span><strong>{fmtMoney(row.orders_value)}</strong></summary>
-              <div className="tally-extra-body"><span>{row.completion_pct}% completion</span><div className="bar-track"><div className="bar-fill" style={{ width: `${Math.min(100, row.completion_pct || 0)}%` }} /></div></div>
-            </details>)}
-            {!(companies || []).length && <p className="muted">No companies in the latest report.</p>}
-          </div>
-        </section>
-        <section className="panel">
-          <div className="panel-heading"><div><div className="section-kicker">DELIVERY / PLANT VIEW</div><h3>Dispatch status</h3></div><Truck size={19} className="muted" /></div>
-          <details className="delivery-plants"><summary>Plant totals <span>{(delivery.plants || []).length} plants</span></summary><div className="mini-stats">{(delivery.plants || []).map((plant) => <span key={plant.plant}><b>{plant.completion_pct}%</b> {plant.plant} / {fmtNum(plant.dispatched_qty)} kg</span>)}</div></details>
-          {!!delivery.pending?.length && <details className="pending-dispatch-details"><summary>Pending dispatch <span>{delivery.pending.length} lines</span></summary>{delivery.pending.slice(0, 8).map((row) => <div className="connection-row" key={row.dispatch_no}><span className="mail-icon"><Truck size={16} /></span><span><b>{row.customer}</b><small>{row.dispatch_no} / balance {fmtNum(row.balance_qty)} kg / {row.plant}</small></span><span className="status"><i />{row.status}</span></div>)}</details>}
-          {!(delivery.pending || []).length && <div className="empty-state"><Check size={22} /><p>No pending dispatch lines.</p></div>}
-        </section>
-      </div>
-      
-      {/* Tally Sales - shown after ERP */}
+
+      <section className="panel">
+        <div className="panel-heading"><div><div className="section-kicker">COMPANY MIX</div><h3>Top companies by order value</h3></div><BriefcaseBusiness size={19} className="muted" /></div>
+        <div className="table-wrap sales-bi-desktop-table"><table><thead><tr><th>Company</th><th>Orders</th><th>Value</th><th>Completion</th></tr></thead><tbody>
+          {(companies || []).map((row) => <tr key={row.company}><td className="table-person"><b>{row.company}</b><div className="bar-track"><div className="bar-fill" style={{ width: `${Math.min(100, (row.orders_value / maxValue) * 100)}%` }} /></div></td><td>{fmtNum(row.orders)}</td><td>{fmtMoney(row.orders_value)}</td><td>{row.completion_pct}%</td></tr>)}
+          {!(companies || []).length && <tr><td colSpan={4}><small className="muted">No companies in the latest report.</small></td></tr>}
+        </tbody></table></div>
+        <div className="sales-bi-mobile-list">
+          {(companies || []).map((row) => <details className="tally-mobile-row" key={row.company}>
+            <summary><span><b>{row.company}</b><small>{fmtNum(row.orders)} orders</small></span><strong>{fmtMoney(row.orders_value)}</strong></summary>
+            <div className="tally-extra-body"><span>{row.completion_pct}% completion</span><div className="bar-track"><div className="bar-fill" style={{ width: `${Math.min(100, row.completion_pct || 0)}%` }} /></div></div>
+          </details>)}
+          {!(companies || []).length && <p className="muted">No companies in the latest report.</p>}
+        </div>
+      </section>
+
       <TallySalesPanel onNotice={onNotice} />
     </div>
   );
@@ -974,9 +1042,9 @@ export function Access({ onNotice, user }) {
 }
 
 // ---------------------------------------------------------------- Marketing companies
-const DIWALI_REEL = "https://www.instagram.com/reel/DfB9Fa4BIsK/?utm_source=ig_web_copy_link&exln=NTc4MTIwNjQ2YQ==";
+const DIWALI_REEL = "https://www.instagram.com/reel/DejmP7AMb5j/?utm_source=ig_web_copy_link&psln=MzRlODBiNWFlZA==&srtk=MzRlODBiNWFlZA==";
 const INSTAGRAM_PROFILE = "https://www.instagram.com/kalikaenterprises1667/";
-const PACKAGING_SHOWCASE = "https://www.instagram.com/reel/DejmP7AMb5j/?utm_source=ig_web_copy_link&rpxt=MzRlODBiNWFlZA==&srtk=MzRlODBiNWFlZA==";
+const PACKAGING_SHOWCASE = "https://www.instagram.com/reel/DejmP7AMb5j/?utm_source=ig_web_copy_link&psln=MzRlODBiNWFlZA==&srtk=MzRlODBiNWFlZA==";
 
 const CURATED_MESSAGES = [
   {
@@ -1042,6 +1110,21 @@ function whatsappHref(text, phone) {
   const digits = String(phone || "").replace(/\D/g, "");
   const base = digits ? `https://wa.me/${digits.length === 10 ? `91${digits}` : digits}` : "https://wa.me/";
   return `${base}?text=${encodeURIComponent(text || "")}`;
+}
+
+function htmlToText(html) {
+  return String(html || "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|li|h[1-6]|tr)>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 export function MessageStudio({ onNotice }) {
@@ -1198,6 +1281,13 @@ export function MarketingCompanies({ onNotice }) {
   });
   const [editing, setEditing] = useState({});
   const [busy, setBusy] = useState(false);
+  const [templates, setTemplates] = useState([]);
+  const [limit, setLimit] = useState(500);
+  const [requirementsOnly, setRequirementsOnly] = useState(false);
+  const [sendTarget, setSendTarget] = useState(null);
+  const [sendTemplateId, setSendTemplateId] = useState("");
+  const [sendSubject, setSendSubject] = useState("");
+  const [sendText, setSendText] = useState("");
   const fileInputRef = React.useRef(null);
 
   const load = async () => {
@@ -1208,6 +1298,8 @@ export function MarketingCompanies({ onNotice }) {
     if (funnelStageFilter) params.set("funnel_stage", funnelStageFilter);
     if (salesProgressFilter) params.set("sales_progress", salesProgressFilter);
     if (dueFollowupsOnly) params.set("due_follow_up", "true");
+    if (requirementsOnly) params.set("requirements_only", "true");
+    params.set("limit", String(limit));
     try {
       const [nextRows, nextStats] = await Promise.all([
         request(`/marketing-companies?${params.toString()}`),
@@ -1222,11 +1314,17 @@ export function MarketingCompanies({ onNotice }) {
 
   useEffect(() => { load(); }, []);
 
+  useEffect(() => {
+    request("/templates")
+      .then((rows) => setTemplates(Array.isArray(rows) ? rows : []))
+      .catch(() => setTemplates([]));
+  }, []);
+
   const debounced = query;
   useEffect(() => {
     const id = setTimeout(() => load(), 250);
     return () => clearTimeout(id);
-  }, [debounced, categoryFilter, statusFilter, funnelStageFilter, salesProgressFilter, dueFollowupsOnly]);
+  }, [debounced, categoryFilter, statusFilter, funnelStageFilter, salesProgressFilter, dueFollowupsOnly, requirementsOnly, limit]);
 
   const updateField = async (id, field, value) => {
     try {
@@ -1322,6 +1420,42 @@ export function MarketingCompanies({ onNotice }) {
     }
   };
 
+  const openSend = (row) => {
+    setSendTarget(row);
+    setSendTemplateId("");
+    setSendSubject("");
+    setSendText("");
+  };
+
+  const applyTemplate = (id) => {
+    setSendTemplateId(id);
+    const template = templates.find((item) => String(item.id) === String(id));
+    if (!template) return;
+    setSendSubject(template.subject || "");
+    setSendText(htmlToText(template.body));
+  };
+
+  const copySendText = async () => {
+    try {
+      await navigator.clipboard.writeText(sendText);
+      onNotice({ type: "success", text: "Message copied." });
+    } catch {
+      onNotice({ type: "error", text: "Clipboard unavailable — copy the message manually." });
+    }
+  };
+
+  const sendWhatsApp = () => {
+    if (!sendTarget?.phone) return;
+    window.open(whatsappHref(sendText, sendTarget.phone), "_blank", "noopener");
+  };
+
+  const sendEmail = () => {
+    if (!sendTarget?.email) return;
+    const subject = encodeURIComponent(sendSubject || `Kalika Enterprises · ${sendTarget.company}`);
+    const body = encodeURIComponent(sendText || "");
+    window.location.href = `mailto:${sendTarget.email}?subject=${subject}&body=${body}`;
+  };
+
   return (
     <div className="content">
       <div className="page-heading">
@@ -1405,6 +1539,10 @@ export function MarketingCompanies({ onNotice }) {
             <option value="">All progress</option>{progressOptions.map((progress) => <option key={progress} value={progress}>{progress.replaceAll("_", " ")}</option>)}
           </select>
           <label className="follow-up-toggle"><input type="checkbox" checked={dueFollowupsOnly} onChange={(event) => setDueFollowupsOnly(event.target.checked)} /> Follow-ups due</label>
+          <label className="follow-up-toggle"><input type="checkbox" checked={requirementsOnly} onChange={(event) => setRequirementsOnly(event.target.checked)} /> With requirements</label>
+          <select value={limit} onChange={(event) => setLimit(Number(event.target.value))} aria-label="Rows to show">
+            {[100, 250, 500, 1000, 2500].map((size) => <option key={size} value={size}>{size} rows</option>)}
+          </select>
           <span className="muted">{rows.length} shown{stats?.total > rows.length ? ` of ${fmtNum(stats.total)}` : ""}</span>
         </div>
         <div className="table-wrap marketing-desktop-table">
@@ -1419,6 +1557,7 @@ export function MarketingCompanies({ onNotice }) {
                 <th>Progress</th>
                 <th>Follow-up</th>
                 <th>Requirements</th>
+                <th>Message</th>
               </tr>
             </thead>
             <tbody>
@@ -1437,22 +1576,26 @@ export function MarketingCompanies({ onNotice }) {
                     <td><select value={row.sales_progress || "new"} onChange={(event) => updateField(row.id, "sales_progress", event.target.value)} aria-label={`Sales progress for ${row.company}`}>{progressOptions.map((progress) => <option key={progress} value={progress}>{progress.replaceAll("_", " ")}</option>)}</select></td>
                     <td><input aria-label={`Follow-up date for ${row.company}`} type="date" value={row.follow_up_date || ""} onChange={(event) => updateField(row.id, "follow_up_date", event.target.value)} /></td>
                     <td>
-                      <textarea
-                        rows={2}
-                        value={editingRequirements}
-                        onChange={(event) => setEditing((previous) => ({
-                          ...previous,
-                          [row.id]: { ...(previous[row.id] || {}), requirements: event.target.value },
-                        }))}
-                        onBlur={(event) => {
-                          if (event.target.value !== row.requirements) updateField(row.id, "requirements", event.target.value);
-                        }}
-                      />
+                      <details className="requirements-details">
+                        <summary>{(row.requirements || "Add requirements").slice(0, 48)}{(row.requirements || "").length > 48 ? "…" : ""}</summary>
+                        <textarea
+                          rows={2}
+                          value={editingRequirements}
+                          onChange={(event) => setEditing((previous) => ({
+                            ...previous,
+                            [row.id]: { ...(previous[row.id] || {}), requirements: event.target.value },
+                          }))}
+                          onBlur={(event) => {
+                            if (event.target.value !== row.requirements) updateField(row.id, "requirements", event.target.value);
+                          }}
+                        />
+                      </details>
                     </td>
+                    <td><button className="secondary-button" onClick={() => openSend(row)}><MessageCircle size={16} /> Send</button></td>
                   </tr>
                 );
               })}
-              {!rows.length && <tr><td colSpan={8}><div className="empty-state"><BriefcaseBusiness size={22} /><p>No marketing companies yet.</p><small>Sync the latest marketing workbook and customers CSV from GCS.</small></div></td></tr>}
+              {!rows.length && <tr><td colSpan={9}><div className="empty-state"><BriefcaseBusiness size={22} /><p>No marketing companies yet.</p><small>Sync the latest marketing workbook and customers CSV from GCS.</small></div></td></tr>}
             </tbody>
           </table>
         </div>
@@ -1473,6 +1616,7 @@ export function MarketingCompanies({ onNotice }) {
                     <button className="icon-button" type="button" title="Copy phone number" aria-label={`Copy ${row.phone}`} onClick={() => copyPhone(row.phone)}><Copy size={17} /></button>
                   </>}
                   {row.email && <a className="secondary-button" href={`mailto:${row.email}`}><Mail size={16} /> Email</a>}
+                  <button className="primary-button" type="button" onClick={() => openSend(row)}><MessageCircle size={16} /> Message</button>
                 </div>
                 <details className="marketing-company-details">
                   <summary>Progress, follow-up and contact details</summary>
@@ -1501,6 +1645,37 @@ export function MarketingCompanies({ onNotice }) {
           {!rows.length && <div className="empty-state"><BriefcaseBusiness size={22} /><p>No marketing companies yet.</p><small>Import the Kalika marketing workbook to populate this view.</small></div>}
         </div>
       </section>
+      {sendTarget && (
+        <div className="modal-overlay" onClick={() => setSendTarget(null)}>
+          <div className="modal-content marketing-send-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-header">
+              <div><div className="section-kicker">MARKETING / TEMPLATE</div><h2>Message {sendTarget.company}</h2></div>
+              <button className="icon-button" onClick={() => setSendTarget(null)} aria-label="Close"><X size={20} /></button>
+            </div>
+            <div className="modal-body">
+              <div className="mini-stats">
+                <span><b>Contact</b> {sendTarget.contact_name || "Not listed"}</span>
+                <span><b>Phone</b> {sendTarget.phone || "—"}</span>
+                <span><b>Email</b> {sendTarget.email || "—"}</span>
+              </div>
+              {sendTarget.requirements && <p className="muted"><b>Requirements:</b> {sendTarget.requirements}</p>}
+              <label>Template
+                <select value={sendTemplateId} onChange={(event) => applyTemplate(event.target.value)}>
+                  <option value="">Choose a template…</option>
+                  {templates.map((template) => <option key={template.id} value={template.id}>{template.name} ({template.channel})</option>)}
+                </select>
+              </label>
+              <label>Subject<input value={sendSubject} onChange={(event) => setSendSubject(event.target.value)} placeholder="Email subject" /></label>
+              <label>Message<textarea rows={8} value={sendText} onChange={(event) => setSendText(event.target.value)} placeholder="Write the WhatsApp message or email body…" /></label>
+              <div className="button-row">
+                <button className="secondary-button" onClick={copySendText}><Copy size={15} /> Copy</button>
+                <button className="secondary-button" disabled={!sendTarget.email} onClick={sendEmail}><Mail size={15} /> Email</button>
+                <button className="primary-button" disabled={!sendTarget.phone} onClick={sendWhatsApp}><MessageCircle size={15} /> WhatsApp</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1510,6 +1685,7 @@ export function Templates({ onNotice }) {
   const [templates, setTemplates] = useState([]);
   const [meta, setMeta] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [query, setQuery] = useState("");
   const [sortBy, setSortBy] = useState("recent");
   const [previewTemplate, setPreviewTemplate] = useState(null);
   const [editTemplate, setEditTemplate] = useState(null);
@@ -1576,6 +1752,13 @@ export function Templates({ onNotice }) {
 
   // Filter and sort templates
   let filteredTemplates = templates;
+  if (query) {
+    const needle = query.toLowerCase();
+    filteredTemplates = filteredTemplates.filter((template) =>
+      [template.name, template.subject, template.channel, template.body]
+        .some((value) => String(value || "").toLowerCase().includes(needle))
+    );
+  }
   if (categoryFilter) {
     filteredTemplates = filteredTemplates.filter(t => t.channel === categoryFilter);
   }
@@ -1622,11 +1805,15 @@ export function Templates({ onNotice }) {
           <div className="search-field">
             <Search size={17} />
             <input
-              placeholder="Search templates..."
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
+              placeholder="Search name, subject or body..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
             />
           </div>
+          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} aria-label="Filter by channel">
+            <option value="">All channels</option>
+            {Array.from(new Set(templates.map((template) => template.channel).filter(Boolean))).sort().map((channel) => <option key={channel} value={channel}>{channel}</option>)}
+          </select>
           <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
             <option value="recent">Recent first</option>
             <option value="name">Name A-Z</option>

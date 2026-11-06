@@ -1881,3 +1881,24 @@ html, body, #root { width: 100%; max-width: 100%; overflow-x: clip; }
   .topbar { padding-right: 10px !important; padding-left: 10px !important; }
   .topbar-title h1 { font-size: 15px !important; }
 }
+
+/* ---- Delivery / plant hero ---- */
+.delivery-hero { border-left: 3px solid var(--primary, #2563eb); }
+.delivery-hero-grid { display: grid; grid-template-columns: minmax(180px, 0.9fr) 1.4fr; gap: 18px; align-items: stretch; }
+.delivery-hero-main { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border-radius: 12px; background: var(--primary-light, #eff6ff); }
+.delivery-hero-main b { font-size: 34px; line-height: 1; letter-spacing: -0.02em; }
+.delivery-hero-main span { font-weight: 600; }
+.delivery-hero-main small { color: var(--muted, #64748b); }
+.delivery-hero-plants { display: flex; flex-wrap: wrap; gap: 8px; align-content: flex-start; }
+.delivery-hero-plants > span { display: inline-flex; align-items: baseline; gap: 6px; padding: 8px 10px; border: 1px solid var(--line, #e2e8f0); border-radius: 10px; font-size: 12px; }
+.delivery-hero-plants b { font-size: 14px; }
+.empty-state.compact { padding: 12px; }
+@media (max-width: 760px) { .delivery-hero-grid { grid-template-columns: 1fr; } }
+
+/* ---- Marketing requirements + send modal ---- */
+.requirements-details summary { cursor: pointer; font-size: 12px; color: var(--muted, #64748b); }
+.requirements-details textarea { width: 100%; margin-top: 6px; }
+.marketing-send-modal { max-width: 620px; width: min(620px, 94vw); }
+.marketing-send-modal .modal-body { display: flex; flex-direction: column; gap: 12px; }
+.marketing-send-modal label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; }
+.marketing-send-modal input, .marketing-send-modal select, .marketing-send-modal textarea { width: 100%; }
