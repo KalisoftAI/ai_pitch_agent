@@ -43,7 +43,7 @@ from ..services import GCSStorage
 router = APIRouter(prefix="/marketing-companies", tags=["marketing"])
 
 DEFAULT_BUCKET = "kalika_enterprises"
-DEFAULT_PATH = "sales-contacts/RECENT_marketing_list_kalika.xlsx"
+DEFAULT_PATH = "sales-contacts/marketing_list_kalika (1).xlsx"
 DEFAULT_CUSTOMERS_PATH = "sales-contacts/customers.csv"
 FUNNEL_STAGES = ("awareness", "interest", "decision", "action")
 SALES_PROGRESS = (
@@ -98,8 +98,6 @@ def _parse_workbook(raw: bytes) -> list[dict[str, Any]]:
 
     for sheet_key, mapper in (
         ("removed duplicates - mail list", _map_mail_list),
-        ("main list ", _map_main_list),
-        ("main list", _map_main_list),
         ("sheet1", _map_sheet1),
     ):
         sheet_name = sheet_map.get(sheet_key)
@@ -174,26 +172,6 @@ def _map_mail_list(headers: list[str], row: tuple) -> dict[str, Any] | None:
         "company": name,
         "contact_name": "",
         "phone": contact_no,
-        "email": email,
-        "category": category or requirements,
-        "call_status": call_status,
-        "requirements": requirements if requirements != category else "",
-    }
-
-
-def _map_main_list(headers: list[str], row: tuple) -> dict[str, Any] | None:
-    company = _cell(_safe(row, _index(headers, "company")))
-    category = _cell(_safe(row, _index(headers, "category")))
-    call_status = _cell(_safe(row, _index(headers, "call status")))
-    requirements = _cell(_safe(row, _index(headers, "requirements")))
-    phone = _cell(_safe(row, _index(headers, "contact")))
-    email = _cell(_safe(row, _index(headers, "email")))
-    if not company:
-        return None
-    return {
-        "company": company,
-        "contact_name": "",
-        "phone": phone,
         "email": email,
         "category": category or requirements,
         "call_status": call_status,
@@ -329,7 +307,7 @@ def list_marketing_companies(
     due_follow_up: bool = False,
     requirements_only: bool = False,
     sort: str = Query(default="company"),
-    limit: int = Query(default=500, ge=1, le=5000),
+    limit: int = Query(default=25, ge=1, le=250),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -385,11 +363,23 @@ def marketing_company_stats(
         )
         return {(value or "(none)"): count for value, count in rows}
 
+    def domain_group():
+        counts: dict[str, int] = {}
+        for (email,) in base.with_entities(MarketingCompany.email).all():
+            email = (email or "").strip()
+            if "@" not in email:
+                continue
+            domain = email.rsplit("@", 1)[-1].lower().split(",")[0].split(";")[0].strip()
+            if domain:
+                counts[domain] = counts.get(domain, 0) + 1
+        return dict(sorted(counts.items(), key=lambda kv: kv[1], reverse=True))
+
     return {
         "total": base.count(),
         "with_requirements": base.filter(MarketingCompany.requirements != "").count(),
         "with_phone": base.filter(MarketingCompany.phone != "").count(),
         "with_email": base.filter(MarketingCompany.email != "").count(),
+        "by_domain": domain_group(),
         "by_category": group(MarketingCompany.category),
         "by_call_status": group(MarketingCompany.call_status),
         "by_funnel_stage": group(MarketingCompany.funnel_stage),

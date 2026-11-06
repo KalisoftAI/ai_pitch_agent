@@ -1282,7 +1282,7 @@ export function MarketingCompanies({ onNotice }) {
   const [editing, setEditing] = useState({});
   const [busy, setBusy] = useState(false);
   const [templates, setTemplates] = useState([]);
-  const [limit, setLimit] = useState(500);
+  const [limit, setLimit] = useState(25);
   const [requirementsOnly, setRequirementsOnly] = useState(false);
   const [sendTarget, setSendTarget] = useState(null);
   const [sendTemplateId, setSendTemplateId] = useState("");
@@ -1697,7 +1697,7 @@ export function MarketingCompanies({ onNotice }) {
         <div>
           <div className="section-kicker">OUTREACH · TEMPLATES · CONTACTS · MAIL</div>
           <h2>Outreach &amp; marketing</h2>
-          <p className="muted">Pick a template (view / edit / send), choose contacts by category or filter, then send via email or WhatsApp and track who opened it.</p>
+          <p className="muted">Pick a template (view / edit / send), choose a small set of contacts by category or filter, then send via email or WhatsApp and track who opened it.</p>
         </div>
         <div className="button-row">
           <button className="secondary-button" onClick={() => { load(); loadActivity(); }}><RefreshCw size={16} /> Refresh</button>
@@ -1826,15 +1826,15 @@ export function MarketingCompanies({ onNotice }) {
             );
           }) : [<div className="marketing-stat" key="tpl"><small>Templates</small><b>{templates.length}</b><span>—</span></div>]}
         </div>
-        <details className="marketing-breakdown">
-          <summary>Category / funnel / progress breakdown</summary>
-          <div className="marketing-breakdown-grid">
-            <div><b>Category</b>{Object.entries(stats?.by_category || {}).map(([label, count]) => <span key={label}>{label}<strong>{fmtNum(count)}</strong></span>)}</div>
-            <div><b>Funnel stage</b>{Object.entries(stats?.by_funnel_stage || {}).map(([label, count]) => <span key={label}>{label}<strong>{fmtNum(count)}</strong></span>)}</div>
-            <div><b>Progress</b>{Object.entries(stats?.by_sales_progress || {}).map(([label, count]) => <span key={label}>{label.replaceAll("_", " ")}<strong>{fmtNum(count)}</strong></span>)}</div>
-            <div><b>Call status / source</b>{Object.entries(stats?.by_call_status || {}).map(([label, count]) => <span key={label}>{label}<strong>{fmtNum(count)}</strong></span>)}{Object.entries(stats?.by_source || {}).map(([label, count]) => <span key={label}>{label}<strong>{fmtNum(count)}</strong></span>)}</div>
-          </div>
-        </details>
+          <details className="marketing-breakdown">
+            <summary>Domains · call status · categories</summary>
+            <div className="marketing-breakdown-grid">
+              <div><b>Domain</b>{Object.entries(stats?.by_domain || {}).slice(0, 12).map(([label, count]) => <span key={label}>{label}<strong>{fmtNum(count)}</strong></span>)}{!Object.keys(stats?.by_domain || {}).length && <span>—</span>}</div>
+              <div><b>Call status</b>{Object.entries(stats?.by_call_status || {}).map(([label, count]) => <span key={label}>{label}<strong>{fmtNum(count)}</strong></span>)}</div>
+              <div><b>Category</b>{Object.entries(stats?.by_category || {}).map(([label, count]) => <span key={label}>{label}<strong>{fmtNum(count)}</strong></span>)}</div>
+              <div><b>Funnel / progress</b>{Object.entries(stats?.by_funnel_stage || {}).map(([label, count]) => <span key={label}>{label}<strong>{fmtNum(count)}</strong></span>)}{Object.entries(stats?.by_sales_progress || {}).map(([label, count]) => <span key={label}>{label.replaceAll("_", " ")}<strong>{fmtNum(count)}</strong></span>)}</div>
+            </div>
+          </details>
       </section>
       <section className="panel table-panel">
         <div className="table-toolbar">
@@ -1864,9 +1864,9 @@ export function MarketingCompanies({ onNotice }) {
             <option value="updated">Sort: recently updated</option>
           </select>
           <select value={limit} onChange={(event) => setLimit(Number(event.target.value))} aria-label="Rows to show">
-            {[100, 250, 500, 1000, 2500].map((size) => <option key={size} value={size}>{size} rows</option>)}
+            {[25, 50, 100, 250].map((size) => <option key={size} value={size}>{size} rows</option>)}
           </select>
-          <span className="muted">{rows.length} shown{totalCompanies > rows.length ? ` of ${fmtNum(totalCompanies)}` : ""} · {selectedRows.length} selected</span>
+          <span className="muted">Sampling {rows.length} of {fmtNum(totalCompanies)} · {selectedRows.length} selected</span>
         </div>
         <div className="table-wrap marketing-desktop-table">
           <table>
@@ -1874,13 +1874,10 @@ export function MarketingCompanies({ onNotice }) {
               <tr>
                 <th></th>
                 <th>Company</th>
-                <th>Contact</th>
-                <th>Category</th>
-                <th>Call comments</th>
-                <th>Funnel</th>
-                <th>Progress</th>
-                <th>Follow-up</th>
-                <th>Requirements</th>
+                <th>Name / contact</th>
+                <th>Mail</th>
+                <th>Previous</th>
+                <th>Next action</th>
                 <th>Mail / viewed</th>
                 <th>Message</th>
               </tr>
@@ -1892,30 +1889,31 @@ export function MarketingCompanies({ onNotice }) {
                 return (
                   <tr key={row.id}>
                     <td><input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleSelect(row.id)} aria-label={`Select ${row.company}`} /></td>
-                    <td><b>{row.company}</b></td>
+                    <td><b>{row.company}</b><br /><small className="muted">{row.category || ""}</small></td>
                     <td className="table-person">
                       <span>{row.contact_name || "-"}</span>
-                      <small>{row.email || ""}{row.phone ? ` · ${row.phone}` : ""}</small>
+                      <small>{row.phone || ""}</small>
                     </td>
-                    <td>{row.category || "-"}</td>
-                    <td><input value={editing[row.id]?.call_status ?? row.call_status ?? ""} onChange={(event) => setEditing((previous) => ({ ...previous, [row.id]: { ...(previous[row.id] || {}), call_status: event.target.value } }))} onBlur={(event) => { if (event.target.value !== row.call_status) updateField(row.id, "call_status", event.target.value); }} placeholder="Call comment" aria-label={`Call comment for ${row.company}`} style={{ minWidth: 120 }} /></td>
-                    <td><select value={row.funnel_stage || "awareness"} onChange={(event) => updateField(row.id, "funnel_stage", event.target.value)} aria-label={`Funnel stage for ${row.company}`}>{funnelStages.map((stage) => <option key={stage} value={stage}>{stage}</option>)}</select></td>
-                    <td><select value={row.sales_progress || "new"} onChange={(event) => updateField(row.id, "sales_progress", event.target.value)} aria-label={`Sales progress for ${row.company}`}>{progressOptions.map((progress) => <option key={progress} value={progress}>{progress.replaceAll("_", " ")}</option>)}</select></td>
-                    <td><input aria-label={`Follow-up date for ${row.company}`} type="date" value={row.follow_up_date || ""} onChange={(event) => updateField(row.id, "follow_up_date", event.target.value)} /></td>
+                    <td><small>{row.email || "-"}</small></td>
                     <td>
                       <details className="requirements-details">
-                        <summary>{(row.requirements || "Add requirements").slice(0, 48)}{(row.requirements || "").length > 48 ? "…" : ""}</summary>
-                        <textarea
-                          rows={2}
-                          value={editingRequirements}
-                          onChange={(event) => setEditing((previous) => ({
-                            ...previous,
-                            [row.id]: { ...(previous[row.id] || {}), requirements: event.target.value },
-                          }))}
-                          onBlur={(event) => {
-                            if (event.target.value !== row.requirements) updateField(row.id, "requirements", event.target.value);
-                          }}
-                        />
+                        <summary>{(row.call_status || "Previous").slice(0, 30) || "Previous"}</summary>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 220 }}>
+                          <input value={editing[row.id]?.call_status ?? row.call_status ?? ""} onChange={(event) => setEditing((previous) => ({ ...previous, [row.id]: { ...(previous[row.id] || {}), call_status: event.target.value } }))} onBlur={(event) => { if (event.target.value !== row.call_status) updateField(row.id, "call_status", event.target.value); }} placeholder="Previous messages / discussion" aria-label={`Call comment for ${row.company}`} />
+                          <textarea rows={2} value={editingRequirements} onChange={(event) => setEditing((previous) => ({ ...previous, [row.id]: { ...(previous[row.id] || {}), requirements: event.target.value } }))} onBlur={(event) => { if (event.target.value !== row.requirements) updateField(row.id, "requirements", event.target.value); }} placeholder="Discussion points / requirements" />
+                          <small className="muted">Comments save on blur.</small>
+                        </div>
+                      </details>
+                    </td>
+                    <td>
+                      <details className="requirements-details">
+                        <summary>{(row.next_action || "Add follow-up").slice(0, 30) || "Add follow-up"}</summary>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 220 }}>
+                          <textarea rows={2} value={editing[row.id]?.next_action ?? row.next_action ?? ""} onChange={(event) => setEditing((previous) => ({ ...previous, [row.id]: { ...(previous[row.id] || {}), next_action: event.target.value } }))} onBlur={(event) => { if (event.target.value !== row.next_action) updateField(row.id, "next_action", event.target.value); }} placeholder="Follow-up message / next action" />
+                          <input type="date" value={row.follow_up_date || ""} onChange={(event) => updateField(row.id, "follow_up_date", event.target.value)} />
+                          <select value={row.sales_progress || "new"} onChange={(event) => updateField(row.id, "sales_progress", event.target.value)}>{progressOptions.map((progress) => <option key={progress} value={progress}>{progress.replaceAll("_", " ")}</option>)}</select>
+                          <small className="muted">Funnel: {row.funnel_stage || "awareness"}</small>
+                        </div>
                       </details>
                     </td>
                     <td>
@@ -1932,7 +1930,7 @@ export function MarketingCompanies({ onNotice }) {
                   </tr>
                 );
               })}
-              {!rows.length && <tr><td colSpan={11}><div className="empty-state"><BriefcaseBusiness size={22} /><p>No marketing companies yet.</p><small>Sync the latest marketing workbook and customers CSV from GCS.</small></div></td></tr>}
+              {!rows.length && <tr><td colSpan={8}><div className="empty-state"><BriefcaseBusiness size={22} /><p>No marketing companies yet.</p><small>Sync the latest marketing workbook and customers CSV from GCS.</small></div></td></tr>}
             </tbody>
           </table>
         </div>
