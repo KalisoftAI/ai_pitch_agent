@@ -1,9 +1,9 @@
 # Kalisoft AI Sales Pipeline - Architecture, Current & Future
 
 > Single FastAPI service + React SPA, deployed to Cloud Run from GitHub Actions.
-> One codebase, three environments (`main` -> production, `UAT` -> staging,
-> `DEV` -> development). Cost-first: Gemma-first LLM chain, scaled-to-zero Cloud
-> Run, JSON-in-GCS for review data (no graph SQL tables).
+> One codebase, two environments (`main` -> production, `DEV` -> development).
+> Cost-first: Gemma-first LLM chain, scaled-to-zero Cloud Run, JSON-in-GCS for
+> review data (no graph SQL tables).
 
 ---
 
@@ -69,13 +69,12 @@
 | Env | Git branch | Cloud Run service | URL (asia-south1) | App `ENV` | `DEPLOY_ENV` | Max inst. |
 |-----|-----------|-------------------|-------------------|-----------|--------------|-----------|
 | Prod | `main` | `kalisoft-sales` | `https://kalisoft-sales-19782268668.asia-south1.run.app` | `production` | `prod` | 3 |
-| Staging | `UAT` | `kalisoft-sales-uat` | `https://kalisoft-sales-uat-19782268668.asia-south1.run.app` | `staging` | `uat` | 2 |
 | Dev | `DEV` | `kalisoft-sales-dev` | `https://kalisoft-sales-dev-19782268668.asia-south1.run.app` | `development` | `dev` | 1 |
 
 | Pipeline | Trigger | What it does |
 |----------|---------|--------------|
-| CI | PRs to `main`/`UAT`/`DEV` + pushes | lint + tests + frontend build (gate only) |
-| CD | push to `main`/`UAT`/`DEV` (or manual dispatch) | build image in Actions -> push to Artifact Registry -> `gcloud run deploy` -> smoke test `/api/health` |
+| CI | PRs to `main`/`DEV` + pushes | lint + tests + frontend build (gate only) |
+| CD | push to `main`/`DEV` (or manual dispatch) | build image in Actions -> push to Artifact Registry -> `gcloud run deploy` -> smoke test `/api/health` |
 
 Deploy hardening (enforced in `.github/workflows/cd.yml` + `config.py`):
 - `CORS_ORIGINS` / `ALLOWED_HOSTS` must be **explicit** HTTPS origins / hostnames - wildcards are rejected both in CI and at app startup in production.

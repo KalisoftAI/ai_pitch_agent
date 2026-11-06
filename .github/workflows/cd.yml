@@ -2,7 +2,7 @@ name: CD
 
 on:
   push:
-    branches: ["main", "UAT", "DEV"]
+    branches: ["main", "DEV"]
   workflow_dispatch:
 
 # Direct-to-prod: push to main deploys production with no manual gate.
@@ -46,11 +46,6 @@ jobs:
               ENV=production; DEPLOY_ENV=prod; SVC=kalisoft-sales; APP=production; MAX=3
               FE="${{ vars.FRONTEND_URL }}"; CORS="${{ vars.CORS_ORIGINS }}"; HOSTS="${{ vars.ALLOWED_HOSTS }}"
               GRAPH_CHAT=false
-              ;;
-            UAT)
-              ENV=staging; DEPLOY_ENV=uat; SVC=kalisoft-sales-uat; APP=staging; MAX=2
-              FE="${{ vars.FRONTEND_URL_UAT }}"; CORS="${{ vars.CORS_ORIGINS_UAT }}"; HOSTS="${{ vars.ALLOWED_HOSTS_UAT }}"
-              GRAPH_CHAT="${{ vars.KNOWLEDGE_GRAPH_CHAT_ENABLED_UAT }}"
               ;;
             DEV)
               ENV=development; DEPLOY_ENV=dev; SVC=kalisoft-sales-dev; APP=development; MAX=1

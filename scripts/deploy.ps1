@@ -1,19 +1,18 @@
-# Build, check and deploy by pushing to the CD branch (UAT / main / DEV).
+# Build, check and deploy by pushing to the CD branch (main / DEV).
 # Pushing a branch triggers .github/workflows/cd.yml.
 #
 # Usage:
-#   .\scripts\deploy.ps1 -Target uat -Message "feat: my change"
+#   .\scripts\deploy.ps1 -Target prod -Message "feat: my change"
 #   .\scripts\deploy.ps1 -Target prod
-#   .\scripts\deploy.ps1 -Target uat -SkipChecks -SkipBuild
+#   .\scripts\deploy.ps1 -Target dev -SkipChecks -SkipBuild
 #
 # Target -> branch:
-#   uat  -> UAT   (staging)
 #   prod -> main  (production)
 #   dev  -> DEV   (development)
 [CmdletBinding()]
 param(
-  [ValidateSet("uat", "prod", "dev")]
-  [string]$Target = "uat",
+  [ValidateSet("prod", "dev")]
+  [string]$Target = "prod",
   [string]$Message = "",
   [switch]$SkipChecks,
   [switch]$SkipBuild
@@ -24,7 +23,6 @@ $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
 $branch = switch ($Target) {
-  "uat"  { "UAT" }
   "prod" { "main" }
   "dev"  { "DEV" }
 }
