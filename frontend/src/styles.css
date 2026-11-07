@@ -2043,3 +2043,23 @@ tr:hover .reach-actions,.reach-actions:focus-within{opacity:1}
   .content.outreach-compact { padding-left:12px; padding-right:12px; }
   .outreach-workspace { gap:8px; }
 }
+
+/* mobile readability + fit (outreach & general) */
+@media (max-width: 640px) {
+  .outreach-compact .table-wrap table { min-width: 0; }
+  .outreach-compact .table-wrap td, .outreach-compact .table-wrap th { padding: 8px 7px; }
+  .outreach-compact .contact-tag, .outreach-compact .outreach-chip { font-size: 12px; }
+  .outreach-compact small.muted, .outreach-compact .muted { font-size: 12.5px; }
+  .outreach-compact h2 { font-size: 24px; } .outreach-compact h3 { font-size: 15px; } .outreach-compact .section-kicker { font-size: 10px; }
+  .outreach-compact .studio-text { font-size: 12.5px; }
+  .outreach-compact .marketing-stat b { font-size: 18px; } .outreach-compact .marketing-stat small { font-size: 11px; }
+  .image-tile span, .video-chip span { font-size: 11px; }
+  .outreach-compact .source-tile b { font-size: 12px; } .outreach-compact .source-tile small { font-size: 10.5px; }
+  .page-heading p.muted { font-size: 13px; }
+}
+/* very small phones */
+@media (max-width: 400px) {
+  .image-strip { grid-template-columns: repeat(3, 1fr); }
+  .marketing-stat-grid { grid-template-columns: 1fr 1fr; }
+  .outreach-compact h2 { font-size: 22px; }
+}
