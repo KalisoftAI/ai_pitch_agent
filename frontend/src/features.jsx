@@ -1337,6 +1337,12 @@ function MarketingEvents({ onNotice }) {
 
 export function MarketingCompanies({ onNotice }) {
   const [mTab, setMTab] = useState("send");
+  const [sources, setSources] = useState([]);
+  const [showTplPicker, setShowTplPicker] = useState(false);
+  const [tplSearch, setTplSearch] = useState("");
+  const [tplSort, setTplSort] = useState("recent");
+  const [editTplId, setEditTplId] = useState(null);
+  const [tplEdit, setTplEdit] = useState({ subject: "", body: "" });
   const [mOrders, setMOrders] = useState([]);
   const [mVideos, setMVideos] = useState([]);
   const [rows, setRows] = useState([]);
@@ -1401,7 +1407,14 @@ export function MarketingCompanies({ onNotice }) {
     }
   };
 
-  useEffect(() => { load(); loadActivity(); }, []);
+  const loadSources = () => request("/marketing-companies/sources").then((d) => setSources(Array.isArray(d?.items) ? d.items : [])).catch(() => setSources([]));
+  useEffect(() => { load(); loadActivity(); loadSources(); }, []);
+
+  useEffect(() => {
+    if (!cDetail) return undefined;
+    const id = setInterval(() => openCampaign(cDetail.id), 12000);
+    return () => clearInterval(id);
+  }, [cDetail?.id, cDetail?.status, cDetail?.sent_count, cDetail?.opened_count]);
 
   useEffect(() => {
     request("/templates")
@@ -1480,6 +1493,14 @@ export function MarketingCompanies({ onNotice }) {
     }
   };
 
+  const syncOne = async (path) => {
+    setBusy(true);
+    try {
+      const result = await request(`/marketing-companies/sync?path=${encodeURIComponent(path)}`, { method: "POST" });
+      onNotice({ type: result.ok ? "success" : "error", text: result.ok ? `Synced ${path.split("/").pop()} (${result.imported} new, ${result.updated} updated).` : (result.detail || "Sync failed.") });
+      load(); loadSources();
+    } catch (error) { onNotice({ type: "error", text: error.message }); } finally { setBusy(false); }
+  };
   const syncFromGCS = async () => {
     setBusy(true);
     try {
@@ -1710,7 +1731,7 @@ export function MarketingCompanies({ onNotice }) {
     setSendTarget(row);
   };
 
-  const createCampaign = async (targetRows) => {
+  const createCampaign = async (targetRows, autoSend = false) => {
     if (!selTemplate) return onNotice({ type: "error", text: "Select a template first." });
     setCBusy(true);
     try {
@@ -1718,7 +1739,7 @@ export function MarketingCompanies({ onNotice }) {
         method: "POST",
         body: JSON.stringify({
           name: cName, channel: cChannel, strategy: cStrategy,
-          template_id: selTemplate.id, use_ai: useAi,
+          template_id: selTemplate.id, use_ai: useAi, auto_send: !!autoSend,
           filter: {
             limit: Math.min(Number(cLimit) || (targetRows?.length || 50), targetRows?.length || Number(cLimit) || 50),
             contact_type: "marketing_companies",
@@ -1818,14 +1839,15 @@ export function MarketingCompanies({ onNotice }) {
           <input value={cName} onChange={(e)=>setCName(e.target.value)} placeholder="Campaign name" style={{minWidth:160}} />
           {selTemplate && selectedRows.length>0 ? (cChannel==="both"
             ? <button className="primary-button" onClick={sendBoth} disabled={cBusy}><Send size={15}/> {cBusy?"Working...":`Create campaigns (${selectedEmail}? ${selectedPhone}WA)`}</button>
-            : <button className="primary-button" onClick={createSelectedCampaign} disabled={cBusy || selectedForChannel===0}><Send size={15}/> {cBusy?"Working...":`Create & queue (${selectedForChannel})`}</button>)
+            : <><button className="secondary-button" onClick={createSelectedCampaign} disabled={cBusy || selectedForChannel===0}>{cBusy?"Working...":`Send for review (${selectedForChannel})`}</button><button className="primary-button" onClick={()=>createCampaign(selectedRows,true)} disabled={cBusy || selectedForChannel===0}><Send size={15}/> {cBusy?"Working...":`Send now (${selectedForChannel})`}</button></>)
           : <button className="primary-button" disabled><Send size={15}/> Select template + contacts</button>}
+          <button className="secondary-button" onClick={()=>setShowTplPicker(true)}><FileText size={14}/> {selTemplate ? "Change template" : "Choose template"}</button>
           {cDetail && <><button className="secondary-button" onClick={approveCampaign} disabled={cBusy||cDetail.status!=="pending_review"}>Approve</button><button className="secondary-button" onClick={sendCampaign} disabled={cBusy||cDetail.status!=="approved"}>Send approved</button><button className="icon-button" onClick={()=>openCampaign(cDetail.id)} title="Refresh"><RefreshCw size={14}/></button></>}</div></div>
         <div className="outreach-chip-row">
           <span className="outreach-chip"><b>Template:</b> {selTemplate ? <>{selTemplate.name} <button className="icon-button" style={{padding:0,marginLeft:4}} onClick={()=>setSelTemplate(null)} title="Clear">?</button></> : "none selected"}</span>
           <span className="outreach-chip"><b>Selected:</b> {selectedRows.length} / {fmtNum(totalCompanies)}</span>
           <span className="outreach-chip">{selectedEmail} email</span><span className="outreach-chip">{selectedPhone} phone</span><span className="outreach-chip">{selectedForChannel} reachable via {cChannel}</span>
-          {cDetail && <><span className="outreach-chip"><b>{cDetail.status}</b></span><span className="outreach-chip">sent {cDetail.sent_count}/{cDetail.total}</span><span className="outreach-chip">viewed {cDetail.opened_count||0}</span><span className="outreach-chip">failed {cDetail.failed_count}</span><span className="outreach-chip">progress {cDetail.total?Math.round(((cDetail.sent_count+cDetail.failed_count)/cDetail.total)*100):0}%</span></>}
+          {cDetail && <><span className="outreach-chip"><b>{cDetail.status}</b></span><span className="outreach-chip">sent {cDetail.sent_count}/{cDetail.total}</span><span className="outreach-chip">viewed {cDetail.opened_count||0}</span><span className="outreach-chip">failed {cDetail.failed_count}</span><span className="outreach-chip">progress {cDetail.total?Math.round(((cDetail.sent_count+cDetail.failed_count)/cDetail.total)*100):0}%</span><button className="icon-button" title="Close progress" onClick={()=>setCDetail(null)}><X size={14}/></button></>}
         </div>
         {selectedRows.length>0 && <div className="outreach-chip-row" style={{marginTop:4}}><small className="muted">Contacts:</small>{selectedRows.slice(0,8).map((r)=>(<span key={r.id} className="contact-tag">{r.contact_name||r.company} <button className="icon-button" style={{padding:0}} onClick={()=>toggleSelect(r.id)}>?</button></span>))}{selectedRows.length>8 && <small className="muted">+{selectedRows.length-8} more</small>}</div>}
       </section>
@@ -1842,6 +1864,14 @@ export function MarketingCompanies({ onNotice }) {
 
         <section className="panel outreach-pane" aria-label="Contacts">
           <div className="panel-heading"><div><div className="section-kicker">CONTACTS</div><h3>Select & act</h3></div><label style={{fontSize:12}}><input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}/> visible</label></div>
+          <div className="source-tiles" aria-label="Contact source files">
+            {sources.map((f)=>(<div className={`source-tile ${f.processed?"done":""}`} key={f.file} title={f.path||f.file}>
+              <b>{f.short}</b><small>{f.size_mb?`${f.size_mb} MB ? `:""}{f.updated}{f.in_gcs?"":" ? local"}</small>
+              <span className="contact-tag">{f.processed?`? ${f.rows_in_db} rows`:"not synced"}</span>
+              {f.in_gcs && <button className="secondary-button" disabled={busy} onClick={()=>syncOne(f.path)}><Database size={12}/> Sync</button>}
+            </div>))}
+            {!sources.length && <small className="muted">No files in sales-contacts/ yet.</small>}
+          </div>
           <div className="table-toolbar"><div className="search-field"><Search size={15}/><input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="Search"/></div>
             <select value={categoryFilter} onChange={(e)=>setCategoryFilter(e.target.value)}><option value="">Category</option>{categories.map((i)=><option key={i} value={i}>{i}</option>)}</select>
             <select value={statusFilter} onChange={(e)=>setStatusFilter(e.target.value)}><option value="">Status</option>{statuses.map((i)=><option key={i} value={i}>{i}</option>)}</select>
@@ -1850,7 +1880,7 @@ export function MarketingCompanies({ onNotice }) {
             {rows.map((row)=>{ const act=activity[row.id]; const msgText=fillMsg(selTemplate?htmlToText(selTemplate.body):"Hi from Kalika Enterprises", row); return (
               <tr key={row.id} className={selectedIds.has(row.id)?"tick-selected":""}>
                 <td><input type="checkbox" checked={selectedIds.has(row.id)} onChange={()=>toggleSelect(row.id)}/></td>
-                <td><b>{row.company}</b><br/><small className="muted">{row.contact_name||"-"} ? {row.email||"no email"}{row.phone?` ? ${row.phone}`:""}</small>
+                <td><b>{row.company}</b><br/><small className="muted">{row.contact_name||"-"} ? {row.email||"no email"}{row.phone?` ? ${row.phone}`:""}{row.source_file?` ? ${row.source_file.replace(/\.[a-z]+$/i,"").slice(0,18)}`:""}</small>
                   <div className="reach-actions" aria-label="Contact actions">{row.phone && <a className="secondary-button" href={`tel:${row.phone}`}>Call</a>}{row.phone && <a className="secondary-button" href={whatsappHref(msgText,row.phone)} target="_blank" rel="noreferrer">Msg</a>}{row.email && <a className="secondary-button" href={`mailto:${row.email}?subject=${encodeURIComponent(selTemplate?.subject||"Kalika Enterprises")}&body=${encodeURIComponent(msgText)}`}>Mail</a>}</div>
                   <div className="inline-edit">
                     <input value={editing[row.id]?.call_status ?? row.call_status ?? ""} onChange={(e)=>setEditing((p)=>({...p,[row.id]:{...(p[row.id]||{}),call_status:e.target.value}}))} onBlur={(e)=>{if(e.target.value!==row.call_status) updateField(row.id,"call_status",e.target.value);}} placeholder="Call comments" />
@@ -1882,7 +1912,40 @@ export function MarketingCompanies({ onNotice }) {
       </div>
     </div>}
 
-            {previewTemplate && (<div className="modal-overlay" onClick={()=>setPreviewTemplate(null)}><div className="modal-content template-preview-modal" onClick={(e)=>e.stopPropagation()}><div className="modal-header"><h2>{previewTemplate.name}</h2><button className="icon-button" onClick={()=>setPreviewTemplate(null)}><X size={20}/></button></div><div className="modal-body"><iframe srcDoc={previewTemplate.body} title="Template Preview" sandbox="allow-same-origin" style={{width:"100%",height:"420px",border:"1px solid #ddd",borderRadius:"8px",background:"white"}}/></div></div></div>)}
+            {showTplPicker && (<div className="modal-overlay" onClick={()=>setShowTplPicker(false)}>
+        <div className="modal-content template-picker" onClick={(e)=>e.stopPropagation()}>
+          <div className="modal-header"><h2>Pick a template</h2>
+            <div className="button-row"><select value={tplSort} onChange={(e)=>setTplSort(e.target.value)}><option value="recent">Recently added</option><option value="name">Name</option><option value="used">Most used</option></select><button className="icon-button" onClick={()=>setShowTplPicker(false)}><X size={20}/></button></div></div>
+          <div className="modal-body">
+            <div className="search-field"><Search size={15}/><input autoFocus value={tplSearch} onChange={(e)=>setTplSearch(e.target.value)} placeholder="Search templates?"/></div>
+            {(() => {
+              const q = tplSearch.toLowerCase();
+              let list = (templates||[]).filter((tt)=>!q || String(tt.name||"").toLowerCase().includes(q) || String(tt.subject||"").toLowerCase().includes(q));
+              if (cChannel!=="both") list = list.filter((tt)=>(tt.channel||"email")===cChannel);
+              if (tplSort==="name") list = [...list].sort((a,b)=>String(a.name||"").localeCompare(String(b.name||"")));
+              else if (tplSort==="used") list = [...list].sort((a,b)=>(b.used_count||0)-(a.used_count||0));
+              else list = [...list].sort((a,b)=>String(b.updated_at||"").localeCompare(String(a.updated_at||"")));
+              return list.map((tt)=>(
+                <div className={`picker-row ${selTemplate?.id===tt.id?"tick-selected":""}`} key={tt.id}>
+                  <div className="picker-main"><b>{tt.name}</b><small className="muted">{tt.channel} ? used {tt.used_count||0} ? {String(tt.updated_at||"").slice(0,10)}</small></div>
+                  <div className="button-row">
+                    <button className="secondary-button" onClick={()=>setPreviewTemplate(tt)}><Eye size={13}/> View</button>
+                    <button className="secondary-button" onClick={()=>{ setEditTplId(editTplId===tt.id?null:tt.id); setTplEdit({ subject: tt.subject||"", body: htmlToText(tt.body) }); }}><FileText size={13}/> Edit</button>
+                    <button className="primary-button" onClick={()=>{ pickTemplate(tt); setShowTplPicker(false); }}>{selTemplate?.id===tt.id?"Selected":"Select"}</button>
+                  </div>
+                  {editTplId===tt.id && <div className="picker-edit">
+                    <input value={tplEdit.subject} onChange={(e)=>setTplEdit((x)=>({...x,subject:e.target.value}))} placeholder="Subject" />
+                    <textarea rows={4} defaultValue={tplEdit.body} onChange={(e)=>setTplEdit((x)=>({...x,body:e.target.value}))} placeholder="Body" />
+                    <div className="button-row"><button className="primary-button" onClick={async()=>{ try { await request(`/templates/${tt.id}`, { method: "PATCH", body: JSON.stringify({ subject: tplEdit.subject, body: tplEdit.body }) }); onNotice({ type:"success", text:"Template saved." }); setEditTplId(null); request("/templates").then((r)=>setTemplates(Array.isArray(r)?r:[])).catch(()=>{}); } catch (e) { onNotice({ type:"error", text: e.message }); } }}>Save</button></div>
+                  </div>}
+                </div>
+              ));
+            })()}
+            {!(templates||[]).length && <small className="muted">No templates loaded ? use Sync templates.</small>}
+          </div>
+        </div>
+      </div>)}
+      {previewTemplate && (<div className="modal-overlay" onClick={()=>setPreviewTemplate(null)}><div className="modal-content template-preview-modal" onClick={(e)=>e.stopPropagation()}><div className="modal-header"><h2>{previewTemplate.name}</h2><button className="icon-button" onClick={()=>setPreviewTemplate(null)}><X size={20}/></button></div><div className="modal-body"><iframe srcDoc={previewTemplate.body} title="Template Preview" sandbox="allow-same-origin" style={{width:"100%",height:"420px",border:"1px solid #ddd",borderRadius:"8px",background:"white"}}/></div></div></div>)}
     </div>
   );
 }

@@ -99,23 +99,25 @@ def _ensure_columns() -> None:
                     conn.execute(text(f"ALTER TABLE company_visits ADD COLUMN {column} {ddl}"))
     if "marketing_companies" in insp.get_table_names():
         cols = {c["name"]: c for c in insp.get_columns("marketing_companies")}
-        for column in ("phone", "call_status", "source_sheet"):
-            col = cols.get(column)
-            length = getattr(col.get("type"), "length", None) if col else None
-            if col is not None and length is not None and length < 255:
-                with engine.begin() as conn:
-                    conn.execute(
-                        text(
-                            f"ALTER TABLE marketing_companies "
-                            f"ALTER COLUMN {column} TYPE VARCHAR(255)"
+        if engine.dialect.name == "postgresql":
+            for column in ("phone", "call_status", "source_sheet"):
+                col = cols.get(column)
+                length = getattr(col.get("type"), "length", None) if col else None
+                if col is not None and length is not None and length < 255:
+                    with engine.begin() as conn:
+                        conn.execute(
+                            text(
+                                f"ALTER TABLE marketing_companies "
+                                f"ALTER COLUMN {column} TYPE VARCHAR(255)"
+                            )
                         )
-                    )
         # Sales-pipeline fields added after the table was first created.
         for column, ddl in (
             ("funnel_stage", "VARCHAR(32) DEFAULT 'awareness'"),
             ("sales_progress", "VARCHAR(48) DEFAULT 'new'"),
             ("next_action", "TEXT DEFAULT ''"),
             ("follow_up_date", "VARCHAR(10) DEFAULT ''"),
+            ("source_file", "VARCHAR(255) DEFAULT ''"),
         ):
             if column not in cols:
                 with engine.begin() as conn:

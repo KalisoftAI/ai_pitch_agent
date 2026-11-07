@@ -635,6 +635,7 @@ class MarketingCompany(Base):
     next_action: Mapped[str] = mapped_column(Text, default="")
     follow_up_date: Mapped[str] = mapped_column(String(10), default="", index=True)
     source_sheet: Mapped[str] = mapped_column(String(255), default="")
+    source_file: Mapped[str] = mapped_column(String(255), index=True, default="")
     source_row: Mapped[int] = mapped_column(Integer, default=0)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
