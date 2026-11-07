@@ -19,10 +19,10 @@ from io import StringIO
 from typing import Any
 
 DIMENSION_GROUPS: dict[str, tuple[str, ...]] = {
-    "Cities": ("city",),
-    "Countries": ("country",),
-    "Regions": ("region", "continent"),
-    "Devices": ("device category", "device info", "mobile device"),
+    "Cities": ("city", "town / city", "town/city", "city (town / city)", "district"),
+    "Countries": ("country", "country / territory", "country/territory", "territory"),
+    "Regions": ("region", "continent", "sub continent", "subcontinent"),
+    "Devices": ("device category", "device info", "mobile device", "device"),
     "Sources": (
         "session source / medium",
         "source / medium",
@@ -30,6 +30,7 @@ DIMENSION_GROUPS: dict[str, tuple[str, ...]] = {
         "channel group",
         "session medium",
         "session source",
+        "source",
     ),
     "Pages": (
         "landing page",
@@ -37,6 +38,7 @@ DIMENSION_GROUPS: dict[str, tuple[str, ...]] = {
         "page location",
         "page title",
         "landing page (expanded)",
+        "page path",
     ),
     "Browsers": ("browser",),
     "OS": ("operating system",),
@@ -82,7 +84,12 @@ def parse_rows_from_csv(raw: bytes) -> list[dict[str, Any]]:
         text = raw.decode("utf-8-sig")
     except UnicodeDecodeError:
         text = raw.decode("latin-1")
-    reader = csv.DictReader(StringIO(text))
+    # GA4 exports wrap the table in "# ..." comment preamble/footer lines and
+    # blank rows; keep only real data lines so DictReader sees the true header.
+    body = [line for line in text.splitlines() if line.strip() and not line.lstrip().startswith("#")]
+    if not body:
+        return []
+    reader = csv.DictReader(StringIO("\n".join(body)))
     rows: list[dict[str, Any]] = []
     for row in reader:
         clean: dict[str, Any] = {}
@@ -127,14 +134,33 @@ def parse_rows_from_json(raw: bytes) -> list[dict[str, Any]] | None:
     return out
 
 
-def _pick_metric(headers: set[str]) -> str | None:
-    for metric in METRIC_PRIORITY:
-        if metric in headers:
-            return metric
-    for header in headers:
-        if any(token in header for token in ("count", "total", "users", "sessions", "views")):
-            return header
+def _is_metric_header(header: str) -> bool:
+    if "%" in header or "percent" in header or "rate" in header or "average" in header or "time" in header:
+        return False
+    return any(token in header for token in ("user", "session", "count", "event", "view", "total", "engagement"))
+
+
+def _find_column(headers: set[str], aliases: tuple[str, ...]) -> str | None:
+    """Locate a real column for a group: exact alias first, then substring."""
+    for alias in aliases:
+        if alias in headers:
+            return alias
+    for header in sorted(headers):
+        if "%" in header or _is_metric_header(header):
+            continue
+        for alias in aliases:
+            if alias in header:
+                return header
     return None
+
+
+def _pick_metric(headers: set[str]) -> str | None:
+    candidates = [h for h in headers if _is_metric_header(h)]
+    for metric in METRIC_PRIORITY:
+        for header in candidates:
+            if header == metric or metric in header:
+                return header
+    return candidates[0] if candidates else None
 
 
 def _aggregate(rows: list[dict[str, Any]], dimension: str, metric: str | None) -> list[dict[str, Any]]:
@@ -182,30 +208,56 @@ def build_summary(
             "sample": [],
         }
 
-    metric = _pick_metric(headers)
+    parsed_files = [(name, rows) for name, rows in file_rows if rows]
+    all_headers: set[str] = set()
+    for _, rows in parsed_files:
+        for row in rows:
+            all_headers.update(row.keys())
+
+    metric = _pick_metric(all_headers)
     stats: dict[str, Any] = {"rows": len(all_rows)}
+    # Per-metric total taken as the MAX single-file column sum (not a cross-file
+    # sum) so overlapping dimensions across the 6 GA4 exports don't double-count
+    # the same audience.
     numeric_headers = [
-        header
-        for header in headers
-        if any(_num(row.get(header)) for row in all_rows[:50])
-        and not any(dim in header for dims in DIMENSION_GROUPS.values() for dim in dims)
-    ][:10]
+        header for header in all_headers if _is_metric_header(header)
+    ][:12]
     for header in numeric_headers:
-        total = sum(_num(row.get(header)) for row in all_rows)
-        if total:
-            stats[header.title()] = int(round(total))
+        sums = [sum(_num(row.get(header)) for row in rows) for _, rows in parsed_files]
+        best = int(round(max(sums))) if sums else 0
+        if best:
+            stats[header.title()] = best
 
     groups: dict[str, list[dict[str, Any]]] = {}
+    group_metric: dict[str, str] = {}
     for group_name, aliases in DIMENSION_GROUPS.items():
-        for alias in aliases:
-            if alias in headers:
-                aggregated = _aggregate(all_rows, alias, metric)
-                if aggregated:
-                    groups[group_name] = aggregated
-                    break
+        column = _find_column(all_headers, aliases)
+        if not column:
+            continue
+        # Pick the file whose report is dedicated to this dimension (highest
+        # weighted distinct values) to avoid summing a repeated column, and use
+        # that file's own best metric so shares reflect real sessions/users.
+        best_agg: list[dict[str, Any]] = []
+        best_score = -1.0
+        best_metric: str | None = None
+        for _, rows in parsed_files:
+            file_headers: set[str] = set()
+            for row in rows:
+                file_headers.update(row.keys())
+            file_metric = _pick_metric(file_headers)
+            present = [row for row in rows if str(row.get(column) or "").strip()]
+            if len(present) < 2:
+                continue
+            aggregated = _aggregate(rows, column, file_metric)
+            score = sum(a["value"] for a in aggregated) + len(aggregated)
+            if aggregated and score > best_score:
+                best_score, best_agg, best_metric = score, aggregated, file_metric
+        if best_agg:
+            groups[group_name] = best_agg
+            group_metric[group_name] = best_metric or ""
 
     dates: list[str] = []
-    for header in headers:
+    for header in all_headers:
         if header in DATE_COLUMNS or "date" == header:
             for row in all_rows:
                 value = str(row.get(header) or "").strip()
@@ -216,7 +268,6 @@ def build_summary(
     date_range = {"from": min(dates), "to": max(dates)} if dates else {}
 
     insights: list[str] = []
-    weight_label = metric.title() if metric else "rows"
     if date_range:
         insights.append(f"Period: {date_range['from']} to {date_range['to']}")
     group_lead_word = {
@@ -228,8 +279,10 @@ def build_summary(
         if top:
             lead = top[0]
             word = group_lead_word.get(group_name, group_name.lower())
+            gmetric = group_metric.get(group_name) or ""
+            unit = gmetric.title() if gmetric else "rows"
             insights.append(
-                f"Top {word}: {lead['label']} - {lead['value']:,} {weight_label} ({lead['share']}%)"
+                f"Top {word}: {lead['label']} - {lead['value']:,} {unit} ({lead['share']}%)"
             )
     insights.append(f"Processed {len(file_rows)} export file(s), {len(all_rows):,} rows.")
 
