@@ -98,6 +98,7 @@ def _parse_workbook(raw: bytes) -> list[dict[str, Any]]:
 
     for sheet_key, mapper in (
         ("removed duplicates - mail list", _map_mail_list),
+        ("main list ", _map_main_list),
         ("sheet1", _map_sheet1),
     ):
         sheet_name = sheet_map.get(sheet_key)
@@ -179,13 +180,28 @@ def _map_mail_list(headers: list[str], row: tuple) -> dict[str, Any] | None:
     }
 
 
+def _map_main_list(headers: list[str], row: tuple) -> dict[str, Any] | None:
+    name = _cell(_safe(row, _index(headers, "company")))
+    if not name:
+        return None
+    return {
+        "company": name,
+        "contact_name": _cell(_safe(row, _index(headers, "contact", "purchase_dept_contact"))),
+        "phone": _cell(_safe(row, _index(headers, "contact", "purchase_dept_contact"))),
+        "email": _cell(_safe(row, _index(headers, "email", "purchase_dept_email"))),
+        "category": _cell(_safe(row, _index(headers, "category"))),
+        "call_status": _cell(_safe(row, _index(headers, "call status", "call status "))),
+        "requirements": _cell(_safe(row, _index(headers, "requirements"))),
+    }
+
+
 def _map_sheet1(headers: list[str], row: tuple) -> dict[str, Any] | None:
     name = _cell(_safe(row, _index(headers, "name")))
-    category = _cell(_safe(row, _index(headers, "category")))
-    call_status = _cell(_safe(row, _index(headers, "call status")))
+    category = _cell(_safe(row, _index(headers, "category", "category ")))
+    call_status = _cell(_safe(row, _index(headers, "call status", "call status ")))
     requirements = _cell(_safe(row, _index(headers, "requirements")))
     phone = _cell(_safe(row, _index(headers, "contact no.")))
-    email = _cell(_safe(row, _index(headers, "email no.")))
+    email = _cell(_safe(row, _index(headers, "email no.", "email no. ")))
     if not name:
         return None
     return {
