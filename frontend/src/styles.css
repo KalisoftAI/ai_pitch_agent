@@ -1933,3 +1933,6 @@ html, body, #root { width: 100%; max-width: 100%; overflow-x: clip; }
 .outreach-tabs .secondary-button { padding:8px 12px; }
 .outreach-tabs .primary-button { padding:8px 12px; }
 .studio-card.tick-selected { outline: 2px solid #2f7d4b; background:#f3faf4; }
+
+tr.tick-selected td{background:#f3faf4;}
+.table-toolbar{gap:8px;align-items:center;}
