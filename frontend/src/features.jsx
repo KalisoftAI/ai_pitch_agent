@@ -1337,6 +1337,13 @@ function MarketingEvents({ onNotice }) {
 
 export function MarketingCompanies({ onNotice }) {
   const [mTab, setMTab] = useState("send");
+  const [sendStep, setSendStep] = useState("select");
+  const [multiSelect, setMultiSelect] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const sendingRef = React.useRef(false);
+  const selCache = React.useRef(new Map());
+  const pressRef = React.useRef({ timer: null, x: 0, y: 0, moved: false });
   const [sources, setSources] = useState([]);
   const [imageTemplates, setImageTemplates] = useState([]);
   const [attachImage, setAttachImage] = useState("");
@@ -1406,6 +1413,7 @@ export function MarketingCompanies({ onNotice }) {
       ]);
       setRows(nextRows);
       setStats(nextStats);
+      nextRows.forEach((r) => { if (selectedIds.has(r.id)) selCache.current.set(r.id, r); });
     } catch (error) {
       onNotice({ type: "error", text: error.message });
     }
@@ -1824,23 +1832,77 @@ export function MarketingCompanies({ onNotice }) {
   const openRate = cDetail && cDetail.sent_count ? Math.round(((cDetail.opened_count || 0) / cDetail.sent_count) * 100) : 0;
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const allVisibleSelected = rows.length > 0 && rows.every((r) => selectedIds.has(r.id));
-  const toggleSelectAll = () => setSelectedIds((prev) => {
+  const toggleSelectAll = (check) => setSelectedIds((prev) => {
     const next = new Set(prev);
-    if (rows.every((r) => next.has(r.id))) rows.forEach((r) => next.delete(r.id));
-    else rows.forEach((r) => next.add(r.id));
+    const wantAll = check === undefined ? !rows.every((r) => next.has(r.id)) : check;
+    rows.forEach((r) => {
+      if (wantAll) { next.add(r.id); selCache.current.set(r.id, r); }
+      else next.delete(r.id);
+    });
     return next;
   });
+  const selectPage = () => toggleSelectAll(true);
+  const clearSelection = () => { setSelectedIds(new Set()); selCache.current.clear(); };
   const [activeRow, setActiveRow] = useState(null);
-  const toggleSelect = (id) => setSelectedIds((prev) => {
+  const toggleSelect = (id, row) => setSelectedIds((prev) => {
     const next = new Set(prev);
-    if (next.has(id)) next.delete(id); else next.add(id);
+    if (next.has(id)) { next.delete(id); selCache.current.delete(id); }
+    else { next.add(id); if (row) selCache.current.set(id, row); }
     return next;
   });
-  const selectedRows = rows.filter((r) => selectedIds.has(r.id));
+  const selectedRows = Array.from(selectedIds).map((id) => rows.find((r) => r.id === id) || selCache.current.get(id)).filter(Boolean);
   const selectedEmail = selectedRows.filter((r) => r.email).length;
   const selectedPhone = selectedRows.filter((r) => r.phone).length;
-  const selectedForChannel = cChannel === "email" ? selectedEmail : selectedPhone;
+  const selectedForChannel = cChannel === "email" ? selectedEmail : cChannel === "whatsapp" ? selectedPhone : selectedEmail + selectedPhone;
   const selectRowForSend = (row) => fillSendArea(row);
+
+  // mobile long-press multi-select (movement threshold keeps normal scrolling intact)
+  const pressStart = (row, ev) => {
+    const p = ev.touches?.[0] || { clientX: 0, clientY: 0 };
+    pressRef.current = { x: p.clientX, y: p.clientY, moved: false, timer: setTimeout(() => {
+      if (!pressRef.current.moved) { setMultiSelect(true); if (!selectedIds.has(row.id)) toggleSelect(row.id, row); }
+    }, 450) };
+  };
+  const pressMove = (ev) => {
+    const p = ev.touches?.[0]; if (!p || !pressRef.current.timer) return;
+    if (Math.abs(p.clientY - pressRef.current.y) > 10 || Math.abs(p.clientX - pressRef.current.x) > 10) {
+      pressRef.current.moved = true; clearTimeout(pressRef.current.timer); pressRef.current.timer = null;
+    }
+  };
+  const pressEnd = () => { if (pressRef.current.timer) { clearTimeout(pressRef.current.timer); pressRef.current.timer = null; } };
+
+  const continueToConfig = () => {
+    if (!selectedRows.length) return onNotice({ type: "error", text: "Select at least one contact to continue." });
+    setSendStep("configure");
+  };
+  const retryCampaign = async () => {
+    if (!cDetail) return; setRetrying(true);
+    try {
+      const result = await request(`/campaigns/${cDetail.id}/retry`, { method: "POST" });
+      onNotice({ type: "success", text: `Retried: ${result.sent} sent, ${result.failed} failed.` });
+      setCDetail(await request(`/campaigns/${cDetail.id}`)); loadCampaigns();
+    } catch (e) { onNotice({ type: "error", text: e.message }); } finally { setRetrying(false); }
+  };
+  const sendNow = async () => {
+    if (!selTemplate) return onNotice({ type: "error", text: "Select a template first." });
+    if (!selectedRows.length) return onNotice({ type: "error", text: "No recipients selected." });
+    if (cChannel === "email" && selectedEmail === 0) return onNotice({ type: "error", text: "No selected contact has a valid email." });
+    if (cChannel === "whatsapp" && selectedPhone === 0) return onNotice({ type: "error", text: "No selected contact has a phone number." });
+    if (sendingRef.current) return onNotice({ type: "error", text: "A send is already in progress." });
+    const ok = window.confirm(`Send to ${selectedForChannel || selectedRows.length} recipient(s) via ${cChannel}? This cannot be undone.`);
+    if (!ok) return;
+    sendingRef.current = true;
+    setSendStep("progress");
+    try {
+      if (cChannel === "both") await sendBoth();
+      else await createCampaign(selectedRows, true);
+    } finally { sendingRef.current = false; }
+  };
+  const scheduleReview = async () => {
+    if (!selTemplate || !selectedRows.length) return onNotice({ type: "error", text: "Select a template and contacts first." });
+    setSendStep("progress");
+    if (cChannel === "both") await sendBoth(); else await createCampaign(selectedRows, false);
+  };
   const sumWith = (key) => stats ? (stats[key] || 0) : 0;
   const totalCompanies = stats?.total || 0;
 
@@ -1889,101 +1951,170 @@ export function MarketingCompanies({ onNotice }) {
       {mTab==="library" && <MarketingLibrary onNotice={onNotice} orders={mOrders} videos={mVideos.length?mVideos:CHANNEL_VIDEOS} />}
       {mTab==="signals" && <MarketingSignals onNotice={onNotice} />}
       {mTab==="events" && <MarketingEvents onNotice={onNotice} />}
-      {mTab==="send" && <div className="outreach-send-compact">
-      <section className="panel outreach-send-top" aria-label="Send and progress">
-        <div className="panel-heading"><div><div className="section-kicker">SEND ? PROGRESS</div><h3>Campaign send</h3></div>
-          <div className="button-row"><select value={cChannel} onChange={(e)=>{setCChannel(e.target.value);setSelTemplate(null);}} aria-label="Channel"><option value="email">Email</option><option value="whatsapp">WhatsApp</option><option value="both">Both (email + WhatsApp)</option></select>
-          <input className="campaign-name" value={cName} onChange={(e)=>setCName(e.target.value)} placeholder="Campaign name" />
-          {selTemplate && selectedRows.length>0 ? (cChannel==="both"
-            ? <button className="primary-button" onClick={sendBoth} disabled={cBusy}><Send size={15}/> {cBusy?"Working...":`Create campaigns (${selectedEmail}? ${selectedPhone}WA)`}</button>
-            : <><button className="secondary-button" onClick={createSelectedCampaign} disabled={cBusy || selectedForChannel===0}>{cBusy?"Working...":`Send for review (${selectedForChannel})`}</button><button className="primary-button" onClick={()=>createCampaign(selectedRows,true)} disabled={cBusy || selectedForChannel===0}><Send size={15}/> {cBusy?"Working...":`Send now (${selectedForChannel})`}</button></>)
-          : <button className="primary-button" disabled><Send size={15}/> Select template + contacts</button>}
-          <button className="secondary-button" onClick={()=>setShowTplPicker(true)}><FileText size={14}/> {selTemplate ? "Change template" : "Choose template"}</button>
-          {cDetail && <><button className="secondary-button" onClick={approveCampaign} disabled={cBusy||cDetail.status!=="pending_review"}>Approve</button><button className="secondary-button" onClick={sendCampaign} disabled={cBusy||cDetail.status!=="approved"}>Send approved</button><button className="icon-button" onClick={()=>openCampaign(cDetail.id)} title="Refresh"><RefreshCw size={14}/></button></>}</div></div>
-        <div className="outreach-chip-row">
-          <span className="outreach-chip"><b>Template:</b> {selTemplate ? <>{selTemplate.name} <button className="icon-button" style={{padding:0,marginLeft:4}} onClick={()=>setSelTemplate(null)} title="Clear">?</button></> : "none selected"}</span>
-          <span className="outreach-chip"><b>Selected:</b> {selectedRows.length} / {fmtNum(totalCompanies)}</span>
-          <span className="outreach-chip">{selectedEmail} email</span><span className="outreach-chip">{selectedPhone} phone</span><span className="outreach-chip">{selectedForChannel} reachable via {cChannel}</span>{(attachImage||attachVideo) && <span className="outreach-chip">{[attachImage&&"???",attachVideo&&"??"].filter(Boolean).join(" ")}</span>}
-          {cDetail && <><span className="outreach-chip"><b>{cDetail.status}</b></span><span className="outreach-chip">sent {cDetail.sent_count}/{cDetail.total}</span><span className="outreach-chip">viewed {cDetail.opened_count||0}</span><span className="outreach-chip">failed {cDetail.failed_count}</span><span className="outreach-chip">progress {cDetail.total?Math.round(((cDetail.sent_count+cDetail.failed_count)/cDetail.total)*100):0}%</span><button className="icon-button" title="Close progress" onClick={()=>setCDetail(null)}><X size={14}/></button></>}
+      {mTab==="send" && <div className="outreach-flow">
+      {sendStep === "select" && <section className="panel" aria-label="Select contacts">
+        <div className="panel-heading">
+          <div><div className="section-kicker">STEP 1 ? SYNC &amp; SELECT CONTACTS</div><h2>Outreach recipients</h2>
+            <p className="muted">Total {fmtNum(totalCompanies)} ? Showing {rows.length} ? <b>{selectedRows.length} selected</b></p></div>
+          <div className="button-row">
+            <button className="secondary-button" onClick={syncAllSources} disabled={busy}><Database size={15}/> {busy?"Syncing?":"Sync all from GCS"}</button>
+            <button className="secondary-button" onClick={() => { load(); loadSources(); }}><RefreshCw size={15}/> Refresh</button>
+          </div>
         </div>
-        {selectedRows.length>0 && <div className="outreach-chip-row" style={{marginTop:4}}><small className="muted">Contacts:</small>{selectedRows.slice(0,8).map((r)=>(<span key={r.id} className="contact-tag">{r.contact_name||r.company} <button className="icon-button" style={{padding:0}} onClick={()=>toggleSelect(r.id)}>?</button></span>))}{selectedRows.length>8 && <small className="muted">+{selectedRows.length-8} more</small>}</div>}
-      </section>
+        <div className="source-tiles" aria-label="Contact source files">
+          {sources.map((f)=>(<div className={`source-tile ${f.processed?"done":""}`} key={f.file} title={f.path||f.file}>
+            <b>{f.short}</b><small>{f.size_mb?`${f.size_mb} MB ? `:""}{f.updated||"local sync"}</small>
+            <span className="contact-tag">{f.processed?`? ${f.rows_in_db} rows`:"not synced"}</span>
+            {f.in_gcs && <button className="secondary-button" disabled={busy} onClick={()=>syncOne(f.path)}><Database size={12}/> Sync</button>}
+          </div>))}
+          {!sources.length && <small className="muted">No files in sales-contacts/ yet.</small>}
+        </div>
 
-      <div className="outreach-workspace">
-        <section className="panel outreach-pane" aria-label="Templates">
-          <div className="panel-heading"><div><div className="section-kicker">TEMPLATES</div><h3>Message windows</h3></div><button className="secondary-button" onClick={syncTemplates} disabled={cBusy}><Database size={14}/></button></div>
-          <div className="studio-grid">
-            {curatedFor(cChannel).map((m)=>(<article className="studio-card" key={m.id}><div className="studio-card-top"><span className="template-channel">curated</span><b>{m.title}</b></div><p className="studio-text">{fillMsg(m.text, selectedRows[0]||{}).slice(0,140)}</p><div className="button-row studio-actions"><button className="secondary-button" onClick={()=>copyText(fillMsg(m.text, selectedRows[0]||{}))}><Copy size={13}/></button>{cChannel!=="email" && <button className="primary-button" onClick={()=>window.open(whatsappHref(fillMsg(m.text, selectedRows[0]||{})+(attachImage?`\n\n\u{1F5BC}\uFE0F ${attachImage}`:"")+(attachVideo?`\n\n\u{1F3AC} ${attachVideo}`:""), selectedRows[0]?.phone||""),"_blank","noopener")}><MessageCircle size={13}/></button>}</div></article>))}
-            {visibleTemplates.map((tt)=>(<article className={`studio-card ${selTemplate?.id===tt.id?"tick-selected":""}`} key={tt.id} onClick={()=> (selTemplate?.id===tt.id?setSelTemplate(null):pickTemplate(tt))} role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter") (selTemplate?.id===tt.id?setSelTemplate(null):pickTemplate(tt));}}><div className="studio-card-top"><span className="template-channel">{tt.channel}</span><b>{tt.name}</b>{selTemplate?.id===tt.id && <span className="contact-tag">?</span>}</div><p className="studio-text">{tt.subject?<><b>{tt.subject}</b><br/></>:null}{htmlToText(tt.body).slice(0,120)}</p><div className="button-row studio-actions" onClick={(e)=>e.stopPropagation()}><button className="secondary-button" onClick={()=>setPreviewTemplate(tt)}><Eye size={13}/> View</button><button className={selTemplate?.id===tt.id?"primary-button":"secondary-button"} onClick={()=> (selTemplate?.id===tt.id?setSelTemplate(null):pickTemplate(tt))}>{selTemplate?.id===tt.id?"Selected":"Select"}</button></div></article>))}
-            {!visibleTemplates.length && !curatedFor(cChannel).length && <small className="muted">No templates for {cChannel}.</small>}
-          </div>
-          <div className="panel-heading" style={{marginTop:12}}><div><div className="section-kicker">POSTERS / IMAGES</div><h3>Attach to WhatsApp &amp; Mail</h3></div><button className="secondary-button" onClick={()=>imgUploadRef.current&&imgUploadRef.current.click()} disabled={busy}><UploadCloud size={13}/> Upload</button></div>
-          <input ref={imgUploadRef} type="file" accept="image/*" hidden onChange={uploadImageTemplate} />
-          <div className="image-strip">
-            {imageTemplates.map((img)=>(<button type="button" className={`image-tile ${attachImage===img.url?"tick-selected":""}`} key={img.path} onClick={()=>setAttachImage(attachImage===img.url?"":img.url)} title={img.name}>
-              <img src={img.url} alt={img.name} loading="lazy" />
-              <span>{img.name.replace(/\.[a-z]+$/i,"").slice(0,16)}</span>
-            </button>))}
-            {!imageTemplates.length && <small className="muted">No posters in sales-image-templates yet ? Upload one (goes to that GCS folder) or pick after GA/media sync.</small>}
-          </div>
-          {attachImage && <div className="outreach-chip-row" style={{marginTop:6}}><span className="contact-tag">Attached to send ? <button className="icon-button" style={{padding:0}} onClick={()=>setAttachImage("")}>?</button></span></div>}
-          <div className="panel-heading" style={{marginTop:12}}><div><div className="section-kicker">CHANNEL VIDEOS</div><h3>Attach a reel to WhatsApp &amp; Mail</h3></div></div>
-          <div className="video-strip">
-            {[...CHANNEL_VIDEOS, ...(defaultVideos||[]).map((v)=>({ title: v.name||v.title, link: v.url||v.link }))].map((v,i)=>(<button type="button" key={`${v.link}-${i}`} className={`video-chip ${attachVideo===v.link?"tick-selected":""}`} onClick={()=>setAttachVideo(attachVideo===v.link?"":v.link)} title={v.note||v.link}>
-              <Video size={13}/> <span>{v.title}</span>
-            </button>))}
-          </div>
-          {attachVideo && <div className="outreach-chip-row" style={{marginTop:6}}><span className="contact-tag">Video attached ? <button className="icon-button" style={{padding:0}} onClick={()=>setAttachVideo("")}>?</button></span></div>}
-        </section>
+        <div className="search-field" style={{marginTop:10}}><Search size={16}/><input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="Search company, person, email or phone" aria-label="Search contacts" /></div>
+        <button className="link-button filters-toggle" onClick={()=>setFiltersOpen((v)=>!v)} aria-expanded={filtersOpen} aria-controls="outreach-filters">{filtersOpen?"Hide filters":"Show filters"}</button>
+        {filtersOpen && <div id="outreach-filters" className="filter-row">
+          <label>Category<select value={categoryFilter} onChange={(e)=>setCategoryFilter(e.target.value)} aria-label="Filter by category"><option value="">All categories</option>{categories.map((i)=><option key={i} value={i}>{i}</option>)}</select></label>
+          <label>Status<select value={statusFilter} onChange={(e)=>setStatusFilter(e.target.value)} aria-label="Filter by status"><option value="">All statuses</option>{statuses.map((i)=><option key={i} value={i}>{i}</option>)}</select></label>
+          <label>Show<select value={limit} onChange={(e)=>setLimit(Number(e.target.value))} aria-label="Rows shown">{[25,50,100,250].map((n)=><option key={n} value={n}>{n}</option>)}</select></label>
+        </div>}
 
-        <section className="panel outreach-pane" aria-label="Contacts">
-          <div className="panel-heading"><div><div className="section-kicker">CONTACTS ? gs://kalika_enterprises/sales-contacts</div><h3>Select & act</h3></div><div className="button-row" style={{gap:6}}>{sources.some((x)=>x.in_gcs) && <button className="secondary-button" disabled={busy} onClick={syncAllSources}><Database size={12}/> Sync all</button>}<label style={{fontSize:12}}><input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}/> visible</label></div></div>
-          <div className="source-tiles" aria-label="Contact source files">
-            {sources.map((f)=>(<div className={`source-tile ${f.processed?"done":""}`} key={f.file} title={f.path||f.file}>
-              <b>{f.short}</b><small>{f.size_mb?`${f.size_mb} MB ? `:""}{f.updated}{f.in_gcs?"":" ? local"}</small>
-              <span className="contact-tag">{f.processed?`? ${f.rows_in_db} rows`:"not synced"}</span>
-              {f.in_gcs && <button className="secondary-button" disabled={busy} onClick={()=>syncOne(f.path)}><Database size={12}/> Sync</button>}
-            </div>))}
-            {!sources.length && <small className="muted">No files in sales-contacts/ yet.</small>}
-          </div>
-          <div className="table-toolbar"><div className="search-field"><Search size={15}/><input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="Search"/></div>
-            <select value={categoryFilter} onChange={(e)=>setCategoryFilter(e.target.value)}><option value="">Category</option>{categories.map((i)=><option key={i} value={i}>{i}</option>)}</select>
-            <select value={statusFilter} onChange={(e)=>setStatusFilter(e.target.value)}><option value="">Status</option>{statuses.map((i)=><option key={i} value={i}>{i}</option>)}</select>
-            <select value={limit} onChange={(e)=>setLimit(Number(e.target.value))}>{[25,50,100,250].map((s)=><option key={s} value={s}>{s}</option>)}</select></div>
-          <div className="table-wrap"><table><thead><tr><th></th><th>Company / person</th><th>Status / last</th></tr></thead><tbody>
-            {rows.map((row)=>{ const act=activity[row.id]; const msgText=fillMsg(selTemplate?htmlToText(selTemplate.body):"Hi from Kalika Enterprises", row) + (attachImage?`\n\n\u{1F5BC}\uFE0F ${attachImage}`:"") + (attachVideo?`\n\n\u{1F3AC} ${attachVideo}`:""); return (
+        <div className="select-toolbar" role="group" aria-label="Selection controls">
+          <button className="secondary-button" onClick={()=>toggleSelectAll(true)} disabled={!rows.length}><Check size={14}/> Select all</button>
+          <button className="secondary-button" onClick={selectPage} disabled={!rows.length}>Select page</button>
+          <button className="secondary-button" onClick={clearSelection} disabled={!selectedRows.length}>Clear ({selectedRows.length})</button>
+          {multiSelect && <span className="contact-tag">Multi-select on</span>}
+          <button className="primary-button" onClick={continueToConfig} disabled={!selectedRows.length} style={{marginLeft:"auto"}}>Continue ({selectedRows.length}) ?</button>
+        </div>
+
+        {selectedRows.length>0 && <div className="selected-names" aria-label="Selected contacts" aria-live="polite">
+          {selectedRows.slice(0,40).map((r)=>(<span className="contact-tag" key={r.id}>{r.contact_name||r.company}<button className="icon-button" style={{padding:"0 4px",marginLeft:4}} onClick={()=>toggleSelect(r.id)} aria-label={`Remove ${r.contact_name||r.company}`}>×</button></span>))}
+          {selectedRows.length>40 && <small className="muted">+{selectedRows.length-40} more</small>}
+        </div>}
+
+        {/* Desktop: table */}
+        <div className="contact-table" role="region" aria-label="Contact list (table)" tabIndex={0}>
+          <table><thead><tr>
+            <th aria-label="Select all visible"><input type="checkbox" checked={allVisibleSelected} onChange={(e)=>toggleSelectAll(e.target.checked)} /></th>
+            <th>Company / Person</th><th>Email</th><th>Phone</th><th>Category</th><th>Status</th><th>Actions</th>
+          </tr></thead><tbody>
+            {rows.map((row)=>{ const act=activity[row.id]; const msgText=fillMsg(selTemplate?htmlToText(selTemplate.body):"Hi from Kalika Enterprises", row) + (attachImage?`\n\n??? ${attachImage}`:"") + (attachVideo?`\n\n?? ${attachVideo}`:""); return (
               <tr key={row.id} className={selectedIds.has(row.id)?"tick-selected":""}>
-                <td><input type="checkbox" checked={selectedIds.has(row.id)} onChange={()=>toggleSelect(row.id)}/></td>
-                <td><b>{row.company}</b><br/><small className="muted">{row.contact_name||"-"} ? {row.email||"no email"}{row.phone?` ? ${row.phone}`:""}{row.source_file?` ? ${row.source_file.replace(/\.[a-z]+$/i,"").slice(0,18)}`:""}</small>
-                  <div className="reach-actions" aria-label="Contact actions">{row.phone && <a className="secondary-button" href={`tel:${row.phone}`}>Call</a>}{row.phone && <a className="secondary-button" href={whatsappHref(msgText,row.phone)} target="_blank" rel="noreferrer">Msg</a>}{row.email && <a className="secondary-button" href={`mailto:${row.email}?subject=${encodeURIComponent(selTemplate?.subject||"Kalika Enterprises")}&body=${encodeURIComponent(msgText)}`}>Mail</a>}</div>
-                  <div className="inline-edit">
-                    <input value={editing[row.id]?.call_status ?? row.call_status ?? ""} onChange={(e)=>setEditing((p)=>({...p,[row.id]:{...(p[row.id]||{}),call_status:e.target.value}}))} onBlur={(e)=>{if(e.target.value!==row.call_status) updateField(row.id,"call_status",e.target.value);}} placeholder="Call comments" />
-                    <input type="date" value={row.follow_up_date||""} onChange={(e)=>updateField(row.id,"follow_up_date",e.target.value)} />
-                    <textarea rows={1} value={editing[row.id]?.requirements ?? row.requirements ?? ""} onChange={(e)=>setEditing((p)=>({...p,[row.id]:{...(p[row.id]||{}),requirements:e.target.value}}))} onBlur={(e)=>{if(e.target.value!==row.requirements) updateField(row.id,"requirements",e.target.value);}} placeholder="Requirements / discussion" />
-                    <textarea rows={1} value={editing[row.id]?.next_action ?? row.next_action ?? ""} onChange={(e)=>setEditing((p)=>({...p,[row.id]:{...(p[row.id]||{}),next_action:e.target.value}}))} onBlur={(e)=>{if(e.target.value!==row.next_action) updateField(row.id,"next_action",e.target.value);}} placeholder="Follow-up msg / next action" />
-                  </div>
-                </td>
-                <td><small>{(row.call_status||"pending").slice(0,18)}</small><br/>{act ? <span className="activity-badges"><span className="contact-tag">?{act.sent}</span><span className="contact-tag">??{act.opened||0}</span></span> : <small className="muted">?</small>}</td>
+                <td><input type="checkbox" checked={selectedIds.has(row.id)} onChange={()=>toggleSelect(row.id,row)} aria-label={`Select ${row.company}`} /></td>
+                <td><b>{row.company}</b><br/><small className="muted">{row.contact_name||"Not Available"}</small></td>
+                <td><small>{row.email||"Not Available"}</small></td>
+                <td><small>{row.phone||"Not Available"}</small></td>
+                <td><small>{row.category||"Not Available"}</small></td>
+                <td><small>{row.call_status||"pending"}</small><br/>{act && <span className="activity-badges"><span className="contact-tag">?{act.sent}</span><span className="contact-tag">??{act.opened||0}</span></span>}</td>
+                <td><div className="reach-actions">
+                  {row.phone && <a className="secondary-button" href={`tel:${row.phone}`}>Call</a>}
+                  {row.phone && <a className="secondary-button" href={whatsappHref(msgText,row.phone)} target="_blank" rel="noreferrer">Msg</a>}
+                  {row.email && <a className="secondary-button" href={`mailto:${row.email}?subject=${encodeURIComponent(selTemplate?.subject||"Kalika Enterprises")}&body=${encodeURIComponent(msgText)}`}>Mail</a>}
+                </div></td>
               </tr>); })}
-            {!rows.length && <tr><td colSpan={3}><small className="muted">No contacts.</small></td></tr>}
-          </tbody></table></div>
-        </section>
+            {!rows.length && <tr><td colSpan={7}><div className="empty-state"><Users size={22}/><p>No contacts. Use ?Sync all from GCS?.</p></div></td></tr>}
+          </tbody></table>
+        </div>
 
-        <section className="panel outreach-pane" aria-label="Campaign details">
-          <div className="panel-heading"><div><div className="section-kicker">PROGRESS & DETAILS</div><h3>Sent / viewed</h3></div><button className="icon-button" onClick={loadCampaigns} title="Refresh"><RefreshCw size={14}/></button></div>
-          {cDetail ? (<div>
-            <div className="outreach-chip-row"><span className="contact-tag">{cDetail.name}</span><span className="contact-tag">{cDetail.status}</span><span className="contact-tag">{cDetail.channel}</span></div>
-            <div className="marketing-stat-grid" style={{marginTop:6}}>{[["Total",cDetail.total],["Sent",cDetail.sent_count],["Viewed",cDetail.opened_count||0],["Failed",cDetail.failed_count],["Queued",Math.max(0,(cDetail.total||0)-(cDetail.sent_count||0)-(cDetail.failed_count||0))]].map(([l,v])=><div className="marketing-stat" key={l}><small>{l}</small><b>{fmtNum(v)}</b></div>)}</div>
-            <div className="mini-chart-row" style={{margin:"6px 0"}}><span>Progress</span><span className="mini-bar"><i style={{width:`${cDetail.total?Math.round(((cDetail.sent_count+cDetail.failed_count)/cDetail.total)*100):0}%`}}/></span><strong>{cDetail.total?Math.round(((cDetail.sent_count+cDetail.failed_count)/cDetail.total)*100):0}%</strong></div>
-            <small className="muted">Opened/viewed via tracking where supported; delivery ?received? not verifiable for all channels.</small>
-            <div className="table-wrap" style={{marginTop:6}}><table><thead><tr><th>Contact</th><th>Status</th><th>Sent</th><th>Viewed</th></tr></thead><tbody>
-              {(cDetail.messages||[]).slice(0,50).map((m)=>(<tr key={m.id}><td><small><b>{m.contact_name||m.contact_id}</b></small></td><td><span className="contact-tag">{m.status}</span></td><td><small>{m.sent_at?String(m.sent_at).slice(5,16).replace("T"," "):"?"}</small></td><td><small>{m.opened_at?String(m.opened_at).slice(5,16).replace("T"," "):(m.status==="opened"?"yes":"?")}</small></td></tr>))}
-            </tbody></table></div>
-          </div>) : <small className="muted">Create/approve/send a campaign to see progress, or click one below.</small>}
-          <h4 style={{margin:"10px 0 4px"}}>History</h4>
-          <div className="contact-list" role="list">{campaigns.slice(0,8).map((cmp)=>(<button key={cmp.id} className="contact-row" style={{width:"100%",textAlign:"left",border:0,background:"transparent",padding:"4px 0"}} onClick={()=>openCampaign(cmp.id)}><span className="contact-main"><b>{cmp.name}</b><small>{cmp.channel} ? sent {cmp.sent_count||0} ? viewed {cmp.opened_count||0} ? fail {cmp.failed_count||0}</small></span><span className="contact-tag">{cmp.status}</span></button>))}{!campaigns.length && <small className="muted">No campaigns.</small>}</div>
-        </section>
-      </div>
+        {/* Mobile: cards */}
+        <div className="contact-cards" aria-label="Contact list (cards)">
+          {rows.map((row)=>{ const act=activity[row.id]; const msgText=fillMsg(selTemplate?htmlToText(selTemplate.body):"Hi from Kalika Enterprises", row) + (attachImage?`\n\n??? ${attachImage}`:"") + (attachVideo?`\n\n?? ${attachVideo}`:""); return (
+            <div key={row.id} className={`contact-card ${selectedIds.has(row.id)?"tick-selected":""}`} onTouchStart={(ev)=>pressStart(row,ev)} onTouchMove={pressMove} onTouchEnd={pressEnd} onTouchCancel={pressEnd} onClick={()=>{ if(multiSelect) toggleSelect(row.id,row); }} role="button" tabIndex={0} aria-pressed={selectedIds.has(row.id)} onKeyDown={(e)=>{ if(e.key===" "||e.key==="Enter"){ e.preventDefault(); toggleSelect(row.id,row); } }}>
+              <label className="contact-card-check" onClick={(e)=>e.stopPropagation()}>
+                <input type="checkbox" checked={selectedIds.has(row.id)} onChange={()=>toggleSelect(row.id,row)} aria-label={`Select ${row.company}`} />
+              </label>
+              <div className="contact-card-body">
+                <b>{row.company}</b>
+                <small>{row.contact_name||"Not Available"}</small>
+                <small>Email: {row.email||"Not Available"}</small>
+                <small>Phone: {row.phone||"Not Available"}</small>
+                <small>Category: {row.category||"Not Available"} ? Status: {row.call_status||"pending"}</small>
+                {act && <div className="activity-badges"><span className="contact-tag">? {act.sent}</span><span className="contact-tag">?? {act.opened||0}</span></div>}
+                <div className="reach-actions" onClick={(e)=>e.stopPropagation()}>
+                  {row.phone && <a className="secondary-button" href={`tel:${row.phone}`}>Call</a>}
+                  {row.phone && <a className="secondary-button" href={whatsappHref(msgText,row.phone)} target="_blank" rel="noreferrer">Msg</a>}
+                  {row.email && <a className="secondary-button" href={`mailto:${row.email}?subject=${encodeURIComponent(selTemplate?.subject||"Kalika Enterprises")}&body=${encodeURIComponent(msgText)}`}>Mail</a>}
+                </div>
+              </div>
+            </div>); })}
+          {!rows.length && <div className="empty-state"><Users size={22}/><p>No contacts found.</p></div>}
+        </div>
+        <p className="mobile-hint muted">Tip: long-press a contact to start multi-select; tap the checkbox on any device.</p>
+      </section>}
+
+      {sendStep === "configure" && <section className="panel" aria-label="Configure campaign">
+        <div className="panel-heading">
+          <div><div className="section-kicker">STEP 2 ? CONFIGURE CAMPAIGN</div><h2>Campaign setup</h2></div>
+          <button className="secondary-button" onClick={()=>setSendStep("select")}><Search size={14}/> ? Back to contacts</button>
+        </div>
+        <div className="form-row"><label>Channel<select value={cChannel} onChange={(e)=>{setCChannel(e.target.value);setSelTemplate(null);}} aria-label="Channel"><option value="email">Email</option><option value="whatsapp">WhatsApp</option><option value="both">Both (email + WhatsApp)</option></select></label>
+          <label>Campaign name<input className="campaign-name" value={cName} onChange={(e)=>setCName(e.target.value)} aria-label="Campaign name" /></label>
+          <label className="switch"><input type="checkbox" checked={useAi} onChange={(e)=>setUseAi(e.target.checked)} /> Personalize with AI</label>
+        </div>
+        <div className="outreach-chip-row">
+          <span className="outreach-chip"><b>Recipients:</b> {selectedRows.length}</span>
+          <span className="outreach-chip">{selectedEmail} with email</span>
+          <span className="outreach-chip">{selectedPhone} with phone</span>
+          <span className="outreach-chip"><b>Will send:</b> {selectedForChannel || selectedRows.length}</span>
+        </div>
+        <div className="button-row" style={{margin:"8px 0"}}><button className="primary-button" onClick={()=>setShowTplPicker(true)}><FileText size={14}/> {selTemplate ? "Change template" : "Choose template"}</button>
+          <button className="secondary-button" onClick={()=>imgUploadRef.current&&imgUploadRef.current.click()} disabled={busy}><UploadCloud size={14}/> Image</button>
+          <button className="secondary-button" onClick={()=>{ setAttachVideo(CHANNEL_VIDEOS[0]?.link||""); }}><Video size={14}/> Video</button></div>
+        <input ref={imgUploadRef} type="file" accept="image/*" hidden onChange={uploadImageTemplate} />
+        <div className="outreach-chip-row">
+          <span className="outreach-chip">Template: {selTemplate?.name || <b>none</b>}</span>
+          <span className="outreach-chip">🖼️ {attachImage ? "image attached" : "no image"}</span>
+          <span className="outreach-chip">🎬 {attachVideo ? "video attached" : "no video"}</span>
+        </div>
+        <div className="configure-sub">
+          <b className="sub-label">Poster</b>
+          <div className="image-strip">
+            {imageTemplates.map((img)=>(<button type="button" className={`image-tile ${attachImage===img.url?"tick-selected":""}`} key={img.path} onClick={()=>setAttachImage(attachImage===img.url?"":img.url)} title={img.name}><img src={img.url} alt={img.name} loading="lazy"/><span>{img.name.replace(/\.[a-z]+$/i,"").slice(0,14)}</span></button>))}
+            {!imageTemplates.length && <small className="muted">No posters in sales-image-templates — use Image above to upload.</small>}
+          </div>
+          <b className="sub-label">Video</b>
+          <div className="video-strip">
+            {[...CHANNEL_VIDEOS, ...(defaultVideos||[]).map((v)=>({ title: v.name||v.title, link: v.url||v.link }))].map((v,i)=>(<button type="button" key={`${v.link}-${i}`} className={`video-chip ${attachVideo===v.link?"tick-selected":""}`} onClick={()=>setAttachVideo(attachVideo===v.link?"":v.link)}><Video size={13}/> <span>{v.title}</span></button>))}
+          </div>
+        </div>
+        <details className="marketing-breakdown" open><summary>Preview recipients ({selectedRows.length})</summary>
+          <div className="preview-list">{selectedRows.slice(0,60).map((r)=>(<div className="preview-item" key={r.id}><b>{r.contact_name||r.company}</b><small>{r.email||"No email"}{r.phone?` ? ${r.phone}`:""}</small></div>))}{selectedRows.length>60 && <small className="muted">+{selectedRows.length-60} more</small>}</div>
+        </details>
+        {selTemplate && <details className="marketing-breakdown"><summary>Preview message</summary><div className="studio-text">{(fillMsg(htmlToText(selTemplate.body), selectedRows[0]||{})||"").slice(0,500)}</div></details>}
+        <div className="send-actions">
+          <button className="primary-button" onClick={sendNow} disabled={cBusy || !selTemplate}><Send size={15}/> Send now</button>
+          <button className="secondary-button" onClick={scheduleReview} disabled={cBusy || !selTemplate}>Send for review</button>
+          {cChannel==="both" && <small className="muted">Creates an email + a WhatsApp campaign.</small>}
+        </div>
+      </section>}
+
+      {sendStep === "progress" && <section className="panel" aria-label="Campaign progress">
+        <div className="panel-heading"><div><div className="section-kicker">STEP 3 ? SENDING PROGRESS</div><h2>{cDetail ? cDetail.name : "Campaign"}</h2></div>
+          <div className="button-row"><button className="secondary-button" onClick={()=>setSendStep("select")}>? New campaign</button>
+          {cDetail && <><button className="secondary-button" onClick={approveCampaign} disabled={cBusy||cDetail.status!=="pending_review"}>Approve</button><button className="primary-button" onClick={sendCampaign} disabled={cBusy||cDetail.status!=="approved"}><Send size={14}/> Send approved</button><button className="icon-button" onClick={()=>openCampaign(cDetail.id)} title="Refresh progress"><RefreshCw size={15}/></button></>}</div></div>
+        {cDetail ? (<>
+          <div aria-live="polite" className="visually-hidden">Sending {cDetail.sent_count} of {cDetail.total}, {cDetail.failed_count} failed, {cDetail.opened_count||0} viewed.</div>
+          <div className="marketing-stat-grid">{[["Total",cDetail.total],["Sent",cDetail.sent_count],["Pending",Math.max(0,cDetail.total-cDetail.sent_count-cDetail.failed_count)],["Viewed",cDetail.opened_count||0],["Failed",cDetail.failed_count]].map(([l,v])=><div className="marketing-stat" key={l}><small>{l}</small><b>{fmtNum(v)}</b></div>)}</div>
+          <div className="mini-chart-row" style={{margin:"8px 0"}}><span>Progress</span><span className="mini-bar"><i style={{width:`${progressPct}%`}}/></span><strong>{progressPct}%</strong></div>
+          {cDetail.status==="pending_review" && <p className="muted">Messages generated for review. Approve then send, or go back and use ?Send now?.</p>}
+          {cDetail.failed_count>0 && <div className="button-row" style={{margin:"6px 0"}}><button className="secondary-button" onClick={retryCampaign} disabled={retrying}><RefreshCw size={14}/> {retrying?"Retrying?":`Retry ${cDetail.failed_count} failed`}</button></div>}
+          <div className="table-wrap"><table><thead><tr><th>Contact</th><th>Status</th><th>Sent</th><th>Viewed</th><th>Error</th></tr></thead><tbody>
+            {(cDetail.messages||[]).slice(0,80).map((m)=>(<tr key={m.id}><td><b>{m.contact_name||m.contact_id}</b></td><td><span className={`contact-tag status-${m.status}`}>{m.status}</span></td><td><small>{m.sent_at?String(m.sent_at).slice(5,16).replace("T"," "):"?"}</small></td><td><small>{m.opened_at?String(m.opened_at).slice(5,16).replace("T"," "):(m.status==="opened"?"yes":"?")}</small></td><td><small className="muted">{m.error||"?"}</small></td></tr>))}
+          </tbody></table></div>
+          <small className="muted">Opened/viewed tracked via email open pixel where supported; delivery ?received? is not verifiable for all channels. Progress auto-refreshes every 12s.</small>
+        </>) : <p className="muted">No campaign yet. Go back, select contacts, configure and send.</p>}
+        <h4 style={{margin:"12px 0 4px"}}>Campaign history</h4>
+        <div className="contact-list" role="list">{campaigns.slice(0,10).map((cmp)=>(<button key={cmp.id} className="contact-row" style={{width:"100%",textAlign:"left",border:0,background:"transparent",padding:"4px 0"}} onClick={()=>openCampaign(cmp.id)}><span className="contact-main"><b>{cmp.name}</b><small>{cmp.channel} ? sent {cmp.sent_count||0} ? viewed {cmp.opened_count||0} ? failed {cmp.failed_count||0}</small></span><span className="contact-tag">{cmp.status}</span></button>))}{!campaigns.length && <small className="muted">No campaigns.</small>}</div>
+      </section>}
+
+      {/* sticky mobile action bar */}
+      {sendStep === "select" && selectedRows.length>0 && (
+        <div className="mobile-actionbar" role="region" aria-label="Selected contacts">
+          <span><b>{selectedRows.length}</b> selected ? {selectedEmail}? {selectedPhone}??</span>
+          <div className="button-row">
+            <button className="secondary-button" onClick={clearSelection}>Clear</button>
+            <button className="primary-button" onClick={continueToConfig}>Continue ?</button>
+          </div>
+        </div>)}
     </div>}
 
             {showTplPicker && (<div className="modal-overlay" onClick={()=>setShowTplPicker(false)}>

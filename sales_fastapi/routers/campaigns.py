@@ -436,9 +436,22 @@ def send_campaign(
             message.error = str(exc)[:500]
             failed += 1
 
-    campaign.sent_count += sent
-    campaign.failed_count += failed
-    campaign.status = "completed" if failed == 0 else "failed"
+    db.commit()  # persist per-message statuses before recomputing rollup counts
+    campaign.sent_count = (
+        db.query(CampaignMessage)
+        .filter(CampaignMessage.campaign_id == campaign.id, CampaignMessage.status.in_(["sent", "opened"]))
+        .count()
+    )
+    campaign.failed_count = (
+        db.query(CampaignMessage)
+        .filter(CampaignMessage.campaign_id == campaign.id, CampaignMessage.status == "failed")
+        .count()
+    )
+    processed = campaign.sent_count + campaign.failed_count
+    if processed >= campaign.total:
+        campaign.status = "completed" if campaign.failed_count == 0 else "failed"
+    else:
+        campaign.status = "partial"
     db.commit()
     db.refresh(campaign)
 
@@ -456,6 +469,27 @@ def send_campaign(
     return CampaignSendResult(
         campaign_id=campaign.id, status=campaign.status, sent=sent, failed=failed, skipped=skipped
     )
+
+
+@router.post("/{campaign_id}/retry", response_model=CampaignSendResult)
+def retry_failed(
+    campaign_id: int, request: Request, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    """Re-queue and re-send only the FAILED messages of a campaign."""
+    campaign = (
+        db.query(Campaign).filter(Campaign.id == campaign_id, Campaign.user_id == user.id).first()
+    )
+    if campaign is None:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    flipped = (
+        db.query(CampaignMessage)
+        .filter(CampaignMessage.campaign_id == campaign_id, CampaignMessage.status == "failed")
+        .update({"status": "approved", "error": ""}, synchronize_session=False)
+    )
+    if not flipped:
+        return CampaignSendResult(campaign_id=campaign.id, status=campaign.status, sent=0, failed=0, skipped=0)
+    db.commit()
+    return send_campaign(campaign_id, request, user, db)
 
 
 @router.get("/{campaign_id}/open/{message_id}")
