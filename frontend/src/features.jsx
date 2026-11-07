@@ -1432,11 +1432,6 @@ export function MarketingCompanies({ onNotice }) {
   };
   useEffect(() => { load(); loadActivity(); loadSources(); loadImageTemplates(); }, []);
 
-  useEffect(() => {
-    if (!cDetail) return undefined;
-    const id = setInterval(() => openCampaign(cDetail.id), 12000);
-    return () => clearInterval(id);
-  }, [cDetail?.id, cDetail?.status, cDetail?.sent_count, cDetail?.opened_count]);
 
   useEffect(() => {
     request("/templates")
@@ -1804,6 +1799,12 @@ export function MarketingCompanies({ onNotice }) {
     await createCampaign(selectedRows);
   };
   const openCampaign = async (id) => { try { setCDetail(await request(`/campaigns/${id}`)); } catch (e) { onNotice({ type: "error", text: e.message }); } };
+
+  useEffect(() => {
+    if (!cDetail) return undefined;
+    const id = setInterval(() => openCampaign(cDetail.id), 12000);
+    return () => clearInterval(id);
+  }, [cDetail?.id, cDetail?.status, cDetail?.sent_count, cDetail?.opened_count]);
   const approveCampaign = async () => {
     if (!cDetail) return; setCBusy(true);
     try { setCDetail(await request(`/campaigns/${cDetail.id}/approve`, { method: "POST" })); onNotice({ type: "success", text: "Approved â€” ready to send." }); }
