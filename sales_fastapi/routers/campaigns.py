@@ -235,6 +235,15 @@ def create_campaign(
         detail={"channel": payload.channel, "total": campaign.total, "ai_model": campaign.ai_model},
         commit=True,
     )
+    if payload.auto_send and campaign.total:
+        db.query(CampaignMessage).filter(
+            CampaignMessage.campaign_id == campaign.id,
+            CampaignMessage.status == "pending_review",
+        ).update({"status": "approved"}, synchronize_session=False)
+        campaign.status = "approved"
+        db.commit()
+        send_campaign(campaign.id, request, user, db)
+        db.refresh(campaign)
     return _detail(db, campaign)
 
 

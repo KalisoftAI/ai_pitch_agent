@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import csv
 import re
+import time
 from datetime import date, datetime
 from io import BytesIO, StringIO
 from typing import Any
@@ -38,13 +39,29 @@ from ..schemas import (
     MarketingImportResult,
 )
 from ..security import get_current_user
-from ..services import GCSStorage
+from ..services import AppDataStore, GCSStorage
 
 router = APIRouter(prefix="/marketing-companies", tags=["marketing"])
 
 DEFAULT_BUCKET = "kalika_enterprises"
 DEFAULT_PATH = "sales-contacts/marketing_list_kalika (1).xlsx"
 DEFAULT_CUSTOMERS_PATH = "sales-contacts/customers.csv"
+
+_contacts_cache: tuple[float, list[dict[str, Any]]] | None = None
+_CONTACTS_CACHE_TTL = 60
+
+
+def _stats_store() -> AppDataStore:
+    return AppDataStore()
+
+
+def _invalidate_stats_cache() -> None:
+    global _stats_mem
+    _stats_mem = None
+    try:
+        _stats_store().delete("marketing_stats")
+    except Exception:
+        pass
 FUNNEL_STAGES = ("awareness", "interest", "decision", "action")
 SALES_PROGRESS = (
     "new",
@@ -221,6 +238,7 @@ def _upsert_rows(
     rows: list[dict[str, Any]],
     *,
     refresh_source_values: bool = False,
+    source_file: str = "",
 ) -> tuple[int, int, int]:
     """Insert or update rows keyed by (user_id, company_key).
 
@@ -249,6 +267,7 @@ def _upsert_rows(
         "category": 255,
         "call_status": 255,
         "source_sheet": 255,
+        "source_file": 255,
         "requirements": 100_000,
         "next_action": 10_000,
     }
@@ -275,6 +294,7 @@ def _upsert_rows(
                 funnel_stage="awareness",
                 sales_progress="new",
                 source_sheet=_clip(row.get("source_sheet"), 255),
+                source_file=_clip(source_file or row.get("source_file"), 255),
                 source_row=int(row.get("source_row") or 0),
             )
             db.add(target)
@@ -300,6 +320,9 @@ def _upsert_rows(
             target.contact_name = contact_name
             changed = True
         source_sheet = _clip(row.get("source_sheet"), 255)
+        if source_file and source_file != target.source_file:
+            target.source_file = _clip(source_file, 255)
+            changed = True
         if refresh_source_values and source_sheet and source_sheet != target.source_sheet:
             target.source_sheet = source_sheet
             target.source_row = int(row.get("source_row") or target.source_row)
@@ -363,11 +386,42 @@ def list_marketing_companies(
     return query.order_by(order_by).limit(limit).all()
 
 
+_stats_mem: tuple[float, int, dict[str, Any]] | None = None
+_STATS_MEM_TTL = 15
+
+
 @router.get("/stats")
 def marketing_company_stats(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """High-level marketing stats.
+
+    Read order: 15s in-process copy -> GCS ``sales-app-data/marketing_stats.json``
+    (<5 min fresh) -> Cloud SQL compute (refreshes the GCS copy). Cuts Cloud SQL
+    calls on the busy Outreach view without changing the payload shape.
+    """
+    global _stats_mem
+    now = time.time()
+    if _stats_mem and now - _stats_mem[0] < _STATS_MEM_TTL and _stats_mem[1] == user.id:
+        return _stats_mem[2]
+    try:
+        cached = _stats_store().load("marketing_stats", max_age_sec=300)
+    except Exception:
+        cached = None
+    if cached and cached.get("user_id") == user.id and isinstance(cached.get("data"), dict):
+        _stats_mem = (now, user.id, cached["data"])
+        return cached["data"]
+    data = _compute_marketing_stats(db, user)
+    try:
+        _stats_store().save("marketing_stats", {"user_id": user.id, "data": data})
+    except Exception:
+        pass
+    _stats_mem = (time.time(), user.id, data)
+    return data
+
+
+def _compute_marketing_stats(db: Session, user: User) -> dict[str, Any]:
     base = db.query(MarketingCompany).filter(MarketingCompany.user_id == user.id)
 
     def group(column):
@@ -504,6 +558,7 @@ def update_marketing_company(
     )
     db.commit()
     db.refresh(company)
+    _invalidate_stats_cache()
     return company
 
 
@@ -587,9 +642,25 @@ async def import_marketing_companies(
     if not raw:
         raise HTTPException(status_code=404, detail="Marketing workbook not found")
 
+    file_name = ""
+    if file is not None and file.filename:
+        file_name = file.filename.split("/")[-1]
+    elif path.strip():
+        file_name = path.strip().split("/")[-1]
+
     rows = _parse_workbook(raw)
-    imported, updated, skipped = _upsert_rows(db, user.id, rows)
+    imported, updated, skipped = _upsert_rows(db, user.id, rows, source_file=file_name)
     db.commit()
+
+    # Keep uploaded workbooks in the same GCS folder so tiles show everything.
+    if file is not None and raw and file_name:
+        try:
+            store = GCSStorage(bucket_name=DEFAULT_BUCKET)
+            if store.available:
+                store.upload_bytes(f"sales-contacts/{file_name}", raw)
+        except Exception:
+            pass
+    _invalidate_stats_cache()
 
     sheets = sorted({(row.get("source_sheet") or "") for row in rows if row.get("source_sheet")})
     return MarketingImportResult(
@@ -658,6 +729,7 @@ def sync_marketing_companies(
             paths.append((DEFAULT_CUSTOMERS_PATH, _parse_customers_csv))
     rows: list[dict[str, Any]] = []
     synced_sources: list[str] = []
+    per_source: list[tuple[str, list[dict[str, Any]]]] = []
     errors: list[str] = []
     for path, parser in paths:
         raw = gcs.download_blob(path)
@@ -667,6 +739,7 @@ def sync_marketing_companies(
         try:
             parsed_rows = parser(raw)
             rows.extend(parsed_rows)
+            per_source.append((path.split("/")[-1], parsed_rows))
             synced_sources.append(path)
         except Exception as exc:
             errors.append(f"Parse failed for {path}: {type(exc).__name__}")
@@ -674,9 +747,14 @@ def sync_marketing_companies(
         raise HTTPException(status_code=404, detail="; ".join(errors) or "No GCS sources found")
 
     try:
-        imported, updated, skipped = _upsert_rows(
-            db, user.id, rows, refresh_source_values=True
-        )
+        imported = updated = skipped = 0
+        for file_name, file_rows in per_source:
+            i2, u2, s2 = _upsert_rows(
+                db, user.id, file_rows, refresh_source_values=True, source_file=file_name
+            )
+            imported += i2
+            updated += u2
+            skipped += s2
         db.commit()
     except Exception as exc:
         db.rollback()
@@ -684,6 +762,7 @@ def sync_marketing_companies(
             status_code=500,
             detail=f"db failed: {type(exc).__name__}: {exc}",
         ) from exc
+    _invalidate_stats_cache()
 
     return {
         "ok": True,
@@ -694,3 +773,73 @@ def sync_marketing_companies(
         "sources": [f"gs://{DEFAULT_BUCKET}/{path}" for path in synced_sources],
         "warnings": errors,
     }
+
+
+@router.get("/sources")
+def marketing_sources(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """File tiles for ``gs://kalika_enterprises/sales-contacts/`` + sync status.
+
+    Lists workbooks/CSVs in the folder (60s in-process GCS listing cache),
+    merges per-file row counts already in Cloud SQL to mark processed tiles,
+    and includes locally-synced files no longer listed in GCS.
+    """
+    global _contacts_cache
+    now = time.time()
+    if _contacts_cache and now - _contacts_cache[0] < _CONTACTS_CACHE_TTL:
+        files = _contacts_cache[1]
+    else:
+        gcs = GCSStorage(bucket_name=DEFAULT_BUCKET)
+        files = gcs.list_blobs(prefix="sales-contacts/", suffixes=(".xlsx", ".xls", ".csv"))
+        _contacts_cache = (now, files)
+
+    counts = {
+        (name or ""): int(num)
+        for name, num in (
+            db.query(MarketingCompany.source_file, func.count(MarketingCompany.id))
+            .filter(MarketingCompany.user_id == user.id)
+            .group_by(MarketingCompany.source_file)
+            .all()
+        )
+    }
+    seen: set[str] = set()
+    items: list[dict[str, Any]] = []
+    for entry in files:
+        name = str(entry.get("name") or "")
+        base = name.split("/")[-1]
+        if not base:
+            continue
+        seen.add(base)
+        rows_db = counts.get(base, 0)
+        items.append(
+            {
+                "path": name,
+                "file": base,
+                "short": base.rsplit(".", 1)[0][:44],
+                "ext": base.rsplit(".", 1)[-1].lower() if "." in base else "",
+                "size_mb": round((entry.get("size") or 0) / (1024 * 1024), 2),
+                "updated": str(entry.get("updated") or "")[:10],
+                "rows_in_db": rows_db,
+                "processed": rows_db > 0,
+                "in_gcs": True,
+            }
+        )
+    for base, rows_db in counts.items():
+        if base and base not in seen:
+            items.append(
+                {
+                    "path": "",
+                    "file": base,
+                    "short": base.rsplit(".", 1)[0][:44],
+                    "ext": base.rsplit(".", 1)[-1].lower() if "." in base else "",
+                    "size_mb": 0,
+                    "updated": "",
+                    "rows_in_db": rows_db,
+                    "processed": True,
+                    "in_gcs": False,
+                }
+            )
+    items.sort(key=lambda x: (not x["processed"], x["file"].lower()))
+    return {"folder": f"gs://{DEFAULT_BUCKET}/sales-contacts/", "items": items}

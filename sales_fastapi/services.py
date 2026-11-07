@@ -601,3 +601,62 @@ class RedditScraper:
                     }
                 )
         return out
+
+class AppDataStore:
+    """JSON side-cache in ``kalika_enterprises/sales-metadata/sales-app-data/``.
+
+    Derived/intermediate payloads (stats, file indexes) live here so hot read
+    paths avoid Cloud SQL round trips. The database stays the source of truth;
+    cache misses fall back to DB and refresh the copy best-effort.
+    """
+
+    BUCKET = "kalika_enterprises"
+    PREFIX = "sales-metadata/sales-app-data/"
+
+    def __init__(self) -> None:
+        self._gcs = GCSStorage(bucket_name=self.BUCKET)
+
+    @property
+    def available(self) -> bool:
+        return self._gcs.available
+
+    def _path(self, key: str) -> str:
+        return f"{self.PREFIX}{key}.json"
+
+    def load(self, key: str, max_age_sec: int | None = None) -> Optional[dict[str, Any]]:
+        if not self._gcs.available:
+            return None
+        raw = self._gcs.download_blob(self._path(key))
+        if not raw:
+            return None
+        if max_age_sec is not None and self._gcs._client is not None:
+            try:
+                blob = self._gcs._client.bucket(self.BUCKET).blob(self._path(key))
+                blob.reload()
+                updated = blob.updated
+                if updated is not None:
+                    from datetime import datetime, timezone
+
+                    age = (datetime.now(timezone.utc) - updated).total_seconds()
+                    if age > max_age_sec:
+                        return None
+            except Exception:
+                return None
+        try:
+            payload = json.loads(raw.decode("utf-8"))
+            return payload if isinstance(payload, dict) else None
+        except Exception:
+            return None
+
+    def save(self, key: str, payload: dict[str, Any]) -> bool:
+        if not self._gcs.available:
+            return False
+        return self._gcs.upload_json(self._path(key), payload)
+
+    def delete(self, key: str) -> None:
+        try:
+            if self._gcs.available and self._gcs._client is not None:
+                self._gcs._client.bucket(self.BUCKET).blob(self._path(key)).delete()
+        except Exception:
+            pass
+

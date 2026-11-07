@@ -287,6 +287,7 @@ class TemplateOut(TemplateBase):
     id: int
     created_at: datetime
     updated_at: datetime
+    used_count: int = 0
 
 
 # ---------- Campaigns (bulk outreach) ----------
@@ -308,6 +309,7 @@ class CampaignCreate(BaseModel):
     strategy: str = Field(default="cold_outreach", max_length=32)
     template_id: int
     use_ai: bool = True
+    auto_send: bool = False
     filter: CampaignFilter = Field(default_factory=CampaignFilter)
 
 
@@ -554,6 +556,7 @@ class MarketingCompanyOut(BaseModel):
     next_action: str = ""
     follow_up_date: str = ""
     source_sheet: str = ""
+    source_file: str = ""
     source_row: int = 0
     created_at: datetime
     updated_at: datetime

@@ -6,6 +6,7 @@ import re
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -139,9 +140,11 @@ def _template_out(row: MessageTemplate) -> dict[str, Any]:
 def list_templates(
     channel: str | None = Query(default=None),
     strategy: str | None = Query(default=None),
+    sort: str = Query(default="recent"),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Templates with usage stats. ``sort``: recent (default) | name | used."""
     query = db.query(MessageTemplate).filter(
         MessageTemplate.user_id.in_([user.id, 0]), MessageTemplate.is_active.is_(True)
     )
@@ -150,7 +153,27 @@ def list_templates(
     if strategy:
         query = query.filter(MessageTemplate.strategy == strategy)
     rows = query.order_by(MessageTemplate.updated_at.desc()).all()
-    return [_template_out(row) for row in rows]
+    used: dict[int, int] = {}
+    if rows:
+        from ..models import Campaign
+
+        for template_id, count in (
+            db.query(Campaign.template_id, func.count(Campaign.id))
+            .filter(Campaign.template_id.in_([row.id for row in rows]))
+            .group_by(Campaign.template_id)
+            .all()
+        ):
+            used[int(template_id)] = int(count)
+    items = []
+    for row in rows:
+        payload = _template_out(row)
+        payload["used_count"] = used.get(row.id, 0)
+        items.append(payload)
+    if sort == "name":
+        items.sort(key=lambda x: str(x.get("name") or "").lower())
+    elif sort == "used":
+        items.sort(key=lambda x: (-x["used_count"], str(x.get("name") or "").lower()))
+    return items
 
 
 @router.post("", response_model=TemplateOut, status_code=201)
