@@ -201,6 +201,7 @@ def create_campaign(
     db.refresh(campaign)
 
     image_url = (payload.image_url or "").strip()
+    video_url = (payload.video_url or "").strip()
     if image_url and payload.channel == "email":
         image_block = (
             f'<div style="margin:12px 0"><img src="{image_url}" '
@@ -208,6 +209,14 @@ def create_campaign(
         )
     else:
         image_block = f"\n\n🖼️ {image_url}" if image_url else ""
+    if video_url and payload.channel == "email":
+        video_block = (
+            f'<div style="margin:12px 0"><a href="{video_url}" '
+            'style="display:inline-block;background:#10251f;color:#fff;text-decoration:none;'
+            'padding:10px 16px;border-radius:8px;font-weight:600">▶ Watch our video</a></div>'
+        )
+    else:
+        video_block = f"\n\n🎬 {video_url}" if video_url else ""
 
     model_used = "template"
     for contact in contacts:
@@ -224,6 +233,11 @@ def create_campaign(
                 final_body = body.replace("</body>", image_block + "</body>", 1)
             else:
                 final_body = (body or "") + image_block
+        if video_block:
+            if payload.channel == "email" and ("</body>" in (final_body or "").lower()):
+                final_body = final_body.replace("</body>", video_block + "</body>", 1)
+            else:
+                final_body = (final_body or "") + video_block
         db.add(
             CampaignMessage(
                 campaign_id=campaign.id,

@@ -462,12 +462,30 @@ def _compute_marketing_stats(db: Session, user: User) -> dict[str, Any]:
     }
 
 
+_activity_cache: dict[int, tuple[float, list]] = {}
+_ACTIVITY_TTL = 45
+
+
 @router.get("/activity")
 def marketing_company_activity(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Per-contact mail/campaign activity: sent, opened/viewed, failed, last touch."""
+    """Per-contact mail/campaign activity: sent, opened/viewed, failed, last touch.
+
+    Memoised for 45s per user (campaign detail view stays live); avoids a
+    repeated campaign_messages scan on burst outreach loads -> fewer Cloud SQL reads.
+    """
+    now = time.time()
+    cached = _activity_cache.get(user.id)
+    if cached and now - cached[0] < _ACTIVITY_TTL:
+        return cached[1]
+    result = _compute_activity(db, user)
+    _activity_cache[user.id] = (now, result)
+    return result
+
+
+def _compute_activity(db: Session, user: User) -> list:
     rows = (
         db.query(CampaignMessage, Campaign.name, Campaign.channel, Campaign.created_at)
         .join(Campaign, Campaign.id == CampaignMessage.campaign_id)

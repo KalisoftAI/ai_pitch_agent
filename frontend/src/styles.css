@@ -2023,3 +2023,23 @@ tr:hover .reach-actions,.reach-actions:focus-within{opacity:1}
 .image-tile.tick-selected { outline:2px solid #2f7d4b; background:#f3faf4; }
 .image-tile.tick-selected span { color:#2f7d4b; font-weight:600; }
 @media (max-width:640px) { .image-strip { grid-template-columns:repeat(auto-fill,minmax(70px,1fr)); } .image-tile img { height:54px; } }
+
+/* attachable channel video picker */
+.video-strip { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.video-chip { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--line,#d7ddd8); background:#fbfdfb; border-radius:999px; padding:6px 11px; font-size:12px; cursor:pointer; color:var(--ink,#1c2a24); }
+.video-chip span { max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.video-chip.tick-selected { outline:2px solid #2f7d4b; background:#f3faf4; color:#2f7d4b; font-weight:600; }
+@media (max-width:640px) { .video-chip { flex:1 1 46%; justify-content:center; } .video-chip span { max-width:none; } }
+
+/* mobile outreach send polish */
+@media (max-width:640px) {
+  .outreach-send-top { position: sticky; top: 0; }
+  .outreach-send-top .button-row select { font-size:14px; }
+  .outreach-compact .source-tiles, .image-strip, .video-strip { -webkit-overflow-scrolling: touch; }
+  .outreach-compact .icon-button { min-width:38px; min-height:34px; }
+  .outreach-compact .secondary-button, .outreach-compact .primary-button { min-height:42px; }
+  .outreach-chip-row { flex-wrap:wrap; }
+  .reach-actions { opacity:1; }
+  .content.outreach-compact { padding-left:12px; padding-right:12px; }
+  .outreach-workspace { gap:8px; }
+}

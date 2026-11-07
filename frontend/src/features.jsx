@@ -1340,6 +1340,7 @@ export function MarketingCompanies({ onNotice }) {
   const [sources, setSources] = useState([]);
   const [imageTemplates, setImageTemplates] = useState([]);
   const [attachImage, setAttachImage] = useState("");
+  const [attachVideo, setAttachVideo] = useState(CHANNEL_VIDEOS[0]?.link || "");
   const imgUploadRef = React.useRef(null);
   const [showTplPicker, setShowTplPicker] = useState(false);
   const [tplSearch, setTplSearch] = useState("");
@@ -1514,6 +1515,20 @@ export function MarketingCompanies({ onNotice }) {
     }
   };
 
+  const syncAllSources = async () => {
+    setBusy(true);
+    try {
+      let imported = 0, updated = 0, done = 0, fail = 0;
+      for (const f of sources.filter((x) => x.in_gcs)) {
+        try {
+          const r = await request(`/marketing-companies/sync?path=${encodeURIComponent(f.path)}`, { method: "POST" });
+          imported += r.imported || 0; updated += r.updated || 0; done += 1;
+        } catch { fail += 1; }
+      }
+      onNotice({ type: fail ? "error" : "success", text: `Synced ${done} file(s): ${imported} new, ${updated} updated${fail?`, ${fail} failed`:""}.` });
+      load(); loadSources();
+    } finally { setBusy(false); }
+  };
   const syncOne = async (path) => {
     setBusy(true);
     try {
@@ -1771,7 +1786,7 @@ export function MarketingCompanies({ onNotice }) {
         method: "POST",
         body: JSON.stringify({
           name: cName, channel: cChannel, strategy: cStrategy,
-          template_id: selTemplate.id, use_ai: useAi, auto_send: !!autoSend, image_url: attachImage || "",
+          template_id: selTemplate.id, use_ai: useAi, auto_send: !!autoSend, image_url: attachImage || "", video_url: attachVideo || "",
           filter: {
             limit: Math.min(Number(cLimit) || (targetRows?.length || 50), targetRows?.length || Number(cLimit) || 50),
             contact_type: "marketing_companies",
@@ -1845,7 +1860,7 @@ export function MarketingCompanies({ onNotice }) {
     if (!byCh.length) return onNotice({ type: "error", text: "Selected contacts have no email/phone." });
     setCBusy(true);
     try {
-      for (const [channel, list] of byCh) await request("/campaigns", { method: "POST", body: JSON.stringify({ name: `${cName} (${channel})`, channel, strategy: cStrategy, template_id: selTemplate.id, use_ai: useAi, image_url: attachImage || "", filter: { limit: list.length, contact_type: "marketing_companies", contact_ids: list.map((r)=>r.id), q: query, category: categoryFilter, call_status: statusFilter, funnel_stage: funnelStageFilter } }) });
+      for (const [channel, list] of byCh) await request("/campaigns", { method: "POST", body: JSON.stringify({ name: `${cName} (${channel})`, channel, strategy: cStrategy, template_id: selTemplate.id, use_ai: useAi, image_url: attachImage || "", video_url: attachVideo || "", filter: { limit: list.length, contact_type: "marketing_companies", contact_ids: list.map((r)=>r.id), q: query, category: categoryFilter, call_status: statusFilter, funnel_stage: funnelStageFilter } }) });
       onNotice({ type: "success", text: `Queued ${byCh.map(([ch,l])=>`${l.length} ${ch}`).join(" + ")} for review.` }); loadCampaigns();
     } catch (e) { onNotice({ type: "error", text: e.message }); } finally { setCBusy(false); }
   };
@@ -1887,7 +1902,7 @@ export function MarketingCompanies({ onNotice }) {
         <div className="outreach-chip-row">
           <span className="outreach-chip"><b>Template:</b> {selTemplate ? <>{selTemplate.name} <button className="icon-button" style={{padding:0,marginLeft:4}} onClick={()=>setSelTemplate(null)} title="Clear">?</button></> : "none selected"}</span>
           <span className="outreach-chip"><b>Selected:</b> {selectedRows.length} / {fmtNum(totalCompanies)}</span>
-          <span className="outreach-chip">{selectedEmail} email</span><span className="outreach-chip">{selectedPhone} phone</span><span className="outreach-chip">{selectedForChannel} reachable via {cChannel}</span>
+          <span className="outreach-chip">{selectedEmail} email</span><span className="outreach-chip">{selectedPhone} phone</span><span className="outreach-chip">{selectedForChannel} reachable via {cChannel}</span>{(attachImage||attachVideo) && <span className="outreach-chip">{[attachImage&&"???",attachVideo&&"??"].filter(Boolean).join(" ")}</span>}
           {cDetail && <><span className="outreach-chip"><b>{cDetail.status}</b></span><span className="outreach-chip">sent {cDetail.sent_count}/{cDetail.total}</span><span className="outreach-chip">viewed {cDetail.opened_count||0}</span><span className="outreach-chip">failed {cDetail.failed_count}</span><span className="outreach-chip">progress {cDetail.total?Math.round(((cDetail.sent_count+cDetail.failed_count)/cDetail.total)*100):0}%</span><button className="icon-button" title="Close progress" onClick={()=>setCDetail(null)}><X size={14}/></button></>}
         </div>
         {selectedRows.length>0 && <div className="outreach-chip-row" style={{marginTop:4}}><small className="muted">Contacts:</small>{selectedRows.slice(0,8).map((r)=>(<span key={r.id} className="contact-tag">{r.contact_name||r.company} <button className="icon-button" style={{padding:0}} onClick={()=>toggleSelect(r.id)}>?</button></span>))}{selectedRows.length>8 && <small className="muted">+{selectedRows.length-8} more</small>}</div>}
@@ -1897,7 +1912,7 @@ export function MarketingCompanies({ onNotice }) {
         <section className="panel outreach-pane" aria-label="Templates">
           <div className="panel-heading"><div><div className="section-kicker">TEMPLATES</div><h3>Message windows</h3></div><button className="secondary-button" onClick={syncTemplates} disabled={cBusy}><Database size={14}/></button></div>
           <div className="studio-grid">
-            {curatedFor(cChannel).map((m)=>(<article className="studio-card" key={m.id}><div className="studio-card-top"><span className="template-channel">curated</span><b>{m.title}</b></div><p className="studio-text">{fillMsg(m.text, selectedRows[0]||{}).slice(0,140)}</p><div className="button-row studio-actions"><button className="secondary-button" onClick={()=>copyText(fillMsg(m.text, selectedRows[0]||{}))}><Copy size={13}/></button>{cChannel!=="email" && <button className="primary-button" onClick={()=>window.open(whatsappHref(fillMsg(m.text, selectedRows[0]||{}), selectedRows[0]?.phone||""),"_blank","noopener")}><MessageCircle size={13}/></button>}</div></article>))}
+            {curatedFor(cChannel).map((m)=>(<article className="studio-card" key={m.id}><div className="studio-card-top"><span className="template-channel">curated</span><b>{m.title}</b></div><p className="studio-text">{fillMsg(m.text, selectedRows[0]||{}).slice(0,140)}</p><div className="button-row studio-actions"><button className="secondary-button" onClick={()=>copyText(fillMsg(m.text, selectedRows[0]||{}))}><Copy size={13}/></button>{cChannel!=="email" && <button className="primary-button" onClick={()=>window.open(whatsappHref(fillMsg(m.text, selectedRows[0]||{})+(attachImage?`\n\n\u{1F5BC}\uFE0F ${attachImage}`:"")+(attachVideo?`\n\n\u{1F3AC} ${attachVideo}`:""), selectedRows[0]?.phone||""),"_blank","noopener")}><MessageCircle size={13}/></button>}</div></article>))}
             {visibleTemplates.map((tt)=>(<article className={`studio-card ${selTemplate?.id===tt.id?"tick-selected":""}`} key={tt.id} onClick={()=> (selTemplate?.id===tt.id?setSelTemplate(null):pickTemplate(tt))} role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter") (selTemplate?.id===tt.id?setSelTemplate(null):pickTemplate(tt));}}><div className="studio-card-top"><span className="template-channel">{tt.channel}</span><b>{tt.name}</b>{selTemplate?.id===tt.id && <span className="contact-tag">?</span>}</div><p className="studio-text">{tt.subject?<><b>{tt.subject}</b><br/></>:null}{htmlToText(tt.body).slice(0,120)}</p><div className="button-row studio-actions" onClick={(e)=>e.stopPropagation()}><button className="secondary-button" onClick={()=>setPreviewTemplate(tt)}><Eye size={13}/> View</button><button className={selTemplate?.id===tt.id?"primary-button":"secondary-button"} onClick={()=> (selTemplate?.id===tt.id?setSelTemplate(null):pickTemplate(tt))}>{selTemplate?.id===tt.id?"Selected":"Select"}</button></div></article>))}
             {!visibleTemplates.length && !curatedFor(cChannel).length && <small className="muted">No templates for {cChannel}.</small>}
           </div>
@@ -1911,10 +1926,17 @@ export function MarketingCompanies({ onNotice }) {
             {!imageTemplates.length && <small className="muted">No posters in sales-image-templates yet ? Upload one (goes to that GCS folder) or pick after GA/media sync.</small>}
           </div>
           {attachImage && <div className="outreach-chip-row" style={{marginTop:6}}><span className="contact-tag">Attached to send ? <button className="icon-button" style={{padding:0}} onClick={()=>setAttachImage("")}>?</button></span></div>}
+          <div className="panel-heading" style={{marginTop:12}}><div><div className="section-kicker">CHANNEL VIDEOS</div><h3>Attach a reel to WhatsApp &amp; Mail</h3></div></div>
+          <div className="video-strip">
+            {[...CHANNEL_VIDEOS, ...(defaultVideos||[]).map((v)=>({ title: v.name||v.title, link: v.url||v.link }))].map((v,i)=>(<button type="button" key={`${v.link}-${i}`} className={`video-chip ${attachVideo===v.link?"tick-selected":""}`} onClick={()=>setAttachVideo(attachVideo===v.link?"":v.link)} title={v.note||v.link}>
+              <Video size={13}/> <span>{v.title}</span>
+            </button>))}
+          </div>
+          {attachVideo && <div className="outreach-chip-row" style={{marginTop:6}}><span className="contact-tag">Video attached ? <button className="icon-button" style={{padding:0}} onClick={()=>setAttachVideo("")}>?</button></span></div>}
         </section>
 
         <section className="panel outreach-pane" aria-label="Contacts">
-          <div className="panel-heading"><div><div className="section-kicker">CONTACTS</div><h3>Select & act</h3></div><label style={{fontSize:12}}><input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}/> visible</label></div>
+          <div className="panel-heading"><div><div className="section-kicker">CONTACTS ? gs://kalika_enterprises/sales-contacts</div><h3>Select & act</h3></div><div className="button-row" style={{gap:6}}>{sources.some((x)=>x.in_gcs) && <button className="secondary-button" disabled={busy} onClick={syncAllSources}><Database size={12}/> Sync all</button>}<label style={{fontSize:12}}><input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}/> visible</label></div></div>
           <div className="source-tiles" aria-label="Contact source files">
             {sources.map((f)=>(<div className={`source-tile ${f.processed?"done":""}`} key={f.file} title={f.path||f.file}>
               <b>{f.short}</b><small>{f.size_mb?`${f.size_mb} MB ? `:""}{f.updated}{f.in_gcs?"":" ? local"}</small>
@@ -1928,7 +1950,7 @@ export function MarketingCompanies({ onNotice }) {
             <select value={statusFilter} onChange={(e)=>setStatusFilter(e.target.value)}><option value="">Status</option>{statuses.map((i)=><option key={i} value={i}>{i}</option>)}</select>
             <select value={limit} onChange={(e)=>setLimit(Number(e.target.value))}>{[25,50,100,250].map((s)=><option key={s} value={s}>{s}</option>)}</select></div>
           <div className="table-wrap"><table><thead><tr><th></th><th>Company / person</th><th>Status / last</th></tr></thead><tbody>
-            {rows.map((row)=>{ const act=activity[row.id]; const msgText=fillMsg(selTemplate?htmlToText(selTemplate.body):"Hi from Kalika Enterprises", row) + (attachImage?`\n\n\u{1F5BC}\uFE0F ${attachImage}`:""); return (
+            {rows.map((row)=>{ const act=activity[row.id]; const msgText=fillMsg(selTemplate?htmlToText(selTemplate.body):"Hi from Kalika Enterprises", row) + (attachImage?`\n\n\u{1F5BC}\uFE0F ${attachImage}`:"") + (attachVideo?`\n\n\u{1F3AC} ${attachVideo}`:""); return (
               <tr key={row.id} className={selectedIds.has(row.id)?"tick-selected":""}>
                 <td><input type="checkbox" checked={selectedIds.has(row.id)} onChange={()=>toggleSelect(row.id)}/></td>
                 <td><b>{row.company}</b><br/><small className="muted">{row.contact_name||"-"} ? {row.email||"no email"}{row.phone?` ? ${row.phone}`:""}{row.source_file?` ? ${row.source_file.replace(/\.[a-z]+$/i,"").slice(0,18)}`:""}</small>

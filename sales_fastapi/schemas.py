@@ -311,6 +311,7 @@ class CampaignCreate(BaseModel):
     use_ai: bool = True
     auto_send: bool = False
     image_url: str = Field(default="", max_length=1024)
+    video_url: str = Field(default="", max_length=1024)
     filter: CampaignFilter = Field(default_factory=CampaignFilter)
 
 
