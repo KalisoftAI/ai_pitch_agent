@@ -1262,6 +1262,79 @@ function MessageStudio_UNUSED({ onNotice }) {
   );
 }
 
+
+function MarketingLibrary({ onNotice, orders, videos }) {
+  const copy = async (text) => { try { await navigator.clipboard.writeText(text||""); onNotice({type:"success",text:"Copied."}); } catch { onNotice({type:"error",text:"Copy failed."}); } };
+  const wa = (text) => window.open(`https://wa.me/?text=${encodeURIComponent(text||"")}`, "_blank", "noopener");
+  const feedbackText = (o) => `Hi ${o.customer||"there"},\n\nThank you for your recent order ${o.order_no||""} with Kalika Enterprises. We would love your feedback:\n1) Product quality (1-5)\n2) Delivery timeliness (1-5)\n3) Anything we can improve?\n\nThank you.`;
+  return (<>
+    <section className="panel studio-panel">
+      <div className="section-kicker"><Film size={13} /> CHANNEL VIDEO LIBRARY</div>
+      <div className="studio-videos">
+        {(videos?.length ? videos : CHANNEL_VIDEOS.map(v=>({title:v.title,url:v.link,platform:v.tag,description:v.note}))).map((v) => (
+          <div className="studio-video" key={v.title||v.url}>
+            <span className="mail-icon"><Video size={16} /></span>
+            <div><b>{v.title}</b><small>{v.platform||v.tag||""} ? {v.description||v.note||""}</small></div>
+            <div className="button-row">
+              <button className="icon-button" title="Copy link" onClick={() => copy(v.url||v.link)}><Copy size={15} /></button>
+              <a className="icon-button" title="Open" href={v.url||v.link} target="_blank" rel="noreferrer"><ExternalLink size={15} /></a>
+              <button className="icon-button" title="WhatsApp" onClick={() => wa(`${v.title}: ${v.url||v.link}`)}><MessageCircle size={15} /></button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+    <section className="panel studio-panel">
+      <div className="section-kicker"><TrendingUp size={13} /> RECENT ERP ORDERS ? ASK FOR FEEDBACK</div>
+      {!orders?.length ? <p className="muted" style={{fontSize:12}}>No recent ERP orders available yet.</p> : (
+        <div className="studio-videos">
+          {orders.map((o) => (
+            <div className="studio-video" key={o.order_no}>
+              <span className="mail-icon"><BriefcaseBusiness size={16} /></span>
+              <div><b>{o.customer}</b><small>{o.order_no} ? ?{fmtNum(o.total_value)} ? {o.status}</small></div>
+              <div className="button-row">
+                <button className="icon-button" title="Copy feedback request" onClick={() => copy(feedbackText(o))}><Copy size={15} /></button>
+                <button className="icon-button" title="WhatsApp" onClick={() => wa(feedbackText(o))}><MessageCircle size={15} /></button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  </>);
+}
+
+function MarketingSignals({ onNotice }) {
+  const [out, setOut] = useState(null); const [busy, setBusy] = useState(false);
+  const run = async (path, body, label) => { setBusy(true); try { setOut({ label, data: await request(path, { method: "POST", body: JSON.stringify(body) }) }); } catch (e) { onNotice({type:"error",text:e.message}); } finally { setBusy(false); } };
+  return (<div className="panel studio-panel">
+    <div className="panel-heading"><div><div className="section-kicker">MARKET INTELLIGENCE</div><h3>Signal desk</h3></div></div>
+    <div className="signal-actions">
+      <button className="signal-action" onClick={() => run("/social/linkedin/search", { keywords: ["procurement", "scm", "hiring"] }, "LinkedIn")}><span><BriefcaseBusiness size={20} /></span><b>LinkedIn hiring search</b><small>Procurement & SCM signals.</small></button>
+      <button className="signal-action" onClick={() => run("/social/reddit/search", {}, "Reddit")}><span><Search size={20} /></span><b>Reddit search</b><small>Useful conversations.</small></button>
+      <button className="signal-action" onClick={() => run("/social/youtube/search", { queries: ["hiring procurement", "supply chain"], max_results: 10 }, "YouTube")}><span><Video size={20} /></span><b>YouTube scan</b><small>Company/tech signals.</small></button>
+      <button className="signal-action" onClick={() => run("/scheduler/run", {}, "Cron sweep")}><span><RefreshCw size={20} /></span><b>Run cron sweep</b><small>Scheduled tasks.</small></button>
+    </div>
+    {busy && <p className="muted">Working?</p>}
+    {out && <section className="panel output-panel" style={{marginTop:12}}><div className="panel-heading"><h3>{out.label}</h3><button className="icon-button" onClick={() => setOut(null)}><X size={17} /></button></div><pre>{JSON.stringify(out.data, null, 2)}</pre></section>}
+  </div>);
+}
+
+function MarketingEvents({ onNotice }) {
+  const [events, setEvents] = useState([]); const [busy, setBusy] = useState(false);
+  const load = () => request("/events?limit=50").then((r)=>setEvents(Array.isArray(r)?r:[])).catch(()=>setEvents([]));
+  useEffect(()=>{ load(); }, []);
+  const importLocal = async () => { setBusy(true); try { const body=new FormData(); body.append("include_contacts","true"); const token=sessionStorage.getItem("sales_token"); const res=await fetch(`${API}/events/import`,{method:"POST",headers:token?{Authorization:`Bearer ${token}`}:{},body}); if(!res.ok) throw new Error((await res.json().catch(()=>({}))).detail||"Import failed"); const result=await res.json(); onNotice({type:"success",text:`Loaded ${result.source||"workbook"}: ${result.events_imported} events.`}); load(); } catch(e){ onNotice({type:"error",text:e.message}); } finally{ setBusy(false);} };
+  return (<div className="panel studio-panel">
+    <div className="panel-heading"><div><div className="section-kicker">EVENTS &amp; OUTREACH</div><h3>Events</h3></div><div className="button-row"><button className="secondary-button" onClick={importLocal} disabled={busy}><Database size={15}/> {busy?"Loading?":"Load workbook"}</button><button className="icon-button" onClick={load}><RefreshCw size={16}/></button></div></div>
+    <div className="contact-list" role="list">
+      {events.map((ev)=> <div key={ev.id} className="contact-row"><span className="contact-main"><b>{ev.title}</b><small>{ev.starts_at?new Date(ev.starts_at).toLocaleString():(ev.when_text||"Date TBC")} ? {ev.location||ev.organiser||""}</small></span><span className={`event-status ${ev.status||""}`}>{ev.status||""}</span></div>)}
+      {!events.length && <div className="empty-state"><CalendarDays size={22}/><p>No events loaded.</p><small>Load the workbook to populate events and outreach.</small></div>}
+    </div>
+  </div>);
+}
+
+
 export function MarketingCompanies({ onNotice }) {
   const [rows, setRows] = useState([]);
   const [stats, setStats] = useState(null);
@@ -1295,6 +1368,12 @@ export function MarketingCompanies({ onNotice }) {
   const [syncPath, setSyncPath] = useState("");
   const [activity, setActivity] = useState({});
   const [mTab, setMTab] = useState("send");
+  const [mOrders, setMOrders] = useState([]);
+  const [mVideos, setMVideos] = useState([]);
+  useEffect(() => {
+    request("/erp/orders?limit=5").then((r) => setMOrders(Array.isArray(r)?r.slice(0,5):[])).catch(()=>setMOrders([]));
+    request("/media/default-videos").then((r) => setMVideos(Array.isArray(r)?r:[])).catch(()=>setMVideos(CHANNEL_VIDEOS.map(v=>({title:v.title, url:v.link, platform:v.tag, description:v.note}))));
+  }, []);
 
   const loadActivity = async () => {
     try {
@@ -1741,175 +1820,197 @@ export function MarketingCompanies({ onNotice }) {
       loadCampaigns();
     } catch (e) { onNotice({ type: "error", text: e.message }); } finally { setCBusy(false); }
   };
+
+  const curatedFor = (ch) => ch === "whatsapp" || ch === "both" ? CURATED_MESSAGES : [];
+  const tplFor = (ch) => (templates || []).filter((t) => {
+    const tc = (t.channel || "email").toLowerCase();
+    if (ch === "both") return tc === "email" || tc === "whatsapp";
+    return tc === ch;
+  });
+  const visibleTemplates = tplFor(cChannel);
+  const fillMsg = (raw, row) => String(raw || "")
+    .replaceAll("{name}", row?.contact_name || row?.company || "there")
+    .replaceAll("{company}", row?.company || "your business")
+    .replaceAll("{email}", row?.email || "")
+    .replaceAll("{phone}", row?.phone || "")
+    .replaceAll("{video}", DIWALI_REEL);
+  const copyText = async (value) => { try { await navigator.clipboard.writeText(value || ""); onNotice({ type: "success", text: "Copied." }); } catch { onNotice({ type: "error", text: "Copy failed." }); } };
+  const bucketStatus = (list) => {
+    const b = { Reached: 0, Pending: 0, Invalid: 0, Other: 0 };
+    (list || []).forEach((r) => {
+      const s = String(r.call_status || "").toLowerCase();
+      if (/answer|done|sent|reach|connect|interested|converted|positive/.test(s)) b.Reached++;
+      else if (!s || /pending|follow|later|call|new|na|n\/a/.test(s)) b.Pending++;
+      else if (/invalid|wrong|bounce|dnd|closed|no\b/.test(s)) b.Invalid++;
+      else b.Other++;
+    }); return b;
+  };
+  const statusBuckets = bucketStatus(rows);
+  const topDomains = Object.entries(stats?.by_domain || {}).slice(0, 5);
+  const maxDomain = Math.max(1, ...topDomains.map(([, n]) => n));
+  const bar = (value, max) => <span className="mini-bar"><i style={{ width: `${Math.max(4, Math.round((value / (max || 1)) * 100))}%` }} /></span>;
+  const sendBoth = async () => {
+    if (!selTemplate || selTemplate._curated) return onNotice({ type: "error", text: "Select a saved template (not curated) for bulk send." });
+    if (!selectedRows.length) return onNotice({ type: "error", text: "Select contacts." });
+    const byChannel = [["email", selectedRows.filter((r) => r.email)], ["whatsapp", selectedRows.filter((r) => r.phone)]].filter(([, list]) => list.length);
+    if (!byChannel.length) return onNotice({ type: "error", text: "No selected contacts have email/phone." });
+    setCBusy(true);
+    try {
+      for (const [channel, list] of byChannel) {
+        await request("/campaigns", { method: "POST", body: JSON.stringify({ name: `${cName} (${channel})`, channel, strategy: cStrategy, template_id: selTemplate.id, use_ai: useAi, filter: { limit: list.length, contact_type: "marketing_companies", contact_ids: list.map((r) => r.id), q: query, category: categoryFilter, call_status: statusFilter, funnel_stage: funnelStageFilter } }) });
+      }
+      onNotice({ type: "success", text: `Queued ${byChannel.map(([ch, l]) => `${l.length} ${ch}`).join(" + ")} for review.` });
+      loadCampaigns();
+    } catch (e) { onNotice({ type: "error", text: e.message }); } finally { setCBusy(false); }
+  };
+
   return (
     <div className="content outreach-compact">
       <div className="page-heading">
-        <div>
-          <div className="section-kicker">OUTREACH Â· TEMPLATES Â· CONTACTS Â· SEND</div>
-          <h2>Outreach &amp; marketing</h2>
-          <p className="muted">Pick channel, select a template, tick contacts, then send email/WhatsApp (or both).</p>
-        </div>
+        <div><div className="section-kicker">OUTREACH ? TEMPLATES ? MARKETING</div><h2>Outreach &amp; marketing</h2><p className="muted">Channel-first send, curated templates, insights, videos, signals and events.</p></div>
         <div className="button-row">
           <button className="secondary-button" onClick={() => { load(); loadActivity(); loadCampaigns(); }}><RefreshCw size={16} /> Refresh</button>
           <button className="secondary-button" onClick={syncFromGCS} disabled={busy}><Database size={16} />{busy ? "Syncing..." : "Sync"}</button>
         </div>
       </div>
 
-      <section className="panel studio-panel">
-        <div className="panel-heading">
-          <div><div className="section-kicker">HIGH-LEVEL</div><h3>Outreach snapshot</h3></div>
-          <span className="muted">{fmtNum(stats?.total || 0)} companies</span>
-        </div>
-        <div className="marketing-stat-grid">
-          {[["Companies", stats?.total || 0], ["With email", sumWith("with_email")], ["With phone", sumWith("with_phone")], ["Follow-ups due", sumWith("follow_up_due")]].map(([label, value]) => (
-            <div className="marketing-stat" key={label}><small>{label}</small><b>{fmtNum(value)}</b></div>
-          ))}
-        </div>
-        <div className="mini-charts">
-          <div><b>Top domains</b>{topDomains.length ? topDomains.map(([label, count]) => <div key={label} className="mini-chart-row"><span>{label}</span>{bar(count, maxDomain)}<strong>{fmtNum(count)}</strong></div>) : <small className="muted">No email domains yet.</small>}</div>
-          <div><b>Call status</b>{Object.entries(statusBuckets).map(([label, count]) => <div key={label} className="mini-chart-row"><span>{label}</span>{bar(count, Math.max(1, ...Object.values(statusBuckets)))}<strong>{fmtNum(count)}</strong></div>)}</div>
-        </div>
-      </section>
+      <div className="outreach-tabs" role="tablist" aria-label="Marketing sections">
+        {[["send","Send & templates"],["insights","Insights & stats"],["library","Videos & ERP"],["signals","Signal desk"],["events","Events"]].map(([id,label]) => (
+          <button key={id} role="tab" aria-selected={mTab===id} className={`secondary-button ${mTab===id?"primary-button":""}`} onClick={() => setMTab(id)}>{label}</button>
+        ))}
+      </div>
 
-      <section className="panel studio-panel">
-        <div className="panel-heading">
-          <div><div className="section-kicker">TEMPLATES Â· CHANNEL-FIRST SEND</div><h3>Templates</h3></div>
-          <div className="button-row">
-            <select value={cChannel} onChange={(e) => { setCChannel(e.target.value); setSelTemplate(null); }} aria-label="Send channel">
-              <option value="email">Email</option><option value="whatsapp">WhatsApp</option><option value="both">Both</option>
-            </select>
-            <button className="secondary-button" onClick={syncTemplates} disabled={cBusy}><Database size={15} /> Sync templates</button>
+      {mTab === "insights" && <>
+        <section className="panel studio-panel">
+          <div className="panel-heading"><div><div className="section-kicker">MARKETING HIGH-LEVEL</div><h3>Exact details for sending</h3></div><span className="muted">{fmtNum(totalCompanies)} companies ? {fmtNum(sumWith("with_email"))} with email ? {fmtNum(sumWith("with_phone"))} with phone</span></div>
+          <div className="marketing-stat-grid">
+            {stats ? [["Companies", stats.total, 100],["Name + email", sumWith("with_email"), totalCompanies?Math.round(sumWith("with_email")/totalCompanies*100):0],["Phone", sumWith("with_phone"), totalCompanies?Math.round(sumWith("with_phone")/totalCompanies*100):0],["Templates", templates.length, totalCompanies?Math.round(templates.length/totalCompanies*100):0],["Follow-ups due", sumWith("follow_up_due"), 0],["With requirements", sumWith("with_requirements"), totalCompanies?Math.round(sumWith("with_requirements")/totalCompanies*100):0]].map(([label,value,pct]) => (
+              <div className="marketing-stat" key={label}><small>{label}</small><b>{fmtNum(value)}</b><span>{pct}%</span></div>
+            )) : <div className="marketing-stat"><small>Templates</small><b>{templates.length}</b></div>}
           </div>
-        </div>
-        <div className="contact-list" role="list">
-          {curatedFor(cChannel).map((m) => (
-            <div key={m.id} role="listitem" className={`contact-row ${selTemplate?.id === `c-${m.id}` ? "selected tick-selected" : ""}`} style={{ cursor: "pointer" }} onClick={() => setSelTemplate({ id: `c-${m.id}`, name: m.title, channel: "whatsapp", body: m.text, subject: m.title, _curated: m })}>
-              <span className="tick-mark">{selTemplate?.id === `c-${m.id}` ? "âœ“" : ""}</span>
-              <span className="contact-main"><b>{m.title}</b><small>{m.category} Â· copy / WhatsApp</small></span>
-              <span className="contact-tag">curated</span>
-            </div>
-          ))}
-          {visibleTemplates.map((t) => (
-            <button key={t.id} role="listitem" className={`contact-row ${selTemplate?.id === t.id ? "selected tick-selected" : ""}`} style={{ width: "100%", textAlign: "left", border: 0, background: selTemplate?.id === t.id ? "#eef6ef" : "transparent" }} onClick={() => (selTemplate?.id === t.id ? setSelTemplate(null) : pickTemplate(t))} aria-pressed={selTemplate?.id === t.id}>
-              <span className="tick-mark">{selTemplate?.id === t.id ? "âœ“" : ""}</span>
-              <span className="contact-main"><b>{t.name}</b><small>{t.subject || String(t.body || "").slice(0, 80)}</small></span>
-              <span className="contact-tag">{t.channel}</span>
-              <span className="button-row">
-                <span className="icon-button" role="button" tabIndex={0} title="Preview" onClick={(e) => { e.stopPropagation(); setPreviewTemplate(t); }}><Eye size={16} /></span>
-                <span className="icon-button" role="button" tabIndex={0} title="Edit" onClick={(e) => { e.stopPropagation(); setEditTemplate(t); }}><Edit2 size={16} /></span>
-              </span>
-            </button>
-          ))}
-          {!visibleTemplates.length && !curatedFor(cChannel).length && <div className="empty-state"><FileText size={22} /><p>No templates for {cChannel}.</p></div>}
-        </div>
-        {selTemplate && <div className="outreach-template-preview"><div className="template-preview-body"><b>{selTemplate.name}</b>{selTemplate.subject && <p>Subject: {selTemplate.subject}</p>}<pre>{fillMsg(selTemplate.body, selectedRows[0] || {})}</pre></div></div>}
-      </section>
-
-      <section className="panel table-panel">
-        <div className="table-toolbar">
-          <div className="search-field"><Search size={17} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search company, contact, email" /></div>
-          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}><option value="">All categories</option>{categories.map((i) => <option key={i} value={i}>{i}</option>)}</select>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="">All call statuses</option>{statuses.map((i) => <option key={i} value={i}>{i}</option>)}</select>
-          <select value={limit} onChange={(e) => setLimit(Number(e.target.value))} aria-label="Rows to show">{[25,50,100,250].map((s) => <option key={s} value={s}>{s} rows</option>)}</select>
-          <span className="muted">Sample {rows.length} of {fmtNum(totalCompanies)} Â· {selectedRows.length} selected</span>
-        </div>
-        <div className="table-wrap marketing-desktop-table">
-          <table>
-            <thead><tr><th></th><th>Company / person</th><th>Reach</th><th>Status</th><th>Last</th><th></th></tr></thead>
-            <tbody>
-              {rows.map((row) => {
-                const act = activity[row.id];
-                return (
-                  <tr key={row.id}>
-                    <td><input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleSelect(row.id)} aria-label={`Select ${row.company}`} /></td>
-                    <td><b>{row.company}</b><br /><small className="muted">{row.contact_name || "-"}</small></td>
-                    <td className="table-person"><small>{row.email || "â€”"}{row.phone ? ` Â· ${row.phone}` : ""}</small></td>
-                    <td><small>{(row.call_status || "pending").slice(0, 24)}</small></td>
-                    <td>{act ? <span className="activity-badges"><span className="contact-tag">âœ‰ {act.sent}</span><span className="contact-tag">ðŸ‘ {act.opened}</span></span> : <small className="muted">â€”</small>}</td>
-                    <td>
-                      <details className="requirements-details">
-                        <summary>Edit</summary>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 220 }}>
-                          <input value={editing[row.id]?.call_status ?? row.call_status ?? ""} onChange={(e) => setEditing((p) => ({ ...p, [row.id]: { ...(p[row.id] || {}), call_status: e.target.value } }))} onBlur={(e) => { if (e.target.value !== row.call_status) updateField(row.id, "call_status", e.target.value); }} placeholder="Previous / call comments" />
-                          <textarea rows={2} value={editing[row.id]?.requirements ?? row.requirements ?? ""} onChange={(e) => setEditing((p) => ({ ...p, [row.id]: { ...(p[row.id] || {}), requirements: e.target.value } }))} onBlur={(e) => { if (e.target.value !== row.requirements) updateField(row.id, "requirements", e.target.value); }} placeholder="Discussion / requirements / comments" />
-                          <textarea rows={2} value={editing[row.id]?.next_action ?? row.next_action ?? ""} onChange={(e) => setEditing((p) => ({ ...p, [row.id]: { ...(p[row.id] || {}), next_action: e.target.value } }))} onBlur={(e) => { if (e.target.value !== row.next_action) updateField(row.id, "next_action", e.target.value); }} placeholder="Follow-up message / next action" />
-                          <input type="date" value={row.follow_up_date || ""} onChange={(e) => updateField(row.id, "follow_up_date", e.target.value)} />
-                          {selTemplate?._curated && <button className="secondary-button" type="button" onClick={() => copyText(fillMsg(selTemplate.body, row))}><Copy size={14} /> Copy msg</button>}
-                          {selTemplate?._curated && row.phone && <button className="secondary-button" type="button" onClick={() => window.open(whatsappHref(fillMsg(selTemplate.body, row), row.phone), "_blank", "noopener")}><MessageCircle size={14} /> WhatsApp</button>}
-                        </div>
-                      </details>
-                    </td>
-                  </tr>
-                );
-              })}
-              {!rows.length && <tr><td colSpan={6}><div className="empty-state"><BriefcaseBusiness size={22} /><p>No contacts yet.</p></div></td></tr>}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {selTemplate && selectedRows.length > 0 && (
-        <div className="send-bar">
-          <span className="muted">{selectedRows.length} selected Â· {selectedEmail} email Â· {selectedPhone} phone Â· {selTemplate.name}</span>
-          {cChannel === "both" ? (
-            <button className="primary-button" onClick={sendBoth} disabled={cBusy || selTemplate?._curated}>{cBusy ? "Working..." : `Send both (${selectedEmail} email Â· ${selectedPhone} WA)`}</button>
-          ) : (
-            <button className="primary-button" onClick={createSelectedCampaign} disabled={cBusy || selectedForChannel === 0 || selTemplate?._curated}>{cBusy ? "Working..." : `Send ${selectedForChannel} via ${cChannel}`}</button>
-          )}
-          {selTemplate?._curated && <small className="muted">Use row Edit â†’ Copy/WhatsApp for curated messages.</small>}
-        </div>
-      )}
-
-      {cDetail && (
-        <section className="panel" style={{ marginTop: 16 }} aria-label="Review and send">
-          <div className="panel-heading"><h3>Review â€” {cDetail.name}</h3><span className="contact-tag">{cDetail.status}</span></div>
-          <div className="bar-track" style={{ margin: "4px 0 8px" }}><div className="bar-fill" style={{ width: `${progressPct}%` }} /></div>
-          <p className="campaign-recipient-count">Sent {cDetail.sent_count}/{cDetail.total} Â· Viewed {cDetail.opened_count || 0} ({openRate}% of sent) Â· Failed {cDetail.failed_count}</p>
-          <div className="button-row"><button className="secondary-button" onClick={approveCampaign} disabled={cBusy || cDetail.status !== "pending_review"}>Approve all</button><button className="primary-button" onClick={sendCampaign} disabled={cBusy || cDetail.status !== "approved"}><Send size={16} /> Send approved</button></div>
+          <div className="mini-charts">
+            <div><b>Top domains</b>{topDomains.length ? topDomains.map(([label,count]) => <div key={label} className="mini-chart-row"><span>{label}</span>{bar(count,maxDomain)}<strong>{fmtNum(count)}</strong></div>) : <small className="muted">No domains.</small>}</div>
+            <div><b>Call status</b>{Object.entries(statusBuckets).map(([label,count]) => <div key={label} className="mini-chart-row"><span>{label}</span>{bar(count,Math.max(1,...Object.values(statusBuckets)))}<strong>{fmtNum(count)}</strong></div>)}</div>
+          </div>
+          <details className="marketing-breakdown"><summary>Domains ? call status ? categories</summary><div className="marketing-breakdown-grid"><div><b>Domains</b>{Object.entries(stats?.by_domain||{}).slice(0,12).map(([l,c]) => <span key={l}>{l}<strong>{c}</strong></span>)}</div><div><b>Call status</b>{Object.entries(stats?.by_call_status||{}).map(([l,c]) => <span key={l}>{l}<strong>{c}</strong></span>)}</div><div><b>Categories</b>{Object.entries(stats?.by_category||{}).slice(0,12).map(([l,c]) => <span key={l}>{l}<strong>{c}</strong></span>)}</div></div></details>
         </section>
-      )}
+        <section className="panel studio-panel" aria-label="Google Analytics insights">
+          <div className="panel-heading"><div><div className="section-kicker">GOOGLE ANALYTICS SYNC</div><h3>Insights &amp; stats</h3></div><button className="secondary-button" onClick={loadGa}><RefreshCw size={15} /> Sync again</button></div>
+          {ga ? (<>
+            <p className="muted">{ga.data_available ? `Latest: ${ga.latest_file||"-"} ? ${ga.rows||0} rows ? ${String(ga.synced_at||"").slice(0,16)}` : (ga.message || "No analytics export synced.")}</p>
+            <div className="marketing-stat-grid">{Object.entries(ga.stats||{}).slice(0,8).map(([k,v]) => <div className="marketing-stat" key={k}><small>{k}</small><b>{String(v)}</b></div>)}</div>
+            <div className="marketing-breakdown-grid"><div><b>Insights (city/country &amp; other stats from export)</b>{(ga.insights||[]).slice(0,10).map((t,i)=><span key={i}>{t}</span>)}{!(ga.insights||[]).length && <span>Sync `kalika_enterprises/docs/kalika-google-analytics/` exports to extract city/country and other stats.</span>}</div>{Array.isArray(ga.sample) && ga.sample[0] && <div><b>Sample fields</b>{Object.keys(ga.sample[0]).slice(0,12).map((k)=><span key={k}>{k}</span>)}</div>}</div>
+          </>) : <p className="muted">Loading analytics?</p>}
+        </section>
+      </>}
 
-      <section className="panel" style={{ marginTop: 16 }} aria-label="Campaign history">
-        <div className="panel-heading"><h3>Campaign history ({campaigns.length})</h3><button className="icon-button" onClick={loadCampaigns} aria-label="Refresh campaigns"><RefreshCw size={16} /></button></div>
-        <div className="contact-list" role="list">
-          {campaigns.slice(0, 12).map((cmp) => (
-            <button key={cmp.id} role="listitem" className="contact-row" style={{ width: "100%", textAlign: "left", border: 0, background: "transparent" }} onClick={() => openCampaign(cmp.id)}>
-              <span className="contact-main"><b>{cmp.name}</b><small>{cmp.channel} Â· {cmp.total} messages Â· viewed {cmp.opened_count || 0}</small></span>
-              <span className="contact-tag">{cmp.status}</span>
-            </button>
-          ))}
-          {!campaigns.length && <div className="empty-state"><Send size={22} /><p>No campaigns yet.</p></div>}
-        </div>
-      </section>
+      {mTab === "library" && <MarketingLibrary onNotice={onNotice} orders={mOrders} videos={mVideos.length?mVideos:CHANNEL_VIDEOS} />}
+      {mTab === "signals" && <MarketingSignals onNotice={onNotice} />}
+      {mTab === "events" && <MarketingEvents onNotice={onNotice} />}
+
+      {mTab === "send" && <>
+        <section className="panel studio-panel">
+          <div className="panel-heading">
+            <div><div className="section-kicker">TEMPLATES ? SELECT FOR GROUP SEND</div><h3>Templates ({templates.length})</h3></div>
+            <div className="button-row">
+              <select value={cChannel} onChange={(e) => { setCChannel(e.target.value); setSelTemplate(null); }} aria-label="Send channel"><option value="email">Email</option><option value="whatsapp">WhatsApp</option><option value="both">Both</option></select>
+              <button className="secondary-button" onClick={syncTemplates} disabled={cBusy}><Database size={15} /> Sync</button>
+            </div>
+          </div>
+          <p className="muted">Curated outreach (view/copy/WhatsApp) + saved templates (select for group send). Select contacts below, then send.</p>
+          <div className="studio-grid">
+            {curatedFor(cChannel).map((m) => (
+              <article className={`studio-card ${selTemplate?.id===`c-${m.id}`?"tick-selected":""}`} key={m.id}>
+                <div className="studio-card-top"><span className="template-channel">{m.category}</span><b>{m.title}</b></div>
+                <p className="studio-text">{fillMsg(m.text, selectedRows[0]||{}).slice(0,220)}{fillMsg(m.text, selectedRows[0]||{}).length>220?"?":""}</p>
+                <div className="button-row studio-actions">
+                  <button className="secondary-button" onClick={() => copyText(fillMsg(m.text, selectedRows[0]||{}))}><Copy size={14} /> Copy</button>
+                  <button className="primary-button" onClick={() => window.open(whatsappHref(fillMsg(m.text, selectedRows[0]||{}), selectedRows[0]?.phone||""), "_blank","noopener")}><MessageCircle size={14} /> WhatsApp</button>
+                </div>
+              </article>
+            ))}
+            {visibleTemplates.map((tt) => (
+              <article className={`studio-card ${selTemplate?.id===tt.id?"tick-selected":""}`} key={tt.id}>
+                <div className="studio-card-top"><span className="template-channel">{tt.channel}</span><b>{tt.name}</b>{selTemplate?.id===tt.id && <span className="contact-tag">? selected</span>}</div>
+                <p className="studio-text">{tt.subject ? <><b>{tt.subject}</b><br/></> : null}{htmlToText(tt.body).slice(0,180)}</p>
+                <div className="button-row studio-actions">
+                  <button className="secondary-button" onClick={() => copyText(fillMsg(htmlToText(tt.body), selectedRows[0]||{}))}><Copy size={14} /> Copy</button>
+                  <button className="secondary-button" onClick={() => setPreviewTemplate(tt)}><Eye size={14} /> View</button>
+                  <button className="primary-button" onClick={() => (selTemplate?.id===tt.id?setSelTemplate(null):pickTemplate(tt))}>{selTemplate?.id===tt.id?"Selected":"Select"}</button>
+                </div>
+              </article>
+            ))}
+            {!visibleTemplates.length && !curatedFor(cChannel).length && <div className="empty-state"><FileText size={22} /><p>No templates for {cChannel}.</p></div>}
+          </div>
+        </section>
+
+        <section className="panel table-panel">
+          <div className="table-toolbar">
+            <div className="search-field"><Search size={17} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search company, contact, email" /></div>
+            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}><option value="">All categories</option>{categories.map((i) => <option key={i} value={i}>{i}</option>)}</select>
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="">All call statuses</option>{statuses.map((i) => <option key={i} value={i}>{i}</option>)}</select>
+            <select value={limit} onChange={(e) => setLimit(Number(e.target.value))} aria-label="Rows">{[25,50,100,250].map((s) => <option key={s} value={s}>{s}</option>)}</select>
+            <span className="muted">Sample {rows.length} of {fmtNum(totalCompanies)} ? {selectedRows.length} selected</span>
+          </div>
+          <div className="table-wrap">
+            <table><thead><tr><th></th><th>Company / person</th><th>Reach</th><th>Status</th><th>Last</th><th></th></tr></thead><tbody>
+              {rows.map((row) => { const act = activity[row.id]; return (
+                <tr key={row.id}>
+                  <td><input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleSelect(row.id)} aria-label={`Select ${row.company}`} /></td>
+                  <td><b>{row.company}</b><br/><small className="muted">{row.contact_name || "-"}</small></td>
+                  <td><small>{row.email || "?"}{row.phone ? ` ? ${row.phone}` : ""}</small></td>
+                  <td><small>{(row.call_status || "pending").slice(0,24)}</small></td>
+                  <td>{act ? <span className="activity-badges"><span className="contact-tag">? {act.sent}</span><span className="contact-tag">?? {act.opened}</span></span> : <small className="muted">?</small>}</td>
+                  <td><details className="requirements-details"><summary>Edit</summary><div style={{display:"flex",flexDirection:"column",gap:6,minWidth:220}}>
+                    <input value={editing[row.id]?.call_status ?? row.call_status ?? ""} onChange={(e)=>setEditing((p)=>({...p,[row.id]:{...(p[row.id]||{}),call_status:e.target.value}}))} onBlur={(e)=>{if(e.target.value!==row.call_status) updateField(row.id,"call_status",e.target.value);}} placeholder="Previous / call comments" />
+                    <textarea rows={2} value={editing[row.id]?.requirements ?? row.requirements ?? ""} onChange={(e)=>setEditing((p)=>({...p,[row.id]:{...(p[row.id]||{}),requirements:e.target.value}}))} onBlur={(e)=>{if(e.target.value!==row.requirements) updateField(row.id,"requirements",e.target.value);}} placeholder="Discussion / requirements / comments" />
+                    <textarea rows={2} value={editing[row.id]?.next_action ?? row.next_action ?? ""} onChange={(e)=>setEditing((p)=>({...p,[row.id]:{...(p[row.id]||{}),next_action:e.target.value}}))} onBlur={(e)=>{if(e.target.value!==row.next_action) updateField(row.id,"next_action",e.target.value);}} placeholder="Follow-up message / next action" />
+                    <input type="date" value={row.follow_up_date || ""} onChange={(e)=>updateField(row.id,"follow_up_date",e.target.value)} />
+                  </div></details></td>
+                </tr>
+              ); })}
+              {!rows.length && <tr><td colSpan={6}><div className="empty-state"><BriefcaseBusiness size={22}/><p>No contacts yet.</p></div></td></tr>}
+            </tbody></table>
+          </div>
+        </section>
+
+        {selTemplate && selectedRows.length > 0 && !selTemplate._curated && (
+          <div className="send-bar">
+            <span className="muted">{selectedRows.length} selected ? {selectedEmail} email ? {selectedPhone} phone ? {selTemplate.name}</span>
+            {cChannel === "both" ? <button className="primary-button" onClick={sendBoth} disabled={cBusy}>{cBusy?"Working...":`Send both (${selectedEmail} email ? ${selectedPhone} WA)`}</button>
+             : <button className="primary-button" onClick={createSelectedCampaign} disabled={cBusy || selectedForChannel===0}>{cBusy?"Working...":`Send ${selectedForChannel} via ${cChannel}`}</button>}
+          </div>
+        )}
+
+        {cDetail && (
+          <section className="panel" style={{marginTop:16}} aria-label="Review and send">
+            <div className="panel-heading"><h3>Review ? {cDetail.name}</h3><span className="contact-tag">{cDetail.status}</span></div>
+            <p className="campaign-recipient-count">Sent {cDetail.sent_count}/{cDetail.total} ? Viewed {cDetail.opened_count||0} ? Failed {cDetail.failed_count}</p>
+            <div className="button-row"><button className="secondary-button" onClick={approveCampaign} disabled={cBusy || cDetail.status!=="pending_review"}>Approve all</button><button className="primary-button" onClick={sendCampaign} disabled={cBusy || cDetail.status!=="approved"}><Send size={16}/> Send approved</button></div>
+          </section>
+        )}
+
+        <section className="panel" style={{marginTop:16}} aria-label="Campaign history">
+          <div className="panel-heading"><h3>Campaign history ({campaigns.length})</h3><button className="icon-button" onClick={loadCampaigns} aria-label="Refresh"><RefreshCw size={16}/></button></div>
+          <div className="contact-list" role="list">
+            {campaigns.slice(0,12).map((cmp)=>(<button key={cmp.id} className="contact-row" style={{width:"100%",textAlign:"left",border:0,background:"transparent"}} onClick={()=>openCampaign(cmp.id)}><span className="contact-main"><b>{cmp.name}</b><small>{cmp.channel} ? {cmp.total} messages ? viewed {cmp.opened_count||0}</small></span><span className="contact-tag">{cmp.status}</span></button>))}
+            {!campaigns.length && <div className="empty-state"><Send size={22}/><p>No campaigns yet.</p></div>}
+          </div>
+        </section>
+      </>}
 
       {previewTemplate && (
         <div className="modal-overlay" onClick={() => setPreviewTemplate(null)}>
-          <div className="modal-content template-preview-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header"><h2>{previewTemplate.name}</h2><button className="icon-button" onClick={() => setPreviewTemplate(null)}><X size={20} /></button></div>
-            <div className="modal-body"><iframe srcDoc={previewTemplate.body} title="Template Preview" sandbox="allow-same-origin" style={{ width: "100%", height: "420px", border: "1px solid #ddd", borderRadius: "8px", background: "white" }} /></div>
-          </div>
-        </div>
-      )}
-      {editTemplate && (
-        <div className="modal-overlay" onClick={() => setEditTemplate(null)}>
-          <div className="modal-content template-edit-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header"><h2>Edit Template</h2><button className="icon-button" onClick={() => setEditTemplate(null)}><X size={20} /></button></div>
-            <div className="modal-body">
-              <div className="form-grid">
-                <label>Name<input value={editTemplate.name} onChange={(e) => setEditTemplate({ ...editTemplate, name: e.target.value })} /></label>
-                <label>Channel<select value={editTemplate.channel} onChange={(e) => setEditTemplate({ ...editTemplate, channel: e.target.value })}>{(tplMeta.channels?.length ? tplMeta.channels : ["email", "whatsapp", "linkedin", "wechat"]).map((ch) => <option key={ch} value={ch}>{ch}</option>)}</select></label>
-                <label>Subject<input value={editTemplate.subject} onChange={(e) => setEditTemplate({ ...editTemplate, subject: e.target.value })} /></label>
-              </div>
-              <label style={{ marginTop: 16, display: "block" }}>HTML Body<textarea rows={16} value={editTemplate.body} onChange={(e) => setEditTemplate({ ...editTemplate, body: e.target.value })} style={{ fontFamily: "monospace", fontSize: 12 }} /></label>
-              <div className="button-row" style={{ marginTop: 16 }}><button className="primary-button" onClick={() => updateTemplate(editTemplate.id, editTemplate)}>Save</button><button className="secondary-button" onClick={() => setEditTemplate(null)}>Cancel</button></div>
-            </div>
+          <div className="modal-content template-preview-modal" onClick={(e)=>e.stopPropagation()}>
+            <div className="modal-header"><h2>{previewTemplate.name}</h2><button className="icon-button" onClick={() => setPreviewTemplate(null)}><X size={20}/></button></div>
+            <div className="modal-body"><iframe srcDoc={previewTemplate.body} title="Template Preview" sandbox="allow-same-origin" style={{width:"100%",height:"420px",border:"1px solid #ddd",borderRadius:"8px",background:"white"}} /></div>
           </div>
         </div>
       )}
     </div>
   );
-}
 
+}
 // ---------------------------------------------------------------- Templates
 function Templates({ onNotice }) {
   const [templates, setTemplates] = useState([]);
