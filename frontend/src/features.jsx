@@ -884,7 +884,7 @@ export function InstoreMails({ onNotice }) {
               </select>
             </div>
             <textarea className="voice-text" rows={4} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Ask about priority accounts, missing links, or the next field action..." />
-            <div className="button-row"><button className="primary-button" disabled={busy}><Send size={15} /> {busy ? "Thinking..." : "Ask"}</button><span className="muted">Gemma 4 ? local SLM ? flash ? echo</span></div>
+            <div className="button-row"><button className="primary-button" disabled={busy}><Send size={15} /> {busy ? "Thinking..." : "Ask"}</button><span className="muted">Gemma 4 / local SLM / flash / echo</span></div>
           </form>
           {reply && <div className="review-card"><div className="chat-head"><b>{reply.expertise}</b><small>{reply.model} ? {reply.provider}{reply.fallback_used ? " ? fallback" : ""}</small></div><p style={{ whiteSpace: "pre-wrap" }}>{reply.reply}</p>{reply.notice && <small className="muted">{reply.notice}</small>}</div>}
           <div className="mini-stats" style={{ marginTop: 14 }}>
@@ -1274,7 +1274,7 @@ function MarketingLibrary({ onNotice, orders, videos }) {
         {(videos?.length ? videos : CHANNEL_VIDEOS.map(v=>({title:v.title,url:v.link,platform:v.tag,description:v.note}))).map((v) => (
           <div className="studio-video" key={v.title||v.url}>
             <span className="mail-icon"><Video size={16} /></span>
-            <div><b>{v.title}</b><small>{v.platform||v.tag||""} ? {v.description||v.note||""}</small></div>
+            <div><b>{v.title}</b><small>{v.platform||v.tag||""} - {v.description||v.note||""}</small></div>
             <div className="button-row">
               <button className="icon-button" title="Copy link" onClick={() => copy(v.url||v.link)}><Copy size={15} /></button>
               <a className="icon-button" title="Open" href={v.url||v.link} target="_blank" rel="noreferrer"><ExternalLink size={15} /></a>
@@ -1285,13 +1285,13 @@ function MarketingLibrary({ onNotice, orders, videos }) {
       </div>
     </section>
     <section className="panel studio-panel">
-      <div className="section-kicker"><TrendingUp size={13} /> RECENT ERP ORDERS ? ASK FOR FEEDBACK</div>
+      <div className="section-kicker"><TrendingUp size={13} /> RECENT ERP ORDERS - ASK FOR FEEDBACK</div>
       {!orders?.length ? <p className="muted" style={{fontSize:12}}>No recent ERP orders available yet.</p> : (
         <div className="studio-videos">
           {orders.map((o) => (
             <div className="studio-video" key={o.order_no}>
               <span className="mail-icon"><BriefcaseBusiness size={16} /></span>
-              <div><b>{o.customer}</b><small>{o.order_no} ? ?{fmtNum(o.total_value)} ? {o.status}</small></div>
+              <div><b>{o.customer}</b><small>{o.order_no} - Rs {fmtNum(o.total_value)} - {o.status}</small></div>
               <div className="button-row">
                 <button className="icon-button" title="Copy feedback request" onClick={() => copy(feedbackText(o))}><Copy size={15} /></button>
                 <button className="icon-button" title="WhatsApp" onClick={() => wa(feedbackText(o))}><MessageCircle size={15} /></button>
@@ -1315,7 +1315,7 @@ function MarketingSignals({ onNotice }) {
       <button className="signal-action" onClick={() => run("/social/youtube/search", { queries: ["hiring procurement", "supply chain"], max_results: 10 }, "YouTube")}><span><Video size={20} /></span><b>YouTube scan</b><small>Company/tech signals.</small></button>
       <button className="signal-action" onClick={() => run("/scheduler/run", {}, "Cron sweep")}><span><RefreshCw size={20} /></span><b>Run cron sweep</b><small>Scheduled tasks.</small></button>
     </div>
-    {busy && <p className="muted">Working?</p>}
+    {busy && <p className="muted">Working...</p>}
     {out && <section className="panel output-panel" style={{marginTop:12}}><div className="panel-heading"><h3>{out.label}</h3><button className="icon-button" onClick={() => setOut(null)}><X size={17} /></button></div><pre>{JSON.stringify(out.data, null, 2)}</pre></section>}
   </div>);
 }
@@ -1328,7 +1328,7 @@ function MarketingEvents({ onNotice }) {
   return (<div className="panel studio-panel">
     <div className="panel-heading"><div><div className="section-kicker">EVENTS &amp; OUTREACH</div><h3>Events</h3></div><div className="button-row"><button className="secondary-button" onClick={importLocal} disabled={busy}><Database size={15}/> {busy?"Loading?":"Load workbook"}</button><button className="icon-button" onClick={load}><RefreshCw size={16}/></button></div></div>
     <div className="contact-list" role="list">
-      {events.map((ev)=> <div key={ev.id} className="contact-row"><span className="contact-main"><b>{ev.title}</b><small>{ev.starts_at?new Date(ev.starts_at).toLocaleString():(ev.when_text||"Date TBC")} ? {ev.location||ev.organiser||""}</small></span><span className={`event-status ${ev.status||""}`}>{ev.status||""}</span></div>)}
+      {events.map((ev)=> <div key={ev.id} className="contact-row"><span className="contact-main"><b>{ev.title}</b><small>{ev.starts_at?new Date(ev.starts_at).toLocaleString():(ev.when_text||"Date TBC")} - {ev.location||ev.organiser||""}</small></span><span className={`event-status ${ev.status||""}`}>{ev.status||""}</span></div>)}
       {!events.length && <div className="empty-state"><CalendarDays size={22}/><p>No events loaded.</p><small>Load the workbook to populate events and outreach.</small></div>}
     </div>
   </div>);
@@ -1348,6 +1348,11 @@ export function MarketingCompanies({ onNotice }) {
   const [imageTemplates, setImageTemplates] = useState([]);
   const [attachImage, setAttachImage] = useState("");
   const [attachVideo, setAttachVideo] = useState(CHANNEL_VIDEOS[0]?.link || "");
+  const [attachCatalog, setAttachCatalog] = useState("");
+  const [waCategory, setWaCategory] = useState("");
+  const [composeSubject, setComposeSubject] = useState("");
+  const [composeBody, setComposeBody] = useState("");
+  const catalogUploadRef = React.useRef(null);
   const imgUploadRef = React.useRef(null);
   const [showTplPicker, setShowTplPicker] = useState(false);
   const [tplSearch, setTplSearch] = useState("");
@@ -1626,7 +1631,7 @@ export function MarketingCompanies({ onNotice }) {
     } catch { setCampaigns([]); }
   };
   useEffect(() => { loadCampaigns(); }, []);
-  const pickTemplate = (t) => { setSelTemplate(t); if (t) { setCChannel(t.channel || "email"); setCStrategy(t.strategy || "cold_outreach"); } };
+  const pickTemplate = (t) => { setSelTemplate(t); if (t) { setCChannel(t.channel || "email"); setCStrategy(t.strategy || "cold_outreach"); setComposeSubject(t.subject || ""); setComposeBody(t.body || ""); } else { setComposeSubject(""); setComposeBody(""); } };
 
   // Templates tab content (preview/edit/delete) folded in, minus the giant page heading
   const [previewTemplate, setPreviewTemplate] = useState(null);
@@ -1732,6 +1737,32 @@ export function MarketingCompanies({ onNotice }) {
       setBusy(false); if (mediaUploadRef.current) mediaUploadRef.current.value = "";
     }
   };
+  const resolveVars = (text, sample) => String(text || "")
+    .replaceAll("{{contact_name}}", sample?.contact_name || sample?.company || "")
+    .replaceAll("{{company_name}}", sample?.company || "")
+    .replaceAll("{{product_name}}", "Kalika Enterprises packaging")
+    .replaceAll("{{name}}", sample?.contact_name || sample?.company || "")
+    .replaceAll("{{company}}", sample?.company || "")
+    .replaceAll("{{email}}", sample?.email || "")
+    .replaceAll("{{phone}}", sample?.phone || "");
+  const waTemplates = (templates || []).filter((x) => (x.channel || "").toLowerCase() === "whatsapp");
+  const waCategories = Array.from(new Set(waTemplates.map((x) => x.category || "General")));
+  const importWhatsapp = async () => {
+    setCBusy(true);
+    try { const r = await request("/templates/import-whatsapp", { method: "POST" }); onNotice({ type: "success", text: `Imported ${r.imported} WhatsApp templates (${r.updated} updated, ${r.skipped} unchanged).` }); request("/templates").then((rows) => setTemplates(Array.isArray(rows) ? rows : [])).catch(() => {}); }
+    catch (e) { onNotice({ type: "error", text: e.message }); } finally { setCBusy(false); }
+  };
+  const uploadCatalog = async (ev) => {
+    const file = ev.target.files?.[0]; if (!file) return;
+    const fd = new FormData(); fd.append("file", file);
+    const token = sessionStorage.getItem("sales_token") || "";
+    setBusy(true);
+    try {
+      const res = await fetch(`${API}/media/upload?kind=catalogue`, { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {}, body: fd });
+      if (!res.ok) { let m = "Catalogue upload failed"; try { m = (await res.json()).detail || m; } catch {} throw new Error(m); }
+      const data = await res.json(); setAttachCatalog(data.url || data.gcs_path || ""); onNotice({ type: "success", text: `Catalogue uploaded to ${data.gcs_path}` });
+    } catch (e) { onNotice({ type: "error", text: e.message }); } finally { setBusy(false); if (catalogUploadRef.current) catalogUploadRef.current.value = ""; }
+  };
   const addContactManually = async (e) => {
     e.preventDefault();
     const form = newContact || {};
@@ -1789,7 +1820,7 @@ export function MarketingCompanies({ onNotice }) {
         method: "POST",
         body: JSON.stringify({
           name: cName, channel: cChannel, strategy: cStrategy,
-          template_id: selTemplate.id, use_ai: useAi, auto_send: !!autoSend, image_url: attachImage || "", video_url: attachVideo || "",
+          template_id: selTemplate.id, use_ai: useAi, auto_send: !!autoSend, image_url: attachImage || "", video_url: attachVideo || "", catalog_url: attachCatalog || "", subject_override: composeSubject || null, body_override: composeBody || null,
           filter: {
             limit: Math.min(Number(cLimit) || (targetRows?.length || 50), targetRows?.length || Number(cLimit) || 50),
             contact_type: "marketing_companies",
@@ -1923,20 +1954,20 @@ export function MarketingCompanies({ onNotice }) {
     if (!byCh.length) return onNotice({ type: "error", text: "Selected contacts have no email/phone." });
     setCBusy(true);
     try {
-      for (const [channel, list] of byCh) await request("/campaigns", { method: "POST", body: JSON.stringify({ name: `${cName} (${channel})`, channel, strategy: cStrategy, template_id: selTemplate.id, use_ai: useAi, image_url: attachImage || "", video_url: attachVideo || "", filter: { limit: list.length, contact_type: "marketing_companies", contact_ids: list.map((r)=>r.id), q: query, category: categoryFilter, call_status: statusFilter, funnel_stage: funnelStageFilter } }) });
+      for (const [channel, list] of byCh) await request("/campaigns", { method: "POST", body: JSON.stringify({ name: `${cName} (${channel})`, channel, strategy: cStrategy, template_id: selTemplate.id, use_ai: useAi, image_url: attachImage || "", video_url: attachVideo || "", catalog_url: attachCatalog || "", subject_override: composeSubject || null, body_override: composeBody || null, filter: { limit: list.length, contact_type: "marketing_companies", contact_ids: list.map((r)=>r.id), q: query, category: categoryFilter, call_status: statusFilter, funnel_stage: funnelStageFilter } }) });
       onNotice({ type: "success", text: `Queued ${byCh.map(([ch,l])=>`${l.length} ${ch}`).join(" + ")} for review.` }); loadCampaigns();
     } catch (e) { onNotice({ type: "error", text: e.message }); } finally { setCBusy(false); }
   };
 
   return (
     <div className="content outreach-compact">
-      <div className="page-heading"><div><div className="section-kicker">OUTREACH ? TEMPLATES ? MARKETING</div><h2>Outreach &amp; marketing</h2><p className="muted">Channel-first send, curated templates, insights, videos, signals and events.</p></div>
+      <div className="page-heading"><div><div className="section-kicker">OUTREACH / TEMPLATES / MARKETING</div><h2>Outreach &amp; marketing</h2><p className="muted">Channel-first send, curated templates, insights, videos, signals and events.</p></div>
         <div className="button-row"><button className="secondary-button" onClick={() => { load(); loadActivity(); loadCampaigns(); }}><RefreshCw size={16}/> Refresh</button><button className="secondary-button" onClick={syncFromGCS} disabled={busy}><Database size={16}/>{busy?"Syncing...":"Sync"}</button></div></div>
       <div className="outreach-tabs" role="tablist">{[["send","Send & templates"],["insights","Insights & stats"],["library","Videos & ERP"],["signals","Signal desk"],["events","Events"]].map(([id,label])=>(<button key={id} role="tab" aria-selected={mTab===id} className={`secondary-button ${mTab===id?"primary-button":""}`} onClick={()=>setMTab(id)}>{label}</button>))}</div>
       {mTab==="insights" && <><section className="panel studio-panel"><div className="panel-heading"><div><div className="section-kicker">MARKETING HIGH-LEVEL</div><h3>Exact details for sending</h3></div><span className="muted">{fmtNum(totalCompanies)} companies ? {fmtNum(sumWith("with_email"))} with email ? {fmtNum(sumWith("with_phone"))} with phone</span></div>
         <div className="marketing-stat-grid">{stats ? [["Companies",stats.total,100],["Name + email",sumWith("with_email"),totalCompanies?Math.round(sumWith("with_email")/totalCompanies*100):0],["Phone",sumWith("with_phone"),totalCompanies?Math.round(sumWith("with_phone")/totalCompanies*100):0],["Templates",templates.length,totalCompanies?Math.round(templates.length/totalCompanies*100):0],["Follow-ups due",sumWith("follow_up_due"),0],["With requirements",sumWith("with_requirements"),totalCompanies?Math.round(sumWith("with_requirements")/totalCompanies*100):0]].map(([label,value,pct])=>(<div className="marketing-stat" key={label}><small>{label}</small><b>{fmtNum(value)}</b><span>{pct}%</span></div>)) : <div className="marketing-stat"><small>Templates</small><b>{templates.length}</b></div>}</div>
         <div className="mini-charts"><div><b>Top domains</b>{topDomains.length?topDomains.map(([label,count])=>(<div key={label} className="mini-chart-row"><span>{label}</span>{bar(count,maxDomain)}<strong>{fmtNum(count)}</strong></div>)):<small className="muted">No domains.</small>}</div><div><b>Call status</b>{Object.entries(statusBuckets).map(([label,count])=>(<div key={label} className="mini-chart-row"><span>{label}</span>{bar(count,Math.max(1,...Object.values(statusBuckets)))}<strong>{fmtNum(count)}</strong></div>))}</div></div>
-        <details className="marketing-breakdown"><summary>Domains ? call status ? categories</summary><div className="marketing-breakdown-grid"><div><b>Domains</b>{Object.entries(stats?.by_domain||{}).slice(0,12).map(([l,c])=><span key={l}>{l}<strong>{c}</strong></span>)}</div><div><b>Call status</b>{Object.entries(stats?.by_call_status||{}).map(([l,c])=><span key={l}>{l}<strong>{c}</strong></span>)}</div><div><b>Categories</b>{Object.entries(stats?.by_category||{}).slice(0,12).map(([l,c])=><span key={l}>{l}<strong>{c}</strong></span>)}</div></div></details></section>
+        <details className="marketing-breakdown"><summary>Domains / call status / categories</summary><div className="marketing-breakdown-grid"><div><b>Domains</b>{Object.entries(stats?.by_domain||{}).slice(0,12).map(([l,c])=><span key={l}>{l}<strong>{c}</strong></span>)}</div><div><b>Call status</b>{Object.entries(stats?.by_call_status||{}).map(([l,c])=><span key={l}>{l}<strong>{c}</strong></span>)}</div><div><b>Categories</b>{Object.entries(stats?.by_category||{}).slice(0,12).map(([l,c])=><span key={l}>{l}<strong>{c}</strong></span>)}</div></div></details></section>
       <section className="panel studio-panel"><div className="panel-heading"><div><div className="section-kicker">GOOGLE ANALYTICS SYNC</div><h3>Insights &amp; stats (city/country &amp; more)</h3></div><div className="button-row"><button className="secondary-button" onClick={loadGa} title="Reload cached insights"><RefreshCw size={14}/> Reload</button><button className="primary-button" onClick={()=>gaSync(false)} disabled={gaBusy}><Database size={14}/> {gaBusy?"Processing...":"GA Sync"}</button><button className="icon-button" title="Force reprocess all exports" onClick={()=>gaSync(true)} disabled={gaBusy}><RefreshCw size={14}/></button></div></div>
         {ga ? (<>
           <p className="muted">{ga.status === "no_new_files" ? (ga.message||"No new file detected.") : ga.data_available ? `${(ga.files||[]).length} file(s) ? ${(ga.rows||0).toLocaleString()} rows ? processed ${String(ga.synced_at||"").slice(0,10)}${ga.from_cache?" (cached)":""}` : (ga.message||"No analytics export processed yet ? press GA Sync.")}</p>
@@ -1946,7 +1977,7 @@ export function MarketingCompanies({ onNotice }) {
           {(ga.insights||[]).length ? <details open className="marketing-breakdown"><summary>Auto insights</summary><div className="marketing-breakdown-grid"><div>{(ga.insights||[]).slice(0,12).map((x,i)=><span key={i}>{x}</span>)}</div></div></details> : null}
           {ga.warnings?.length ? <small className="muted">Warnings: {ga.warnings.slice(0,3).join("; ")}</small> : null}
           {Array.isArray(ga.sample)&&ga.sample[0] && <details className="marketing-breakdown"><summary>Sample fields ({(ga.files||[]).length} file{(ga.files||[]).length===1?"":"s"})</summary><div className="marketing-breakdown-grid"><div>{Object.keys(ga.sample[0]).slice(0,16).map((k)=><span key={k}>{k}</span>)}</div></div></details>}
-        </>) : <p className="muted">Loading analytics?</p>}
+        </>) : <p className="muted">Loading analytics...</p>}
       </section></>}
       {mTab==="library" && <MarketingLibrary onNotice={onNotice} orders={mOrders} videos={mVideos.length?mVideos:CHANNEL_VIDEOS} />}
       {mTab==="signals" && <MarketingSignals onNotice={onNotice} />}
@@ -1954,8 +1985,8 @@ export function MarketingCompanies({ onNotice }) {
       {mTab==="send" && <div className="outreach-flow">
       {sendStep === "select" && <section className="panel" aria-label="Select contacts">
         <div className="panel-heading">
-          <div><div className="section-kicker">STEP 1 ? SYNC &amp; SELECT CONTACTS</div><h2>Outreach recipients</h2>
-            <p className="muted">Total {fmtNum(totalCompanies)} ? Showing {rows.length} ? <b>{selectedRows.length} selected</b></p></div>
+          <div><div className="section-kicker">STEP 1: SYNC &amp; SELECT CONTACTS</div><h2>Outreach recipients</h2>
+            <p className="muted">Total {fmtNum(totalCompanies)} - Showing {rows.length} - <b>{selectedRows.length} selected</b></p></div>
           <div className="button-row">
             <button className="secondary-button" onClick={syncAllSources} disabled={busy}><Database size={15}/> {busy?"Syncing?":"Sync all from GCS"}</button>
             <button className="secondary-button" onClick={() => { load(); loadSources(); }}><RefreshCw size={15}/> Refresh</button>
@@ -1983,7 +2014,7 @@ export function MarketingCompanies({ onNotice }) {
           <button className="secondary-button" onClick={selectPage} disabled={!rows.length}>Select page</button>
           <button className="secondary-button" onClick={clearSelection} disabled={!selectedRows.length}>Clear ({selectedRows.length})</button>
           {multiSelect && <span className="contact-tag">Multi-select on</span>}
-          <button className="primary-button" onClick={continueToConfig} disabled={!selectedRows.length} style={{marginLeft:"auto"}}>Continue ({selectedRows.length}) ?</button>
+          <button className="primary-button" onClick={continueToConfig} disabled={!selectedRows.length} style={{marginLeft:"auto"}}>Continue ({selectedRows.length})</button>
         </div>
 
         {selectedRows.length>0 && <div className="selected-names" aria-label="Selected contacts" aria-live="polite">
@@ -2004,14 +2035,14 @@ export function MarketingCompanies({ onNotice }) {
                 <td><small>{row.email||"Not Available"}</small></td>
                 <td><small>{row.phone||"Not Available"}</small></td>
                 <td><small>{row.category||"Not Available"}</small></td>
-                <td><small>{row.call_status||"pending"}</small><br/>{act && <span className="activity-badges"><span className="contact-tag">?{act.sent}</span><span className="contact-tag">??{act.opened||0}</span></span>}</td>
+                <td><small>{row.call_status||"pending"}</small><br/>{act && <span className="activity-badges"><span className="contact-tag">Sent {act.sent}</span><span className="contact-tag">Viewed {act.opened||0}</span></span>}</td>
                 <td><div className="reach-actions">
                   {row.phone && <a className="secondary-button" href={`tel:${row.phone}`}>Call</a>}
                   {row.phone && <a className="secondary-button" href={whatsappHref(msgText,row.phone)} target="_blank" rel="noreferrer">Msg</a>}
                   {row.email && <a className="secondary-button" href={`mailto:${row.email}?subject=${encodeURIComponent(selTemplate?.subject||"Kalika Enterprises")}&body=${encodeURIComponent(msgText)}`}>Mail</a>}
                 </div></td>
               </tr>); })}
-            {!rows.length && <tr><td colSpan={7}><div className="empty-state"><Users size={22}/><p>No contacts. Use ?Sync all from GCS?.</p></div></td></tr>}
+            {!rows.length && <tr><td colSpan={7}><div className="empty-state"><Users size={22}/><p>No contacts. Use "Sync all from GCS".</p></div></td></tr>}
           </tbody></table>
         </div>
 
@@ -2027,8 +2058,8 @@ export function MarketingCompanies({ onNotice }) {
                 <small>{row.contact_name||"Not Available"}</small>
                 <small>Email: {row.email||"Not Available"}</small>
                 <small>Phone: {row.phone||"Not Available"}</small>
-                <small>Category: {row.category||"Not Available"} ? Status: {row.call_status||"pending"}</small>
-                {act && <div className="activity-badges"><span className="contact-tag">? {act.sent}</span><span className="contact-tag">?? {act.opened||0}</span></div>}
+                <small>Category: {row.category||"Not Available"} - Status: {row.call_status||"pending"}</small>
+                {act && <div className="activity-badges"><span className="contact-tag">Sent {act.sent}</span><span className="contact-tag">Viewed {act.opened||0}</span></div>}
                 <div className="reach-actions" onClick={(e)=>e.stopPropagation()}>
                   {row.phone && <a className="secondary-button" href={`tel:${row.phone}`}>Call</a>}
                   {row.phone && <a className="secondary-button" href={whatsappHref(msgText,row.phone)} target="_blank" rel="noreferrer">Msg</a>}
@@ -2043,8 +2074,8 @@ export function MarketingCompanies({ onNotice }) {
 
       {sendStep === "configure" && <section className="panel" aria-label="Configure campaign">
         <div className="panel-heading">
-          <div><div className="section-kicker">STEP 2 ? CONFIGURE CAMPAIGN</div><h2>Campaign setup</h2></div>
-          <button className="secondary-button" onClick={()=>setSendStep("select")}><Search size={14}/> ? Back to contacts</button>
+          <div><div className="section-kicker">STEP 2: CONFIGURE CAMPAIGN</div><h2>Campaign setup</h2></div>
+          <button className="secondary-button" onClick={()=>setSendStep("select")}><Search size={14}/> Back to contacts</button>
         </div>
         <div className="form-row"><label>Channel<select value={cChannel} onChange={(e)=>{setCChannel(e.target.value);setSelTemplate(null);}} aria-label="Channel"><option value="email">Email</option><option value="whatsapp">WhatsApp</option><option value="both">Both (email + WhatsApp)</option></select></label>
           <label>Campaign name<input className="campaign-name" value={cName} onChange={(e)=>setCName(e.target.value)} aria-label="Campaign name" /></label>
@@ -2076,6 +2107,31 @@ export function MarketingCompanies({ onNotice }) {
             {[...CHANNEL_VIDEOS, ...(defaultVideos||[]).map((v)=>({ title: v.name||v.title, link: v.url||v.link }))].map((v,i)=>(<button type="button" key={`${v.link}-${i}`} className={`video-chip ${attachVideo===v.link?"tick-selected":""}`} onClick={()=>setAttachVideo(attachVideo===v.link?"":v.link)}><Video size={13}/> <span>{v.title}</span></button>))}
           </div>
         </div>
+        {selTemplate && <div className="composer">
+          <b className="sub-label">Message (edit before sending)</b>
+          {cChannel !== "whatsapp" && <label className="field"><span>Subject</span><input value={composeSubject} onChange={(e)=>setComposeSubject(e.target.value)} aria-label="Email subject" /></label>}
+          {(cChannel === "whatsapp" || cChannel === "both") && <div className="cat-row">
+            <label className="field"><span>WhatsApp category</span><select value={waCategory} onChange={(e)=>setWaCategory(e.target.value)} aria-label="Category"><option value="">All categories</option>{waCategories.map((cc)=><option key={cc} value={cc}>{cc}</option>)}</select></label>
+            <button className="secondary-button" onClick={importWhatsapp} disabled={cBusy}><FileText size={13}/> {cBusy?"Importing...":"Import WhatsApp templates"}</button>
+          </div>}
+          <textarea className="compose-body" rows={6} value={composeBody} onChange={(e)=>setComposeBody(e.target.value)} aria-label="Message body" placeholder="Edit the personalised message. Variables like {{contact_name}}, {{company_name}}, {{product_name}} resolve per recipient." />
+          <div className="catalog-row">
+            <button className="secondary-button" onClick={()=>catalogUploadRef.current&&catalogUploadRef.current.click()} disabled={busy}><UploadCloud size={13}/> Catalogue (PDF)</button>
+            <input className="field-inline" value={attachCatalog} onChange={(e)=>setAttachCatalog(e.target.value)} placeholder="or paste a catalogue/PDF link" aria-label="Catalogue link" />
+            <input ref={catalogUploadRef} type="file" accept="application/pdf" hidden onChange={uploadCatalog} />
+          </div>
+          <b className="sub-label">Preview{selectedRows[0] ? ` (as ${selectedRows[0].contact_name || selectedRows[0].company})` : " (select a contact to personalize)"}</b>
+          {(cChannel === "whatsapp" || cChannel === "both") ? (
+            <div className="wa-preview" aria-label="WhatsApp preview"><div className="wa-bubble">
+              {resolveVars(composeBody, selectedRows[0] || {}).split("\n").map((line, i) => <span key={i}>{line}<br /></span>)}
+              {attachImage && <img className="wa-media" src={attachImage} alt="attachment" />}
+              {attachVideo && <div className="wa-link">Video: {attachVideo}</div>}
+              {attachCatalog && <div className="wa-link">Catalogue: {attachCatalog}</div>}
+            </div></div>
+          ) : (
+            <div className="email-preview" aria-label="Email preview"><div className="ep-subject">{resolveVars(composeSubject, selectedRows[0] || {}) || "(no subject)"}</div><iframe title="Email preview" sandbox="allow-same-origin" srcDoc={resolveVars(composeBody, selectedRows[0] || {})} /></div>
+          )}
+        </div>}
         <details className="marketing-breakdown" open><summary>Preview recipients ({selectedRows.length})</summary>
           <div className="preview-list">{selectedRows.slice(0,60).map((r)=>(<div className="preview-item" key={r.id}><b>{r.contact_name||r.company}</b><small>{r.email||"No email"}{r.phone?` ? ${r.phone}`:""}</small></div>))}{selectedRows.length>60 && <small className="muted">+{selectedRows.length-60} more</small>}</div>
         </details>
@@ -2088,19 +2144,19 @@ export function MarketingCompanies({ onNotice }) {
       </section>}
 
       {sendStep === "progress" && <section className="panel" aria-label="Campaign progress">
-        <div className="panel-heading"><div><div className="section-kicker">STEP 3 ? SENDING PROGRESS</div><h2>{cDetail ? cDetail.name : "Campaign"}</h2></div>
-          <div className="button-row"><button className="secondary-button" onClick={()=>setSendStep("select")}>? New campaign</button>
+        <div className="panel-heading"><div><div className="section-kicker">STEP 3: SENDING PROGRESS</div><h2>{cDetail ? cDetail.name : "Campaign"}</h2></div>
+          <div className="button-row"><button className="secondary-button" onClick={()=>setSendStep("select")}>New campaign</button>
           {cDetail && <><button className="secondary-button" onClick={approveCampaign} disabled={cBusy||cDetail.status!=="pending_review"}>Approve</button><button className="primary-button" onClick={sendCampaign} disabled={cBusy||cDetail.status!=="approved"}><Send size={14}/> Send approved</button><button className="icon-button" onClick={()=>openCampaign(cDetail.id)} title="Refresh progress"><RefreshCw size={15}/></button></>}</div></div>
         {cDetail ? (<>
           <div aria-live="polite" className="visually-hidden">Sending {cDetail.sent_count} of {cDetail.total}, {cDetail.failed_count} failed, {cDetail.opened_count||0} viewed.</div>
           <div className="marketing-stat-grid">{[["Total",cDetail.total],["Sent",cDetail.sent_count],["Pending",Math.max(0,cDetail.total-cDetail.sent_count-cDetail.failed_count)],["Viewed",cDetail.opened_count||0],["Failed",cDetail.failed_count]].map(([l,v])=><div className="marketing-stat" key={l}><small>{l}</small><b>{fmtNum(v)}</b></div>)}</div>
           <div className="mini-chart-row" style={{margin:"8px 0"}}><span>Progress</span><span className="mini-bar"><i style={{width:`${progressPct}%`}}/></span><strong>{progressPct}%</strong></div>
-          {cDetail.status==="pending_review" && <p className="muted">Messages generated for review. Approve then send, or go back and use ?Send now?.</p>}
+          {cDetail.status==="pending_review" && <p className="muted">Messages generated for review. Approve then send, or go back and use "Send now".</p>}
           {cDetail.failed_count>0 && <div className="button-row" style={{margin:"6px 0"}}><button className="secondary-button" onClick={retryCampaign} disabled={retrying}><RefreshCw size={14}/> {retrying?"Retrying?":`Retry ${cDetail.failed_count} failed`}</button></div>}
           <div className="table-wrap"><table><thead><tr><th>Contact</th><th>Status</th><th>Sent</th><th>Viewed</th><th>Error</th></tr></thead><tbody>
             {(cDetail.messages||[]).slice(0,80).map((m)=>(<tr key={m.id}><td><b>{m.contact_name||m.contact_id}</b></td><td><span className={`contact-tag status-${m.status}`}>{m.status}</span></td><td><small>{m.sent_at?String(m.sent_at).slice(5,16).replace("T"," "):"?"}</small></td><td><small>{m.opened_at?String(m.opened_at).slice(5,16).replace("T"," "):(m.status==="opened"?"yes":"?")}</small></td><td><small className="muted">{m.error||"?"}</small></td></tr>))}
           </tbody></table></div>
-          <small className="muted">Opened/viewed tracked via email open pixel where supported; delivery ?received? is not verifiable for all channels. Progress auto-refreshes every 12s.</small>
+          <small className="muted">Opened/viewed tracked via email open pixel where supported; delivery "received" is not verifiable for all channels. Progress auto-refreshes every 12s.</small>
         </>) : <p className="muted">No campaign yet. Go back, select contacts, configure and send.</p>}
         <h4 style={{margin:"12px 0 4px"}}>Campaign history</h4>
         <div className="contact-list" role="list">{campaigns.slice(0,10).map((cmp)=>(<button key={cmp.id} className="contact-row" style={{width:"100%",textAlign:"left",border:0,background:"transparent",padding:"4px 0"}} onClick={()=>openCampaign(cmp.id)}><span className="contact-main"><b>{cmp.name}</b><small>{cmp.channel} ? sent {cmp.sent_count||0} ? viewed {cmp.opened_count||0} ? failed {cmp.failed_count||0}</small></span><span className="contact-tag">{cmp.status}</span></button>))}{!campaigns.length && <small className="muted">No campaigns.</small>}</div>
@@ -2109,10 +2165,10 @@ export function MarketingCompanies({ onNotice }) {
       {/* sticky mobile action bar */}
       {sendStep === "select" && selectedRows.length>0 && (
         <div className="mobile-actionbar" role="region" aria-label="Selected contacts">
-          <span><b>{selectedRows.length}</b> selected ? {selectedEmail}? {selectedPhone}??</span>
+          <span><b>{selectedRows.length}</b> selected - {selectedEmail} email, {selectedPhone} phone</span>
           <div className="button-row">
             <button className="secondary-button" onClick={clearSelection}>Clear</button>
-            <button className="primary-button" onClick={continueToConfig}>Continue ?</button>
+            <button className="primary-button" onClick={continueToConfig}>Continue</button>
           </div>
         </div>)}
     </div>}
@@ -2122,7 +2178,7 @@ export function MarketingCompanies({ onNotice }) {
           <div className="modal-header"><h2>Pick a template</h2>
             <div className="button-row"><select value={tplSort} onChange={(e)=>setTplSort(e.target.value)}><option value="recent">Recently added</option><option value="name">Name</option><option value="used">Most used</option></select><button className="icon-button" onClick={()=>setShowTplPicker(false)}><X size={20}/></button></div></div>
           <div className="modal-body">
-            <div className="search-field"><Search size={15}/><input autoFocus value={tplSearch} onChange={(e)=>setTplSearch(e.target.value)} placeholder="Search templates?"/></div>
+            <div className="search-field"><Search size={15}/><input autoFocus value={tplSearch} onChange={(e)=>setTplSearch(e.target.value)} placeholder="Search templates"/></div>
             {(() => {
               const q = tplSearch.toLowerCase();
               let list = (templates||[]).filter((tt)=>!q || String(tt.name||"").toLowerCase().includes(q) || String(tt.subject||"").toLowerCase().includes(q));
@@ -2132,7 +2188,7 @@ export function MarketingCompanies({ onNotice }) {
               else list = [...list].sort((a,b)=>String(b.updated_at||"").localeCompare(String(a.updated_at||"")));
               return list.map((tt)=>(
                 <div className={`picker-row ${selTemplate?.id===tt.id?"tick-selected":""}`} key={tt.id}>
-                  <div className="picker-main"><b>{tt.name}</b><small className="muted">{tt.channel} ? used {tt.used_count||0} ? {String(tt.updated_at||"").slice(0,10)}</small></div>
+                  <div className="picker-main"><b>{tt.name}</b><small className="muted">{tt.channel} - used {tt.used_count||0} - {String(tt.updated_at||"").slice(0,10)}</small></div>
                   <div className="button-row">
                     <button className="secondary-button" onClick={()=>setPreviewTemplate(tt)}><Eye size={13}/> View</button>
                     <button className="secondary-button" onClick={()=>{ setEditTplId(editTplId===tt.id?null:tt.id); setTplEdit({ subject: tt.subject||"", body: htmlToText(tt.body) }); }}><FileText size={13}/> Edit</button>
@@ -2146,7 +2202,7 @@ export function MarketingCompanies({ onNotice }) {
                 </div>
               ));
             })()}
-            {!(templates||[]).length && <small className="muted">No templates loaded ? use Sync templates.</small>}
+            {!(templates||[]).length && <small className="muted">No templates loaded - use Sync templates.</small>}
           </div>
         </div>
       </div>)}

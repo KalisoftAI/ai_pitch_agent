@@ -124,6 +124,11 @@ def _ensure_columns() -> None:
                     conn.execute(
                         text(f"ALTER TABLE marketing_companies ADD COLUMN {column} {ddl}")
                     )
+    if "message_templates" in insp.get_table_names():
+        cols = {c["name"] for c in insp.get_columns("message_templates")}
+        if "category" not in cols:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE message_templates ADD COLUMN category VARCHAR(128) DEFAULT ''"))
     if "campaigns" in insp.get_table_names():
         cols = {c["name"] for c in insp.get_columns("campaigns")}
         if "image_url" not in cols:

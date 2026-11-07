@@ -28,6 +28,7 @@ GCS_BUCKET = "kalika_enterprises"
 IMAGE_TEMPLATE_PREFIX = "sales-metadata/sales-image-templates"
 ALLOWED_IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tif", ".tiff")
 ALLOWED_VIDEO_EXTENSIONS = (".mp4", ".mov", ".webm", ".mkv", ".avi")
+ALLOWED_DOC_EXTENSIONS = (".pdf",)
 
 DEFAULT_VIDEOS = [
     {
@@ -103,12 +104,12 @@ async def upload_media(
     db: Session = Depends(get_db),
 ):
     kind = (kind or "image").strip().lower()
-    if kind not in {"image", "video", "image_template"}:
+    if kind not in {"image", "video", "image_template", "catalogue"}:
         raise HTTPException(status_code=400, detail="kind must be image, video or image_template")
     filename = (file.filename or "").strip()
     if not filename:
         raise HTTPException(status_code=400, detail="File name is required")
-    allowed = ALLOWED_VIDEO_EXTENSIONS if kind == "video" else ALLOWED_IMAGE_EXTENSIONS
+    allowed = ALLOWED_VIDEO_EXTENSIONS if kind == "video" else (ALLOWED_DOC_EXTENSIONS if kind == "catalogue" else ALLOWED_IMAGE_EXTENSIONS)
     if not filename.lower().endswith(allowed):
         raise HTTPException(
             status_code=400,
@@ -122,6 +123,8 @@ async def upload_media(
         prefix = IMAGE_TEMPLATE_PREFIX
     elif kind == "image":
         prefix = "images"
+    elif kind == "catalogue":
+        prefix = "catalogues"
     else:
         prefix = "videos"
     timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")

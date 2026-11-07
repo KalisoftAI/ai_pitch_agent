@@ -345,6 +345,8 @@ def list_marketing_companies(
     sales_progress: str | None = Query(default=None),
     due_follow_up: bool = False,
     requirements_only: bool = False,
+    has_phone: bool = False,
+    has_email: bool = False,
     sort: str = Query(default="company"),
     limit: int = Query(default=25, ge=1, le=250),
     user: User = Depends(get_current_user),
@@ -375,6 +377,10 @@ def list_marketing_companies(
         )
     if requirements_only:
         query = query.filter(MarketingCompany.requirements != "")
+    if has_phone:
+        query = query.filter(MarketingCompany.phone != "")
+    if has_email:
+        query = query.filter(MarketingCompany.email != "")
     order_by = {
         "company": MarketingCompany.company.asc(),
         "follow_up": MarketingCompany.follow_up_date.asc(),

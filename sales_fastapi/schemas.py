@@ -242,6 +242,7 @@ class TemplateBase(BaseModel):
     funnel_stage: str = Field(default="awareness", max_length=32)
     subject: str = Field(default="", max_length=255)
     body: str = Field(default="", max_length=20_000)
+    category: str = Field(default="", max_length=128)
     variables: list[str] = Field(default_factory=list)
     is_active: bool = True
 
@@ -277,6 +278,7 @@ class TemplateUpdate(BaseModel):
     funnel_stage: Optional[str] = Field(default=None, max_length=32)
     subject: Optional[str] = Field(default=None, max_length=255)
     body: Optional[str] = Field(default=None, max_length=20_000)
+    category: Optional[str] = Field(default=None, max_length=128)
     variables: Optional[list[str]] = None
     is_active: Optional[bool] = None
 
@@ -312,6 +314,9 @@ class CampaignCreate(BaseModel):
     auto_send: bool = False
     image_url: str = Field(default="", max_length=1024)
     video_url: str = Field(default="", max_length=1024)
+    catalog_url: str = Field(default="", max_length=1024)
+    subject_override: Optional[str] = Field(default=None, max_length=255)
+    body_override: Optional[str] = Field(default=None, max_length=20_000)
     filter: CampaignFilter = Field(default_factory=CampaignFilter)
 
 

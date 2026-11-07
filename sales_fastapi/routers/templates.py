@@ -129,6 +129,7 @@ def _template_out(row: MessageTemplate) -> dict[str, Any]:
         "funnel_stage": row.funnel_stage or "awareness",
         "subject": row.subject or "",
         "body": row.body or "",
+        "category": row.category or "",
         "variables": [str(v) for v in variables],
         "is_active": bool(row.is_active),
         "created_at": str(row.created_at),
@@ -140,6 +141,7 @@ def _template_out(row: MessageTemplate) -> dict[str, Any]:
 def list_templates(
     channel: str | None = Query(default=None),
     strategy: str | None = Query(default=None),
+    category: str | None = Query(default=None),
     sort: str = Query(default="recent"),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -152,6 +154,8 @@ def list_templates(
         query = query.filter(MessageTemplate.channel == channel)
     if strategy:
         query = query.filter(MessageTemplate.strategy == strategy)
+    if category:
+        query = query.filter(MessageTemplate.category == category)
     rows = query.order_by(MessageTemplate.updated_at.desc()).all()
     used: dict[int, int] = {}
     if rows:
@@ -462,4 +466,148 @@ def sync_specific_templates(
         "synced": synced,
         "updated": updated,
         "message": f"Synced {synced} templates, updated {updated} templates",
+    }
+
+
+@router.post("/import-whatsapp")
+def import_whatsapp_templates(
+    path: str = Query(default="Mail_templates/Kalika_WhatsApp_Message_Templates.xlsx"),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Import the WhatsApp message template library from the GCS Excel file.
+
+    Reads ``kalika_enterprises/Mail_templates/Kalika_WhatsApp_Message_Templates.xlsx``,
+    preserves each template's category, emojis and line formatting, resolves the
+    ``{{...}}`` personalization fields and upserts them as ``channel="whatsapp"``
+    templates. Email templates are untouched; re-running the import updates rows in
+    place instead of creating duplicates (matched on user + whatsapp + name + category).
+    """
+    from io import BytesIO
+
+    try:
+        from openpyxl import load_workbook
+    except Exception:  # pragma: no cover - openpyxl is a hard dependency here
+        raise HTTPException(status_code=500, detail="openpyxl unavailable on server")
+
+    gcs = GCSStorage(bucket_name="kalika_enterprises")
+    if not gcs.available:
+        raise HTTPException(status_code=503, detail="GCS is not available")
+    raw = gcs.download_blob(path)
+    if not raw:
+        raise HTTPException(status_code=404, detail=f"Template file not found at {path}")
+
+    try:
+        workbook = load_workbook(BytesIO(raw), data_only=True, read_only=True)
+    except Exception as exc:  # pragma: no cover
+        raise HTTPException(status_code=400, detail=f"Could not read workbook: {type(exc).__name__}")
+
+    sheet = workbook.active
+    grid = [list(row) for row in sheet.iter_rows(values_only=True)] if sheet is not None else []
+
+    def _norm(value):
+        return " ".join(str(value or "").strip().lower().split())
+
+    header_idx = None
+    headers = []
+    for i, row in enumerate(grid[:12]):
+        cells = [_norm(c) for c in row]
+        if any(("message" in c or "template" in c or "body" in c or "text" in c) for c in cells) or \
+           any("category" in c for c in cells):
+            header_idx = i
+            headers = cells
+            break
+    if header_idx is None and grid:
+        header_idx = 0
+        headers = [_norm(c) for c in grid[0]]
+
+    def find_col(tokens):
+        for idx, head in enumerate(headers):
+            if any(tok in head for tok in tokens):
+                return idx
+        return None
+
+    category_idx = find_col(["category", "type", "group", "occasion", "theme"])
+    name_idx = find_col(["name", "title", "subject", "template name"])
+    message_idx = find_col(["message", "body", "text", "content", "template", "caption"])
+    if message_idx is None:
+        raise HTTPException(status_code=400, detail="No message/text column found in the workbook")
+
+    def cell(row, idx):
+        if idx is None or idx >= len(row) or row[idx] is None:
+            return ""
+        return str(row[idx]).strip()
+
+    imported = updated = skipped = 0
+    categories_seen = set()
+    batch_keys = set()
+    for row in grid[header_idx + 1:]:
+        if not row or all((c is None or str(c).strip() == "") for c in row):
+            continue
+        message = cell(row, message_idx)
+        if not message:
+            continue
+        category = cell(row, category_idx) or "General"
+        name = cell(row, name_idx) or (message[:40].replace("\n", " ").strip())
+        dedup_key = (name[:128].lower(), category[:128].lower())
+        if dedup_key in batch_keys:  # duplicate inside the same workbook
+            skipped += 1
+            continue
+        batch_keys.add(dedup_key)
+        categories_seen.add(category)
+
+        existing = (
+            db.query(MessageTemplate)
+            .filter(
+                MessageTemplate.user_id == user.id,
+                MessageTemplate.channel == "whatsapp",
+                MessageTemplate.name == name[:128],
+                MessageTemplate.category == category[:128],
+            )
+            .first()
+        )
+        detected = variables_used(message)
+        if existing is not None:
+            if existing.body != message or (existing.variables or []) != detected:
+                existing.body = message
+                existing.variables = detected
+                existing.is_active = True
+                updated += 1
+            else:
+                skipped += 1
+            continue
+        db.add(
+            MessageTemplate(
+                user_id=user.id,
+                channel="whatsapp",
+                strategy="cold_outreach",
+                funnel_stage="awareness",
+                name=name[:128],
+                category=category[:128],
+                subject="",
+                body=message,
+                variables=detected,
+                is_active=True,
+            )
+        )
+        imported += 1
+
+    db.commit()
+    log_event(
+        db,
+        action="template.import_whatsapp",
+        actor_user_id=user.id,
+        resource_type="template",
+        resource_id="",
+        tenant_id=user.domain,
+        detail={"file": path, "imported": imported, "updated": updated, "skipped": skipped},
+        commit=True,
+    )
+    return {
+        "ok": True,
+        "imported": imported,
+        "updated": updated,
+        "skipped": skipped,
+        "file": path,
+        "categories": sorted(categories_seen),
     }

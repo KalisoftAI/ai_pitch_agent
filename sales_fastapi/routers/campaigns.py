@@ -45,6 +45,7 @@ SENDER_CONTEXT = {
     "sender_name": "Kalisoft AI",
     "sender_email": "ai.solutions@kalisoftai.in",
     "product": "Kalisoft AI Sales Automation",
+    "product_name": "Kalisoft AI Sales Automation",
     "calendar_link": "https://kalisoftai.in/demo",
 }
 
@@ -218,13 +219,27 @@ def create_campaign(
     else:
         video_block = f"\n\n🎬 {video_url}" if video_url else ""
 
+    catalog_url = (payload.catalog_url or "").strip()
+    if catalog_url and payload.channel == "email":
+        catalog_block = (
+            '\n<div style="margin:12px 0"><a href="' + catalog_url + '" '
+            'style="display:inline-block;background:#2b56a3;color:#fff;text-decoration:none;'
+            'padding:10px 16px;border-radius:8px;font-weight:600">Download our catalogue (PDF)</a></div>'
+        )
+    else:
+        catalog_block = ("\n\nCatalogue: " + catalog_url) if catalog_url else ""
+
     model_used = "template"
+    subject_src = payload.subject_override if payload.subject_override is not None else template.subject
+    body_src = payload.body_override if payload.body_override is not None else template.body
     for contact in contacts:
-        subject = render(template.subject, {**SENDER_CONTEXT, **contact_context(contact)})
-        if payload.use_ai:
+        render_context = {**SENDER_CONTEXT, **contact_context(contact)}
+        subject = render(subject_src, render_context)
+        if payload.use_ai and payload.body_override is None:
             model_name, body = _ai_personalise(template, contact, payload.channel)
+            body = render(body, render_context)
         else:
-            model_name, body = "template", template.body
+            model_name, body = "template", render(body_src, render_context)
         if model_name != "template":
             model_used = model_name
         final_body = body
@@ -238,6 +253,11 @@ def create_campaign(
                 final_body = final_body.replace("</body>", video_block + "</body>", 1)
             else:
                 final_body = (final_body or "") + video_block
+        if catalog_block:
+            if payload.channel == "email" and ("</body>" in (final_body or "").lower()):
+                final_body = final_body.replace("</body>", catalog_block + "</body>", 1)
+            else:
+                final_body = (final_body or "") + catalog_block
         db.add(
             CampaignMessage(
                 campaign_id=campaign.id,

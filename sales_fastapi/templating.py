@@ -48,9 +48,13 @@ def render_optional(text: str, context: dict[str, Any]) -> str:
 
 
 def contact_context(contact: Any, extra: dict[str, Any] | None = None) -> dict[str, Any]:
+    name_value = getattr(contact, "name", "") or ""
+    company_value = getattr(contact, "company", "") or ""
     context = {
-        "name": getattr(contact, "name", "") or "",
-        "company": getattr(contact, "company", "") or "",
+        "name": name_value,
+        "company": company_value,
+        "contact_name": name_value,
+        "company_name": company_value,
         "email": getattr(contact, "email", "") or "",
         "phone": getattr(contact, "phone", "") or "",
         "intent": getattr(contact, "intent", "") or "",

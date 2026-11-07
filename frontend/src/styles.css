@@ -2121,3 +2121,22 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 
 .selected-names { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
 .selected-names .contact-tag { display:inline-flex; align-items:center; font-size:12px; }
+
+/* composer + previews (outreach) */
+.composer { border-top:1px dashed var(--line,#e0e6e1); margin-top:12px; padding-top:10px; display:flex; flex-direction:column; gap:8px; }
+.composer .sub-label { font-size:12px; color:var(--muted,#5c6b62); text-transform:uppercase; letter-spacing:.04em; margin-top:4px; }
+.field { display:flex; flex-direction:column; gap:3px; font-size:12px; color:var(--muted,#5c6b62); flex:1 1 200px; }
+.field span { font-size:11px; }
+.field input, .field select, .field-inline { font-size:14px; padding:8px 10px; border:1px solid var(--line,#d7ddd8); border-radius:8px; background:#fff; color:var(--ink,#1c2a24); }
+.compose-body { width:100%; box-sizing:border-box; font-size:14px; line-height:1.5; padding:10px; border:1px solid var(--line,#d7ddd8); border-radius:8px; resize:vertical; }
+.cat-row { display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; }
+.catalog-row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.field-inline { flex:1 1 220px; min-width:0; }
+.wa-preview { background:#e7f0e6; border-radius:12px; padding:14px; }
+.wa-bubble { position:relative; max-width:520px; margin:0 auto; background:#dcf8c6; border-radius:10px; padding:10px 12px; font-size:14px; line-height:1.5; color:#0b141a; white-space:pre-wrap; word-break:break-word; box-shadow:0 1px 1px rgba(0,0,0,.08); }
+.wa-media { max-width:100%; border-radius:8px; margin-top:8px; display:block; }
+.wa-link { margin-top:6px; font-size:12px; word-break:break-all; color:#2b56a3; }
+.email-preview { border:1px solid var(--line,#e0e6e1); border-radius:10px; overflow:hidden; background:#fff; }
+.ep-subject { padding:10px 12px; font-weight:700; border-bottom:1px solid #eef1ec; background:#fafaf5; }
+.email-preview iframe { width:100%; height:260px; border:0; display:block; background:#fff; }
+@media (max-width:640px){ .wa-bubble { max-width:100%; } .email-preview iframe { height:220px; } .catalog-row .field-inline { flex:1 1 100%; } }

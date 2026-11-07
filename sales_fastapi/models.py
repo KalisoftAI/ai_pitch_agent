@@ -300,6 +300,7 @@ class MessageTemplate(Base):
     funnel_stage: Mapped[str] = mapped_column(String(32), default="awareness")
     subject: Mapped[str] = mapped_column(String(255), default="")
     body: Mapped[str] = mapped_column(Text, default="")
+    category: Mapped[str] = mapped_column(String(128), index=True, default="")
     variables: Mapped[list] = mapped_column(JSON, default=list)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
