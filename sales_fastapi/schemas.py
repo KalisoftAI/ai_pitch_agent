@@ -310,6 +310,7 @@ class CampaignCreate(BaseModel):
     template_id: int
     use_ai: bool = True
     auto_send: bool = False
+    image_url: str = Field(default="", max_length=1024)
     filter: CampaignFilter = Field(default_factory=CampaignFilter)
 
 
@@ -323,6 +324,7 @@ class CampaignMessageOut(BaseModel):
     to_address: str
     rendered_subject: str
     rendered_body: str
+    image_url: str = ""
     status: str
     error: str
     provider_id: str
@@ -347,6 +349,7 @@ class CampaignOut(BaseModel):
     template_id: int
     ai_model: str
     status: str
+    image_url: str = ""
     total: int
     sent_count: int
     failed_count: int

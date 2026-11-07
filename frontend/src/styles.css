@@ -2014,3 +2014,12 @@ tr:hover .reach-actions,.reach-actions:focus-within{opacity:1}
   .requirements-details summary { cursor: pointer; padding: 4px 0; }
   .signal-action { min-height: auto; padding: 15px; }
 }
+
+/* attachable image/poster picker */
+.image-strip { display:grid; grid-template-columns:repeat(auto-fill,minmax(84px,1fr)); gap:7px; margin-top:8px; }
+.image-tile { border:1px solid var(--line,#d7ddd8); border-radius:10px; background:#fbfdfb; padding:4px; cursor:pointer; display:flex; flex-direction:column; gap:3px; align-items:center; }
+.image-tile img { width:100%; height:64px; object-fit:cover; border-radius:7px; background:#eee; }
+.image-tile span { font-size:10px; color:var(--muted,#5c6b62); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.image-tile.tick-selected { outline:2px solid #2f7d4b; background:#f3faf4; }
+.image-tile.tick-selected span { color:#2f7d4b; font-weight:600; }
+@media (max-width:640px) { .image-strip { grid-template-columns:repeat(auto-fill,minmax(70px,1fr)); } .image-tile img { height:54px; } }

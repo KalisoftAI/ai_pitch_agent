@@ -25,6 +25,7 @@ from ..services import GCSStorage
 router = APIRouter(prefix="/media", tags=["media"])
 
 GCS_BUCKET = "kalika_enterprises"
+IMAGE_TEMPLATE_PREFIX = "sales-metadata/sales-image-templates"
 ALLOWED_IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tif", ".tiff")
 ALLOWED_VIDEO_EXTENSIONS = (".mp4", ".mov", ".webm", ".mkv", ".avi")
 
@@ -64,6 +65,36 @@ def default_videos():
     return DEFAULT_VIDEOS
 
 
+@router.get("/image-templates")
+def image_templates(user: User = Depends(get_current_user)):
+    """Poster/image templates stored under ``sales-metadata/sales-image-templates``.
+
+    Returns selectable tiles (signed URLs) so campaigns can attach a Diwali or
+    product poster to WhatsApp and email without re-uploading each time.
+    """
+    gcs = GCSStorage(bucket_name=GCS_BUCKET)
+    if not gcs.available:
+        return {"items": [], "prefix": f"gs://{GCS_BUCKET}/{IMAGE_TEMPLATE_PREFIX}"}
+    blobs = gcs.list_blobs(prefix=f"{IMAGE_TEMPLATE_PREFIX}/", suffixes=ALLOWED_IMAGE_EXTENSIONS)
+    items = []
+    for blob in blobs:
+        name = blob["name"]
+        base = name.split("/")[-1]
+        if not base or base.endswith("/"):
+            continue
+        items.append(
+            {
+                "name": base,
+                "path": name,
+                "url": _signed_url(name),
+                "size": blob.get("size"),
+                "updated": blob.get("updated"),
+            }
+        )
+    items.sort(key=lambda x: str(x.get("updated") or ""), reverse=True)
+    return {"items": items, "prefix": f"gs://{GCS_BUCKET}/{IMAGE_TEMPLATE_PREFIX}"}
+
+
 @router.post("/upload")
 async def upload_media(
     kind: str = Query(default="image"),
@@ -72,12 +103,12 @@ async def upload_media(
     db: Session = Depends(get_db),
 ):
     kind = (kind or "image").strip().lower()
-    if kind not in {"image", "video"}:
-        raise HTTPException(status_code=400, detail="kind must be image or video")
+    if kind not in {"image", "video", "image_template"}:
+        raise HTTPException(status_code=400, detail="kind must be image, video or image_template")
     filename = (file.filename or "").strip()
     if not filename:
         raise HTTPException(status_code=400, detail="File name is required")
-    allowed = ALLOWED_IMAGE_EXTENSIONS if kind == "image" else ALLOWED_VIDEO_EXTENSIONS
+    allowed = ALLOWED_VIDEO_EXTENSIONS if kind == "video" else ALLOWED_IMAGE_EXTENSIONS
     if not filename.lower().endswith(allowed):
         raise HTTPException(
             status_code=400,
@@ -87,7 +118,12 @@ async def upload_media(
     if not raw:
         raise HTTPException(status_code=400, detail="Uploaded file is empty")
 
-    prefix = "images" if kind == "image" else "videos"
+    if kind == "image_template":
+        prefix = IMAGE_TEMPLATE_PREFIX
+    elif kind == "image":
+        prefix = "images"
+    else:
+        prefix = "videos"
     timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
     safe_name = "".join(c if c.isalnum() or c in "._-" else "_" for c in filename.replace(" ", "_"))[-120:]
     path = f"{prefix}/{timestamp}_{safe_name}"

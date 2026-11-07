@@ -124,11 +124,17 @@ def _ensure_columns() -> None:
                     conn.execute(
                         text(f"ALTER TABLE marketing_companies ADD COLUMN {column} {ddl}")
                     )
+    if "campaigns" in insp.get_table_names():
+        cols = {c["name"] for c in insp.get_columns("campaigns")}
+        if "image_url" not in cols:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE campaigns ADD COLUMN image_url VARCHAR(1024) DEFAULT ''"))
     if "campaign_messages" in insp.get_table_names():
         # Older campaign_messages predate contact_name/opened_at tracking.
         cols = {c["name"] for c in insp.get_columns("campaign_messages")}
         for column, ddl in (
             ("contact_name", "VARCHAR(255) DEFAULT ''"),
+            ("image_url", "VARCHAR(1024) DEFAULT ''"),
             ("sent_at", "TIMESTAMP"),
             ("opened_at", "TIMESTAMP"),
         ):

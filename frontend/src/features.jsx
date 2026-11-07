@@ -1338,6 +1338,9 @@ function MarketingEvents({ onNotice }) {
 export function MarketingCompanies({ onNotice }) {
   const [mTab, setMTab] = useState("send");
   const [sources, setSources] = useState([]);
+  const [imageTemplates, setImageTemplates] = useState([]);
+  const [attachImage, setAttachImage] = useState("");
+  const imgUploadRef = React.useRef(null);
   const [showTplPicker, setShowTplPicker] = useState(false);
   const [tplSearch, setTplSearch] = useState("");
   const [tplSort, setTplSort] = useState("recent");
@@ -1408,7 +1411,25 @@ export function MarketingCompanies({ onNotice }) {
   };
 
   const loadSources = () => request("/marketing-companies/sources").then((d) => setSources(Array.isArray(d?.items) ? d.items : [])).catch(() => setSources([]));
-  useEffect(() => { load(); loadActivity(); loadSources(); }, []);
+  const loadImageTemplates = () => request("/media/image-templates")
+    .then((d) => { const items = Array.isArray(d?.items) ? d.items : []; setImageTemplates(items); setAttachImage((prev) => prev || items[0]?.url || ""); })
+    .catch(() => setImageTemplates([]));
+  const uploadImageTemplate = async (ev) => {
+    const file = ev.target.files?.[0];
+    if (!file) return;
+    const fd = new FormData(); fd.append("file", file);
+    const token = sessionStorage.getItem("sales_token") || "";
+    setBusy(true);
+    try {
+      const res = await fetch(`${API}/media/upload?kind=image_template`, { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {}, body: fd });
+      if (!res.ok) { let m = "Image upload failed"; try { m = (await res.json()).detail || m; } catch {} throw new Error(m); }
+      const data = await res.json();
+      onNotice({ type: "success", text: `Poster uploaded to ${data.gcs_path}` });
+      await loadImageTemplates();
+      if (data.url) setAttachImage(data.url);
+    } catch (e) { onNotice({ type: "error", text: e.message }); } finally { setBusy(false); if (imgUploadRef.current) imgUploadRef.current.value = ""; }
+  };
+  useEffect(() => { load(); loadActivity(); loadSources(); loadImageTemplates(); }, []);
 
   useEffect(() => {
     if (!cDetail) return undefined;
@@ -1750,7 +1771,7 @@ export function MarketingCompanies({ onNotice }) {
         method: "POST",
         body: JSON.stringify({
           name: cName, channel: cChannel, strategy: cStrategy,
-          template_id: selTemplate.id, use_ai: useAi, auto_send: !!autoSend,
+          template_id: selTemplate.id, use_ai: useAi, auto_send: !!autoSend, image_url: attachImage || "",
           filter: {
             limit: Math.min(Number(cLimit) || (targetRows?.length || 50), targetRows?.length || Number(cLimit) || 50),
             contact_type: "marketing_companies",
@@ -1824,7 +1845,7 @@ export function MarketingCompanies({ onNotice }) {
     if (!byCh.length) return onNotice({ type: "error", text: "Selected contacts have no email/phone." });
     setCBusy(true);
     try {
-      for (const [channel, list] of byCh) await request("/campaigns", { method: "POST", body: JSON.stringify({ name: `${cName} (${channel})`, channel, strategy: cStrategy, template_id: selTemplate.id, use_ai: useAi, filter: { limit: list.length, contact_type: "marketing_companies", contact_ids: list.map((r)=>r.id), q: query, category: categoryFilter, call_status: statusFilter, funnel_stage: funnelStageFilter } }) });
+      for (const [channel, list] of byCh) await request("/campaigns", { method: "POST", body: JSON.stringify({ name: `${cName} (${channel})`, channel, strategy: cStrategy, template_id: selTemplate.id, use_ai: useAi, image_url: attachImage || "", filter: { limit: list.length, contact_type: "marketing_companies", contact_ids: list.map((r)=>r.id), q: query, category: categoryFilter, call_status: statusFilter, funnel_stage: funnelStageFilter } }) });
       onNotice({ type: "success", text: `Queued ${byCh.map(([ch,l])=>`${l.length} ${ch}`).join(" + ")} for review.` }); loadCampaigns();
     } catch (e) { onNotice({ type: "error", text: e.message }); } finally { setCBusy(false); }
   };
@@ -1880,6 +1901,16 @@ export function MarketingCompanies({ onNotice }) {
             {visibleTemplates.map((tt)=>(<article className={`studio-card ${selTemplate?.id===tt.id?"tick-selected":""}`} key={tt.id} onClick={()=> (selTemplate?.id===tt.id?setSelTemplate(null):pickTemplate(tt))} role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter") (selTemplate?.id===tt.id?setSelTemplate(null):pickTemplate(tt));}}><div className="studio-card-top"><span className="template-channel">{tt.channel}</span><b>{tt.name}</b>{selTemplate?.id===tt.id && <span className="contact-tag">?</span>}</div><p className="studio-text">{tt.subject?<><b>{tt.subject}</b><br/></>:null}{htmlToText(tt.body).slice(0,120)}</p><div className="button-row studio-actions" onClick={(e)=>e.stopPropagation()}><button className="secondary-button" onClick={()=>setPreviewTemplate(tt)}><Eye size={13}/> View</button><button className={selTemplate?.id===tt.id?"primary-button":"secondary-button"} onClick={()=> (selTemplate?.id===tt.id?setSelTemplate(null):pickTemplate(tt))}>{selTemplate?.id===tt.id?"Selected":"Select"}</button></div></article>))}
             {!visibleTemplates.length && !curatedFor(cChannel).length && <small className="muted">No templates for {cChannel}.</small>}
           </div>
+          <div className="panel-heading" style={{marginTop:12}}><div><div className="section-kicker">POSTERS / IMAGES</div><h3>Attach to WhatsApp &amp; Mail</h3></div><button className="secondary-button" onClick={()=>imgUploadRef.current&&imgUploadRef.current.click()} disabled={busy}><UploadCloud size={13}/> Upload</button></div>
+          <input ref={imgUploadRef} type="file" accept="image/*" hidden onChange={uploadImageTemplate} />
+          <div className="image-strip">
+            {imageTemplates.map((img)=>(<button type="button" className={`image-tile ${attachImage===img.url?"tick-selected":""}`} key={img.path} onClick={()=>setAttachImage(attachImage===img.url?"":img.url)} title={img.name}>
+              <img src={img.url} alt={img.name} loading="lazy" />
+              <span>{img.name.replace(/\.[a-z]+$/i,"").slice(0,16)}</span>
+            </button>))}
+            {!imageTemplates.length && <small className="muted">No posters in sales-image-templates yet ? Upload one (goes to that GCS folder) or pick after GA/media sync.</small>}
+          </div>
+          {attachImage && <div className="outreach-chip-row" style={{marginTop:6}}><span className="contact-tag">Attached to send ? <button className="icon-button" style={{padding:0}} onClick={()=>setAttachImage("")}>?</button></span></div>}
         </section>
 
         <section className="panel outreach-pane" aria-label="Contacts">
@@ -1897,7 +1928,7 @@ export function MarketingCompanies({ onNotice }) {
             <select value={statusFilter} onChange={(e)=>setStatusFilter(e.target.value)}><option value="">Status</option>{statuses.map((i)=><option key={i} value={i}>{i}</option>)}</select>
             <select value={limit} onChange={(e)=>setLimit(Number(e.target.value))}>{[25,50,100,250].map((s)=><option key={s} value={s}>{s}</option>)}</select></div>
           <div className="table-wrap"><table><thead><tr><th></th><th>Company / person</th><th>Status / last</th></tr></thead><tbody>
-            {rows.map((row)=>{ const act=activity[row.id]; const msgText=fillMsg(selTemplate?htmlToText(selTemplate.body):"Hi from Kalika Enterprises", row); return (
+            {rows.map((row)=>{ const act=activity[row.id]; const msgText=fillMsg(selTemplate?htmlToText(selTemplate.body):"Hi from Kalika Enterprises", row) + (attachImage?`\n\n\u{1F5BC}\uFE0F ${attachImage}`:""); return (
               <tr key={row.id} className={selectedIds.has(row.id)?"tick-selected":""}>
                 <td><input type="checkbox" checked={selectedIds.has(row.id)} onChange={()=>toggleSelect(row.id)}/></td>
                 <td><b>{row.company}</b><br/><small className="muted">{row.contact_name||"-"} ? {row.email||"no email"}{row.phone?` ? ${row.phone}`:""}{row.source_file?` ? ${row.source_file.replace(/\.[a-z]+$/i,"").slice(0,18)}`:""}</small>

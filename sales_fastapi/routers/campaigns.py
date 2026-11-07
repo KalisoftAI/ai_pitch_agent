@@ -192,12 +192,22 @@ def create_campaign(
         channel=payload.channel,
         strategy=payload.strategy,
         template_id=template.id,
+        image_url=payload.image_url or "",
         status="pending_review",
         total=len(contacts),
     )
     db.add(campaign)
     db.commit()
     db.refresh(campaign)
+
+    image_url = (payload.image_url or "").strip()
+    if image_url and payload.channel == "email":
+        image_block = (
+            f'<div style="margin:12px 0"><img src="{image_url}" '
+            'alt="Kalika Enterprises" style="max-width:100%;width:520px;border-radius:10px;display:block"/></div>'
+        )
+    else:
+        image_block = f"\n\n🖼️ {image_url}" if image_url else ""
 
     model_used = "template"
     for contact in contacts:
@@ -208,6 +218,12 @@ def create_campaign(
             model_name, body = "template", template.body
         if model_name != "template":
             model_used = model_name
+        final_body = body
+        if image_block:
+            if payload.channel == "email" and ("<body" in (body or "").lower()):
+                final_body = body.replace("</body>", image_block + "</body>", 1)
+            else:
+                final_body = (body or "") + image_block
         db.add(
             CampaignMessage(
                 campaign_id=campaign.id,
@@ -216,7 +232,8 @@ def create_campaign(
                 contact_name=(getattr(contact, "name", "") or ""),
                 to_address=contact.phone if phone_channel else contact.email,
                 rendered_subject=subject,
-                rendered_body=body,
+                rendered_body=final_body,
+                image_url=image_url,
                 status="pending_review",
             )
         )
@@ -256,8 +273,10 @@ def _detail(db: Session, campaign: Campaign) -> CampaignDetail:
         .all()
     )
     opened = sum(1 for m in messages if m.status == "opened")
+    data = CampaignOut.model_validate(campaign).model_dump()
+    data.pop("opened_count", None)
     return CampaignDetail(
-        **CampaignOut.model_validate(campaign).model_dump(),
+        **data,
         opened_count=opened,
         messages=[CampaignMessageOut.model_validate(message) for message in messages],
     )
