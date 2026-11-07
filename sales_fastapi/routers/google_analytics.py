@@ -103,13 +103,15 @@ def google_analytics():
 
 
 @router.post("/google/sync")
-def google_analytics_sync():
+def google_analytics_sync(force: bool = False):
     """Detect new/changed exports; process only then.
 
     * No change since last sync -> ``status=no_new_files`` (message for the UI,
       previously stored insights are returned untouched, nothing re-read).
     * New/changed file(s)      -> parse them (latest first, capped), rebuild
       insights, store into ``sales-app-data/`` and return the fresh summary.
+    * ``force=True``           -> re-read and rebuild even with no new files
+      (used after parser changes or to refresh on demand).
     """
     store = AppDataStore()
     gcs = GCSStorage(bucket_name=GCS_BUCKET)
@@ -127,13 +129,13 @@ def google_analytics_sync():
 
     signature = files_signature(files)
     state: dict[str, Any] = {}
-    if store.available:
+    if not force and store.available:
         try:
             state = store.load("ga_state") or {}
         except Exception:
             state = {}
 
-    if state.get("signature") == signature:
+    if not force and state.get("signature") == signature:
         cached: dict[str, Any] = {}
         if store.available:
             try:
