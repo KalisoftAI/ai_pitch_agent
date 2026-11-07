@@ -1918,3 +1918,14 @@ html, body, #root { width: 100%; max-width: 100%; overflow-x: clip; }
 .send-bar select { border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; background: #fff; font-size: 12px; }
 .activity-badges { display: inline-flex; gap: 4px; align-items: center; flex-wrap: wrap; }
 .failed-tag { background: #fde2d8; color: #9a4527; }
+
+/* outreach compact */
+.mini-charts { display:grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-top:12px; }
+.mini-charts b { display:block; font-size:12px; margin-bottom:6px; }
+.mini-chart-row { display:grid; grid-template-columns: minmax(80px,1fr) 1fr auto; gap:8px; align-items:center; font-size:12px; margin:4px 0; }
+.mini-chart-row span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#445; }
+.mini-bar { height:8px; background:#eef1ec; border-radius:999px; overflow:hidden; }
+.mini-bar i { display:block; height:100%; background:#2f7d4b; border-radius:999px; }
+.outreach-compact .table-wrap { overflow-x:hidden; }
+.outreach-compact table { width:100%; table-layout:fixed; }
+.outreach-compact th,.outreach-compact td { white-space:normal; word-break:break-word; vertical-align:top; font-size:12px; }

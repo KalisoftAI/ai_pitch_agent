@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import {
   Activity, BarChart3, Bot, BriefcaseBusiness, Building2, CalendarDays, Calculator, Check, Clock,
   Copy, Database, Edit2, ExternalLink, Eye, Film, FileDown, FileText, Link2, Mail, MapPin, MessageCircle, MessageSquarePlus, Mic, Package, PhoneCall, Plus, RefreshCw, Save, Search, Send, ShieldCheck,
@@ -144,7 +144,7 @@ export function TallySalesPanel({ onNotice, compact = false }) {
             <div><small>Sales value</small><b>{fmtMoney(stats.total_value)}</b></div>
             <div><small>Invoices</small><b>{fmtNum(stats.invoices)}</b></div>
             <div><small>Buyers</small><b>{fmtNum(stats.customers)}</b></div>
-            <details className="tally-extra"><summary>More register details</summary><div className="tally-extra-body"><span>{fmtNum(stats.total_quantity)} total quantity</span><span>{stats.last_sync?.status || "Not synced"}{stats.last_sync?.finished_at ? ` · ${String(stats.last_sync.finished_at).slice(0, 16)}` : ""}</span></div></details>
+            <details className="tally-extra"><summary>More register details</summary><div className="tally-extra-body"><span>{fmtNum(stats.total_quantity)} total quantity</span><span>{stats.last_sync?.status || "Not synced"}{stats.last_sync?.finished_at ? ` Â· ${String(stats.last_sync.finished_at).slice(0, 16)}` : ""}</span></div></details>
           </div>
           <div className="table-wrap tally-desktop-table">
             <table>
@@ -191,7 +191,7 @@ export function TallySalesPanel({ onNotice, compact = false }) {
               </div>
               <div className="tally-mobile-list">
                 {sales.map((row) => <details className="tally-mobile-row" key={row.id}>
-                  <summary><span><b>{row.buyer}</b><small>{row.sale_date} · {row.voucher_no}</small></span><strong>{fmtMoney(row.value)}</strong></summary>
+                  <summary><span><b>{row.buyer}</b><small>{row.sale_date} Â· {row.voucher_no}</small></span><strong>{fmtMoney(row.value)}</strong></summary>
                   <div className="tally-extra-body"><span>{row.item_name || "Sales line"}</span><span>{fmtNum(row.quantity)} quantity</span></div>
                 </details>)}
               </div>
@@ -237,7 +237,7 @@ export function InstoreSummaryCard({ onNotice }) {
           {mails.map((mail) => (
             <div className="connection-row" key={mail.id}>
               <span className="mail-icon"><Mail size={16} /></span>
-              <span><b>{mail.working_title || mail.subject || "(no subject)"}</b><small>{mail.client_name || mail.from_email || "unknown sender"} · {mail.intent || "general"}</small></span>
+              <span><b>{mail.working_title || mail.subject || "(no subject)"}</b><small>{mail.client_name || mail.from_email || "unknown sender"} Â· {mail.intent || "general"}</small></span>
               <span className={`status-pill ${mail.contact_id ? "approved" : "rejected"}`}>{mail.contact_id ? "linked" : "missing"}</span>
             </div>
           ))}
@@ -303,7 +303,7 @@ export function SalesBi({ onNotice }) {
           <div className="delivery-hero-main">
             <b>{totals.completion_pct || 0}%</b>
             <span>Dispatch / {fmtNum(totals.dispatched_qty)} kg</span>
-            <small>{fmtNum(totals.scheduled_qty)} kg scheduled · {fmtNum(totals.pending_dispatch)} pending lines</small>
+            <small>{fmtNum(totals.scheduled_qty)} kg scheduled Â· {fmtNum(totals.pending_dispatch)} pending lines</small>
           </div>
           <div className="delivery-hero-plants">
             {(delivery.plants || []).map((plant) => (
@@ -575,10 +575,10 @@ export function CompanyVisits({ onNotice, user }) {
   return (
     <div className={`content dash ${expandedView ? "visit-expanded" : ""}`}>
       <div className="greeting-banner">
-        <span className="greeting-emoji">👋</span>
+        <span className="greeting-emoji">ðŸ‘‹</span>
         <div>
-          <h3>Hola!! {userName} 🎉</h3>
-          <p className="muted">Welcome to your field dashboard. Keep up the great work! ✨</p>
+          <h3>Hola!! {userName} ðŸŽ‰</h3>
+          <p className="muted">Welcome to your field dashboard. Keep up the great work! âœ¨</p>
         </div>
       </div>
       <div className="page-heading">
@@ -670,7 +670,7 @@ export function CompanyVisits({ onNotice, user }) {
             <div className="modal-header">
               <div>
                 <h2>{selectedVisit.company}</h2>
-                <div className="muted">{selectedVisit.visit_date} · {selectedVisit.outcome || selectedVisit.status}</div>
+                <div className="muted">{selectedVisit.visit_date} Â· {selectedVisit.outcome || selectedVisit.status}</div>
               </div>
               <button className="icon-button" onClick={() => setSelectedVisit(null)}>
                 <X size={20} />
@@ -853,14 +853,14 @@ export function InstoreMails({ onNotice }) {
           </tbody></table></div>
           <div className="instore-mail-mobile">
             {mails.map((mail) => <details className="instore-mail-card" key={`mobile-${mail.id}`}>
-              <summary><span><b>{mail.working_title || mail.subject || "(no subject)"}</b><small>{mail.client_name || mail.from_email || mail.to || "Unknown sender"} · {String(mail.date || "").slice(0, 10)}</small></span><span className="contact-tag">{mail.intent || "general"}</span></summary>
+              <summary><span><b>{mail.working_title || mail.subject || "(no subject)"}</b><small>{mail.client_name || mail.from_email || mail.to || "Unknown sender"} Â· {String(mail.date || "").slice(0, 10)}</small></span><span className="contact-tag">{mail.intent || "general"}</span></summary>
               <div className="mail-detail">
-                <small className="muted">{mail.from_email || mail.to || ""}{mail.owner_email ? ` · owner ${mail.owner_email}` : ""}</small>
+                <small className="muted">{mail.from_email || mail.to || ""}{mail.owner_email ? ` Â· owner ${mail.owner_email}` : ""}</small>
                 {mail.context && <p><b>Context:</b> {mail.context}</p>}
                 {mail.snippet && <p>{mail.snippet}</p>}
                 {mail.outcome && <p><b>Outcome:</b> {mail.outcome}</p>}
                 {(mail.entities || []).length > 0 && <div className="mini-stats">{mail.entities.slice(0, 8).map((entity) => <span key={entity}>{entity}</span>)}</div>}
-                {(mail.attachments || []).length > 0 && <div className="mail-attachments"><b>Attachments</b>{mail.attachments.map((item) => <span key={item.name}>{item.name} · {item.purpose || "document"}</span>)}</div>}
+                {(mail.attachments || []).length > 0 && <div className="mail-attachments"><b>Attachments</b>{mail.attachments.map((item) => <span key={item.name}>{item.name} Â· {item.purpose || "document"}</span>)}</div>}
                 <span className={`status-pill ${mail.contact_id ? "approved" : "rejected"}`}>{mail.contact_id ? "Contact linked" : "Contact missing"}</span>
               </div>
             </details>)}
@@ -1051,51 +1051,51 @@ const CURATED_MESSAGES = [
     id: "diwali-2026",
     category: "Diwali",
     title: "Diwali greetings + festive reel",
-    text: `✨ Happy Diwali from Kalika Enterprises! ✨\n\nMay this festival of lights bring growth, prosperity and new partnerships to your business. Thank you for trusting us with your flexible packaging needs.\n\n🎬 Watch our festive reel: ${DIWALI_REEL}\n\nWarm wishes,\nKalika Enterprises\n📞 Reply to this message for a quick quote.`,
+    text: `âœ¨ Happy Diwali from Kalika Enterprises! âœ¨\n\nMay this festival of lights bring growth, prosperity and new partnerships to your business. Thank you for trusting us with your flexible packaging needs.\n\nðŸŽ¬ Watch our festive reel: ${DIWALI_REEL}\n\nWarm wishes,\nKalika Enterprises\nðŸ“ž Reply to this message for a quick quote.`,
     video: DIWALI_REEL,
   },
   {
     id: "growth-partner",
     category: "Business growth",
     title: "Grow faster with a packaging partner",
-    text: `Hi {name},\n\nEvery order is a chance to grow. At Kalika Enterprises we help brands cut packaging cost, improve shelf appeal and deliver on time — every time.\n\n✅ Custom poly bags & films\n✅ Fast sampling and quotes\n✅ Reliable dispatch from our plant\n\nReply YES and we will share a growth plan for {company}.`,
+    text: `Hi {name},\n\nEvery order is a chance to grow. At Kalika Enterprises we help brands cut packaging cost, improve shelf appeal and deliver on time â€” every time.\n\nâœ… Custom poly bags & films\nâœ… Fast sampling and quotes\nâœ… Reliable dispatch from our plant\n\nReply YES and we will share a growth plan for {company}.`,
   },
   {
     id: "short-packaging",
     category: "Packaging",
     title: "Short packaging pitch",
-    text: `Hi {name}, need stronger, lighter, better-looking packaging?\n\nKalika Enterprises makes custom poly bags & films that protect your product and lift your brand — at the right price.\n\nSend us your size and quantity for a same-day estimate. 📦`,
+    text: `Hi {name}, need stronger, lighter, better-looking packaging?\n\nKalika Enterprises makes custom poly bags & films that protect your product and lift your brand â€” at the right price.\n\nSend us your size and quantity for a same-day estimate. ðŸ“¦`,
   },
   {
     id: "feedback-recent-order",
     category: "Feedback",
     title: "Feedback on recent order",
-    text: `Hi {name},\n\nThank you for your recent order {order_no} with Kalika Enterprises. We would love your feedback:\n\n1️⃣ Product quality (1-5)\n2️⃣ Delivery timeliness (1-5)\n3️⃣ Anything we can improve?\n\nYour feedback helps us serve you better. 🙏`,
+    text: `Hi {name},\n\nThank you for your recent order {order_no} with Kalika Enterprises. We would love your feedback:\n\n1ï¸âƒ£ Product quality (1-5)\n2ï¸âƒ£ Delivery timeliness (1-5)\n3ï¸âƒ£ Anything we can improve?\n\nYour feedback helps us serve you better. ðŸ™`,
   },
   {
     id: "new-customer",
     category: "New customer",
     title: "Welcome a new customer",
-    text: `Welcome to Kalika Enterprises, {name}! 🎉\n\nWe are excited to partner with {company} for flexible packaging. Here is what you can expect:\n\n• Dedicated support\n• Fast quotes and samples\n• Consistent quality and dispatch\n\nReply with your requirement and we will get started today.`,
+    text: `Welcome to Kalika Enterprises, {name}! ðŸŽ‰\n\nWe are excited to partner with {company} for flexible packaging. Here is what you can expect:\n\nâ€¢ Dedicated support\nâ€¢ Fast quotes and samples\nâ€¢ Consistent quality and dispatch\n\nReply with your requirement and we will get started today.`,
   },
   {
     id: "reorder",
     category: "Follow-up",
     title: "Reorder / follow-up",
-    text: `Hi {name}, hope your last batch from Kalika Enterprises is working well.\n\nRunning low on stock? Reply with your quantity and we will reserve production for {company} this week.\n\n🎬 See our packaging in action: {video}`,
+    text: `Hi {name}, hope your last batch from Kalika Enterprises is working well.\n\nRunning low on stock? Reply with your quantity and we will reserve production for {company} this week.\n\nðŸŽ¬ See our packaging in action: {video}`,
     video: DIWALI_REEL,
   },
   {
     id: "rate-quote",
     category: "Business growth",
     title: "Share a rate quote",
-    text: `Hi {name}, here is our latest quote for {company}:\n\n• Product: {product}\n• Rate: {rate}\n• Validity: 7 days\n\nReply to confirm and we will block capacity for you. Thank you for choosing Kalika Enterprises.`,
+    text: `Hi {name}, here is our latest quote for {company}:\n\nâ€¢ Product: {product}\nâ€¢ Rate: {rate}\nâ€¢ Validity: 7 days\n\nReply to confirm and we will block capacity for you. Thank you for choosing Kalika Enterprises.`,
   },
   {
     id: "catalogue",
     category: "Packaging",
     title: "Share catalogue / samples",
-    text: `Hi {name}, sharing the Kalika Enterprises packaging range for {company}. We can customise size, micron, print and finish.\n\nWant physical samples? Reply with your address and we will courier them. 📬`,
+    text: `Hi {name}, sharing the Kalika Enterprises packaging range for {company}. We can customise size, micron, print and finish.\n\nWant physical samples? Reply with your address and we will courier them. ðŸ“¬`,
   },
 ];
 
@@ -1127,7 +1127,7 @@ function htmlToText(html) {
     .trim();
 }
 
-export function MessageStudio({ onNotice }) {
+function MessageStudio_UNUSED({ onNotice }) {
   const [category, setCategory] = useState("All");
   const [phone, setPhone] = useState("");
   const [orders, setOrders] = useState([]);
@@ -1156,9 +1156,9 @@ export function MessageStudio({ onNotice }) {
   const copy = async (text) => {
     try {
       await navigator.clipboard.writeText(text);
-      onNotice({ type: "success", text: "Message copied — paste it in WhatsApp." });
+      onNotice({ type: "success", text: "Message copied â€” paste it in WhatsApp." });
     } catch {
-      onNotice({ type: "error", text: "Clipboard unavailable — select and copy manually." });
+      onNotice({ type: "error", text: "Clipboard unavailable â€” select and copy manually." });
     }
   };
 
@@ -1221,7 +1221,7 @@ export function MessageStudio({ onNotice }) {
               <span className="mail-icon"><Video size={16} /></span>
               <div>
                 <b>{video.title}</b>
-                <small>{video.tag} · {video.note}</small>
+                <small>{video.tag} Â· {video.note}</small>
               </div>
               <div className="button-row">
                 <button className="icon-button" title="Copy link" onClick={() => copy(video.link)}><Copy size={15} /></button>
@@ -1234,7 +1234,7 @@ export function MessageStudio({ onNotice }) {
       </div>
 
       <div className="studio-section">
-        <div className="section-kicker"><TrendingUp size={13} /> RECENT ERP ORDERS · ASK FOR FEEDBACK</div>
+        <div className="section-kicker"><TrendingUp size={13} /> RECENT ERP ORDERS Â· ASK FOR FEEDBACK</div>
         {orders.length === 0 ? (
           <p className="muted" style={{ fontSize: 12 }}>No recent ERP orders available yet.</p>
         ) : (
@@ -1246,7 +1246,7 @@ export function MessageStudio({ onNotice }) {
                   <span className="mail-icon"><BriefcaseBusiness size={16} /></span>
                   <div>
                     <b>{order.customer}</b>
-                    <small>{order.order_no} · ₹{fmtNum(order.total_value)} · {order.status}</small>
+                    <small>{order.order_no} Â· â‚¹{fmtNum(order.total_value)} Â· {order.status}</small>
                   </div>
                   <div className="button-row">
                     <button className="icon-button" title="Copy feedback request" onClick={() => copy(feedback)}><Copy size={15} /></button>
@@ -1432,7 +1432,7 @@ export function MarketingCompanies({ onNotice }) {
       await navigator.clipboard.writeText(phone);
       onNotice({ type: "success", text: "Phone number copied." });
     } catch {
-      onNotice({ type: "error", text: "Clipboard unavailable — copy the number manually." });
+      onNotice({ type: "error", text: "Clipboard unavailable â€” copy the number manually." });
     }
   };
 
@@ -1456,7 +1456,7 @@ export function MarketingCompanies({ onNotice }) {
       await navigator.clipboard.writeText(sendText);
       onNotice({ type: "success", text: "Message copied." });
     } catch {
-      onNotice({ type: "error", text: "Clipboard unavailable — copy the message manually." });
+      onNotice({ type: "error", text: "Clipboard unavailable â€” copy the message manually." });
     }
   };
 
@@ -1467,7 +1467,7 @@ export function MarketingCompanies({ onNotice }) {
 
   const sendEmail = () => {
     if (!sendTarget?.email) return;
-    const subject = encodeURIComponent(sendSubject || `Kalika Enterprises · ${sendTarget.company}`);
+    const subject = encodeURIComponent(sendSubject || `Kalika Enterprises Â· ${sendTarget.company}`);
     const body = encodeURIComponent(sendText || "");
     window.location.href = `mailto:${sendTarget.email}?subject=${subject}&body=${body}`;
   };
@@ -1556,7 +1556,7 @@ export function MarketingCompanies({ onNotice }) {
       });
       if (!res.ok) { let m = "Template upload failed"; try { m = (await res.json()).detail || m; } catch {} throw new Error(m); }
       const data = await res.json();
-      onNotice({ type: "success", text: `${data.message || "Template uploaded"}${data.gcs_path ? ` · stored ${data.gcs_path}` : ""}` });
+      onNotice({ type: "success", text: `${data.message || "Template uploaded"}${data.gcs_path ? ` Â· stored ${data.gcs_path}` : ""}` });
       setNewTemplate(null); loadCampaigns();
     } catch (e) { onNotice({ type: "error", text: e.message }); } finally {
       setCBusy(false); if (tplUploadRef.current) tplUploadRef.current.value = "";
@@ -1662,7 +1662,7 @@ export function MarketingCompanies({ onNotice }) {
   const openCampaign = async (id) => { try { setCDetail(await request(`/campaigns/${id}`)); } catch (e) { onNotice({ type: "error", text: e.message }); } };
   const approveCampaign = async () => {
     if (!cDetail) return; setCBusy(true);
-    try { setCDetail(await request(`/campaigns/${cDetail.id}/approve`, { method: "POST" })); onNotice({ type: "success", text: "Approved — ready to send." }); }
+    try { setCDetail(await request(`/campaigns/${cDetail.id}/approve`, { method: "POST" })); onNotice({ type: "success", text: "Approved â€” ready to send." }); }
     catch (e) { onNotice({ type: "error", text: e.message }); } finally { setCBusy(false); }
   };
   const sendCampaign = async () => {
@@ -1691,526 +1691,220 @@ export function MarketingCompanies({ onNotice }) {
   const selectRowForSend = (row) => fillSendArea(row);
   const sumWith = (key) => stats ? (stats[key] || 0) : 0;
   const totalCompanies = stats?.total || 0;
+  const curatedFor = (ch) => ch === "whatsapp" || ch === "both" ? CURATED_MESSAGES : [];
+  const tplFor = (ch) => (templates || []).filter((t) => {
+    const tc = (t.channel || "email").toLower();
+    if (ch === "both") return tc === "email" || tc === "whatsapp";
+    return tc === ch;
+  });
+  const visibleTemplates = tplFor(cChannel);
+  const fillMsg = (raw, row) => String(raw || "")
+    .replaceAll("{name}", row?.contact_name || row?.company || "there")
+    .replaceAll("{company}", row?.company || "your business")
+    .replaceAll("{email}", row?.email || "")
+    .replaceAll("{phone}", row?.phone || "")
+    .replaceAll("{video}", DIWALI_REEL);
+  const copyText = async (value) => {
+    try { await navigator.clipboard.writeText(value || ""); onNotice({ type: "success", text: "Copied." }); }
+    catch { onNotice({ type: "error", text: "Copy failed." }); }
+  };
+  const bucketStatus = (rows) => {
+    const b = { Reached: 0, Pending: 0, Invalid: 0, Other: 0 };
+    (rows || []).forEach((r) => {
+      const s = String(r.call_status || "").toLowerCase();
+      if (/answer|done|sent|reach|connect|interested|converted|positive/.test(s)) b.Reached++;
+      else if (!s || /pending|follow|later|call|new|na|n\/a/.test(s)) b.Pending++;
+      else if (/invalid|wrong|bounce|dnd|closed|no\b/.test(s)) b.Invalid++;
+      else b.Other++;
+    });
+    return b;
+  };
+  const statusBuckets = bucketStatus(rows);
+  const topDomains = Object.entries(stats?.by_domain || {}).slice(0, 5);
+  const maxDomain = Math.max(1, ...topDomains.map(([, n]) => n));
+  const bar = (value, max) => <span className="mini-bar"><i style={{ width: `${Math.max(4, Math.round((value / (max || 1)) * 100))}%` }} /></span>;
+  const sendBoth = async () => {
+    if (!selTemplate) return onNotice({ type: "error", text: "Select a template first." });
+    if (!selectedRows.length) return onNotice({ type: "error", text: "Select contacts." });
+    const byChannel = [["email", selectedRows.filter((r) => r.email)], ["whatsapp", selectedRows.filter((r) => r.phone)]].filter(([, list]) => list.length);
+    if (!byChannel.length) return onNotice({ type: "error", text: "No selected contacts have email/phone for the chosen channel." });
+    setCBusy(true);
+    try {
+      for (const [channel, list] of byChannel) {
+        const prev = cChannel;
+        setCChannel(channel);
+        await request("/campaigns", { method: "POST", body: JSON.stringify({ name: `${cName} (${channel})`, channel, strategy: cStrategy, template_id: selTemplate.id, use_ai: useAi, filter: { limit: list.length, contact_type: "marketing_companies", q: query, category: categoryFilter, call_status: statusFilter, funnel_stage: funnelStageFilter, contact_ids: list.map((r) => r.id) } }) });
+        setCChannel(prev);
+      }
+      onNotice({ type: "success", text: `Queued ${byChannel.map(([ch, l]) => `${l.length} ${ch}`).join(" + ")} for review.` });
+      loadCampaigns();
+    } catch (e) { onNotice({ type: "error", text: e.message }); } finally { setCBusy(false); }
+  };
   return (
-    <div className="content">
+    <div className="content outreach-compact">
       <div className="page-heading">
         <div>
-          <div className="section-kicker">OUTREACH · TEMPLATES · CONTACTS · MAIL</div>
+          <div className="section-kicker">OUTREACH Â· TEMPLATES Â· CONTACTS Â· SEND</div>
           <h2>Outreach &amp; marketing</h2>
-          <p className="muted">Pick a template (view / edit / send), choose a small set of contacts by category or filter, then send via email or WhatsApp and track who opened it.</p>
+          <p className="muted">Pick channel, select a template, tick contacts, then send email/WhatsApp (or both).</p>
         </div>
         <div className="button-row">
-          <button className="secondary-button" onClick={() => { load(); loadActivity(); }}><RefreshCw size={16} /> Refresh</button>
-          <label className="secondary-button" style={{ cursor: busy ? "wait" : "pointer" }}>
-            <UploadCloud size={16} />{busy ? "Uploading..." : "Upload File"}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              onChange={uploadFile}
-              disabled={busy}
-              style={{ display: "none" }}
-            />
-          </label>
+          <button className="secondary-button" onClick={() => { load(); loadActivity(); loadCampaigns(); }}><RefreshCw size={16} /> Refresh</button>
+          <button className="secondary-button" onClick={syncFromGCS} disabled={busy}><Database size={16} />{busy ? "Syncing..." : "Sync"}</button>
         </div>
       </div>
-      <section className="panel" style={{ marginBottom: 14 }}>
-        <div className="table-toolbar">
-          <div className="search-field"><Database size={17} /><input value={syncPath} onChange={(e) => setSyncPath(e.target.value)} placeholder="GCS path to sync (optional) e.g. sales-contacts/my_list.xlsx" /></div>
-          <button className="secondary-button" onClick={syncFromGCS} disabled={busy}><Database size={16} />{busy ? "Syncing..." : "Sync this path"}</button>
-          <button className="secondary-button" onClick={runImport} disabled={busy}><Database size={16} />{busy ? "Importing..." : "Import default"}</button>
-          <button className="primary-button" onClick={() => setNewContact({ company: "", contact_name: "", phone: "", email: "", category: "", call_status: "", requirements: "", follow_up_date: "", next_action: "" })}>Add contact manually</button>
-        </div>
-        <small className="muted">Leave the path blank to sync the default marketing workbook + customers CSV. Upload an .xlsx / .csv above to update immediately, then sync to merge.</small>
-        {newContact && (
-          <form className="form-grid" onSubmit={addContactManually} style={{ borderTop: "1px solid #edf0eb", paddingTop: 12, marginTop: 12 }}>
-            <label>Company*<input value={newContact.company || ""} onChange={(e) => setNewContact({ ...newContact, company: e.target.value })} required /></label>
-            <label>Contact<input value={newContact.contact_name || ""} onChange={(e) => setNewContact({ ...newContact, contact_name: e.target.value })} /></label>
-            <label>Email<input value={newContact.email || ""} onChange={(e) => setNewContact({ ...newContact, email: e.target.value })} /></label>
-            <label>Phone<input value={newContact.phone || ""} onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })} /></label>
-            <label>Category<input value={newContact.category || ""} onChange={(e) => setNewContact({ ...newContact, category: e.target.value })} /></label>
-            <label>Call status<input value={newContact.call_status || ""} onChange={(e) => setNewContact({ ...newContact, call_status: e.target.value })} placeholder="e.g. not called yet" /></label>
-            <label>Follow-up date<input type="date" value={newContact.follow_up_date || ""} onChange={(e) => setNewContact({ ...newContact, follow_up_date: e.target.value })} /></label>
-            <label>Requirements<textarea rows={2} value={newContact.requirements || ""} onChange={(e) => setNewContact({ ...newContact, requirements: e.target.value })} /></label>
-            <div className="button-row"><button type="submit" className="primary-button" disabled={busy}>{busy ? "Saving..." : "Add contact"}</button><button type="button" className="secondary-button" onClick={() => setNewContact(null)}>Cancel</button></div>
-          </form>
-        )}
-      </section>
-      {/* --- Templates first: pick one (green tick ✓ = selected) --- */}
+
       <section className="panel studio-panel">
         <div className="panel-heading">
-          <div><div className="section-kicker">TEMPLATES · SELECT FOR GROUP SEND</div><h3>Templates ({templates.length})</h3></div>
-          <button className="secondary-button" onClick={syncTemplates} disabled={cBusy}><Database size={15} /> Sync from GCS</button>
-          <button className="secondary-button" onClick={() => setNewTemplate({ name: "", channel: "email", strategy: "cold_outreach", subject: "", body: "" })}>Create template</button>
-          {templates.length > 0 && <span className="muted">Tap a template to select (tick ✓ = selected). Then select contacts below and send.</span>}
+          <div><div className="section-kicker">HIGH-LEVEL</div><h3>Outreach snapshot</h3></div>
+          <span className="muted">{fmtNum(stats?.total || 0)} companies</span>
         </div>
-        {newTemplate && (
-          <form className="form-grid" onSubmit={createTemplateFromForm} style={{ borderTop: "1px solid #edf0eb", paddingTop: 12, marginTop: 12 }}>
-            <label>Name<input value={newTemplate.name || ""} onChange={(e) => setNewTemplate({ ...newTemplate, name: e.target.value })} placeholder="e.g. Bulk marketing – packaging film" required /></label>
-            <label>Channel
-              <select value={newTemplate.channel || "email"} onChange={(e) => setNewTemplate({ ...newTemplate, channel: e.target.value })}>
-                <option value="email">email</option><option value="whatsapp">whatsapp</option><option value="linkedin">linkedin</option><option value="wechat">wechat</option>
-              </select>
-            </label>
-            <label>Strategy
-              <select value={newTemplate.strategy || "cold_outreach"} onChange={(e) => setNewTemplate({ ...newTemplate, strategy: e.target.value })}>
-                <option value="cold_outreach">cold_outreach (bulk marketing)</option>
-                <option value="follow_up">follow_up</option>
-                <option value="catalog">catalog (product catalog)</option>
-                <option value="manufacturing_video">manufacturing_video</option>
-                <option value="nurture">nurture</option>
-              </select>
-            </label>
-            <label>Subject<input value={newTemplate.subject || ""} onChange={(e) => setNewTemplate({ ...newTemplate, subject: e.target.value })} placeholder="Email subject (optional)" /></label>
-            <label style={{ gridColumn: "1 / -1" }}>Body / message (paste here)
-              <textarea rows={4} value={newTemplate.body || ""} onChange={(e) => setNewTemplate({ ...newTemplate, body: e.target.value })} placeholder="Paste HTML or plain message…" required />
-            </label>
-            <div className="button-row">
-              <button type="submit" className="primary-button" disabled={cBusy}>{cBusy ? "Saving..." : "Create template"}</button>
-              <label className="secondary-button"><UploadCloud size={15} /> Upload file (.html/.txt)
-                <input ref={tplUploadRef} type="file" accept=".html,.htm,.txt,.md" onChange={uploadTemplateFile} style={{ display: "none" }} />
-              </label>
-              <button type="button" className="secondary-button" onClick={() => setNewTemplate(null)}>Cancel</button>
-            </div>
-            <small className="muted">Created templates are stored in GCS ``kalika_enterprises/Mail_templates/`` on next sync and appear in the UI.</small>
-          </form>
-        )}
+        <div className="marketing-stat-grid">
+          {[["Companies", stats?.total || 0], ["With email", sumWith("with_email")], ["With phone", sumWith("with_phone")], ["Follow-ups due", sumWith("follow_up_due")]].map(([label, value]) => (
+            <div className="marketing-stat" key={label}><small>{label}</small><b>{fmtNum(value)}</b></div>
+          ))}
+        </div>
+        <div className="mini-charts">
+          <div><b>Top domains</b>{topDomains.length ? topDomains.map(([label, count]) => <div key={label} className="mini-chart-row"><span>{label}</span>{bar(count, maxDomain)}<strong>{fmtNum(count)}</strong></div>) : <small className="muted">No email domains yet.</small>}</div>
+          <div><b>Call status</b>{Object.entries(statusBuckets).map(([label, count]) => <div key={label} className="mini-chart-row"><span>{label}</span>{bar(count, Math.max(1, ...Object.values(statusBuckets)))}<strong>{fmtNum(count)}</strong></div>)}</div>
+        </div>
+      </section>
+
+      <section className="panel studio-panel">
+        <div className="panel-heading">
+          <div><div className="section-kicker">TEMPLATES Â· CHANNEL-FIRST SEND</div><h3>Templates</h3></div>
+          <div className="button-row">
+            <select value={cChannel} onChange={(e) => { setCChannel(e.target.value); setSelTemplate(null); }} aria-label="Send channel">
+              <option value="email">Email</option><option value="whatsapp">WhatsApp</option><option value="both">Both</option>
+            </select>
+            <button className="secondary-button" onClick={syncTemplates} disabled={cBusy}><Database size={15} /> Sync templates</button>
+          </div>
+        </div>
         <div className="contact-list" role="list">
-          {templates.map((t) => (
+          {curatedFor(cChannel).map((m) => (
+            <div key={m.id} role="listitem" className={`contact-row ${selTemplate?.id === `c-${m.id}` ? "selected tick-selected" : ""}`} style={{ cursor: "pointer" }} onClick={() => setSelTemplate({ id: `c-${m.id}`, name: m.title, channel: "whatsapp", body: m.text, subject: m.title, _curated: m })}>
+              <span className="tick-mark">{selTemplate?.id === `c-${m.id}` ? "âœ“" : ""}</span>
+              <span className="contact-main"><b>{m.title}</b><small>{m.category} Â· copy / WhatsApp</small></span>
+              <span className="contact-tag">curated</span>
+            </div>
+          ))}
+          {visibleTemplates.map((t) => (
             <button key={t.id} role="listitem" className={`contact-row ${selTemplate?.id === t.id ? "selected tick-selected" : ""}`} style={{ width: "100%", textAlign: "left", border: 0, background: selTemplate?.id === t.id ? "#eef6ef" : "transparent" }} onClick={() => (selTemplate?.id === t.id ? setSelTemplate(null) : pickTemplate(t))} aria-pressed={selTemplate?.id === t.id}>
-              <span className="tick-mark">{selTemplate?.id === t.id ? "✓" : ""}</span>
-              <span className="contact-main"><b>{t.name}</b><small>{t.subject || String(t.body || "").slice(0, 90)}</small></span>
+              <span className="tick-mark">{selTemplate?.id === t.id ? "âœ“" : ""}</span>
+              <span className="contact-main"><b>{t.name}</b><small>{t.subject || String(t.body || "").slice(0, 80)}</small></span>
               <span className="contact-tag">{t.channel}</span>
-              <span className="contact-tag">{t.strategy || "general"}</span>
               <span className="button-row">
                 <span className="icon-button" role="button" tabIndex={0} title="Preview" onClick={(e) => { e.stopPropagation(); setPreviewTemplate(t); }}><Eye size={16} /></span>
                 <span className="icon-button" role="button" tabIndex={0} title="Edit" onClick={(e) => { e.stopPropagation(); setEditTemplate(t); }}><Edit2 size={16} /></span>
-                <span className="icon-button danger" role="button" tabIndex={0} title="Delete" onClick={(e) => { e.stopPropagation(); deleteTemplate(t.id); }}><Trash2 size={16} /></span>
               </span>
             </button>
           ))}
-          {!templates.length && <div className="empty-state"><FileText size={22} /><p>No templates yet.</p><small>Sync from GCS to import HTML templates.</small></div>}
+          {!visibleTemplates.length && !curatedFor(cChannel).length && <div className="empty-state"><FileText size={22} /><p>No templates for {cChannel}.</p></div>}
         </div>
-        {selTemplate && (
-          <details className="outreach-template-preview">
-            <summary><span>View selected template</span><b>{selTemplate.name}</b></summary>
-            <div className="template-preview-body">
-              {selTemplate.subject && <p><b>Subject:</b> {selTemplate.subject}</p>}
-              <pre>{selTemplate.body}</pre>
-              {!!selTemplate.variables?.length && <small>Personalization fields: {selTemplate.variables.join(", ")}</small>}
-            </div>
-          </details>
-        )}
+        {selTemplate && <div className="outreach-template-preview"><div className="template-preview-body"><b>{selTemplate.name}</b>{selTemplate.subject && <p>Subject: {selTemplate.subject}</p>}<pre>{fillMsg(selTemplate.body, selectedRows[0] || {})}</pre></div></div>}
       </section>
-      <section className="panel studio-panel">
-        <div className="panel-heading">
-          <div><div className="section-kicker">MARKETING HIGH-LEVEL</div><h3>Exact details for sending</h3></div>
-          <span className="muted">{stats ? `${fmtNum(totalCompanies)} companies · ${sumWith("with_email")} with email · ${sumWith("with_phone")} with phone` : `${templates.length} templates`}</span>
-        </div>
-        <div className="marketing-stat-grid">
-          {stats ? [
-            ["Companies", stats.total],
-            ["Name + email", sumWith("with_email")],
-            ["Phone", sumWith("with_phone")],
-            ["Templates", templates.length],
-            ["Follow-ups due", sumWith("follow_up_due")],
-            ["With requirements", sumWith("with_requirements")],
-          ].map(([label, value]) => {
-            const pct = totalCompanies ? Math.round((value / totalCompanies) * 100) : 0;
-            return (
-              <div className="marketing-stat" key={label}>
-                <small>{label}</small>
-                <b>{fmtNum(value)}</b>
-                <span>{pct}%</span>
-              </div>
-            );
-          }) : [<div className="marketing-stat" key="tpl"><small>Templates</small><b>{templates.length}</b><span>—</span></div>]}
-        </div>
-          <details className="marketing-breakdown">
-            <summary>Domains · call status · categories</summary>
-            <div className="marketing-breakdown-grid">
-              <div><b>Domain</b>{Object.entries(stats?.by_domain || {}).slice(0, 12).map(([label, count]) => <span key={label}>{label}<strong>{fmtNum(count)}</strong></span>)}{!Object.keys(stats?.by_domain || {}).length && <span>—</span>}</div>
-              <div><b>Call status</b>{Object.entries(stats?.by_call_status || {}).map(([label, count]) => <span key={label}>{label}<strong>{fmtNum(count)}</strong></span>)}</div>
-              <div><b>Category</b>{Object.entries(stats?.by_category || {}).map(([label, count]) => <span key={label}>{label}<strong>{fmtNum(count)}</strong></span>)}</div>
-              <div><b>Funnel / progress</b>{Object.entries(stats?.by_funnel_stage || {}).map(([label, count]) => <span key={label}>{label}<strong>{fmtNum(count)}</strong></span>)}{Object.entries(stats?.by_sales_progress || {}).map(([label, count]) => <span key={label}>{label.replaceAll("_", " ")}<strong>{fmtNum(count)}</strong></span>)}</div>
-            </div>
-          </details>
-      </section>
+
       <section className="panel table-panel">
         <div className="table-toolbar">
-          <div className="search-field"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search company, contact, email or requirements" /></div>
-          <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
-            <option value="">All categories</option>
-            {categories.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-            <option value="">All call statuses</option>
-            {statuses.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-          <select value={funnelStageFilter} onChange={(event) => setFunnelStageFilter(event.target.value)} aria-label="Filter by funnel stage">
-            <option value="">All funnel stages</option>{funnelStages.map((stage) => <option key={stage} value={stage}>{stage}</option>)}
-          </select>
-          <select value={salesProgressFilter} onChange={(event) => setSalesProgressFilter(event.target.value)} aria-label="Filter by sales progress">
-            <option value="">All progress</option>{progressOptions.map((progress) => <option key={progress} value={progress}>{progress.replaceAll("_", " ")}</option>)}
-          </select>
-          <label className="follow-up-toggle"><input type="checkbox" checked={dueFollowupsOnly} onChange={(event) => setDueFollowupsOnly(event.target.checked)} /> Follow-ups due</label>
-          <label className="follow-up-toggle"><input type="checkbox" checked={requirementsOnly} onChange={(event) => setRequirementsOnly(event.target.checked)} /> With requirements</label>
-          <select value={sortBy} onChange={(event) => setSortBy(event.target.value)} aria-label="Sort contacts">
-            <option value="company">Sort: company</option>
-            <option value="contact">Sort: contact</option>
-            <option value="category">Sort: category</option>
-            <option value="progress">Sort: progress</option>
-            <option value="follow_up">Sort: follow-up</option>
-            <option value="updated">Sort: recently updated</option>
-          </select>
-          <select value={limit} onChange={(event) => setLimit(Number(event.target.value))} aria-label="Rows to show">
-            {[25, 50, 100, 250].map((size) => <option key={size} value={size}>{size} rows</option>)}
-          </select>
-          <span className="muted">Sampling {rows.length} of {fmtNum(totalCompanies)} · {selectedRows.length} selected</span>
+          <div className="search-field"><Search size={17} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search company, contact, email" /></div>
+          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}><option value="">All categories</option>{categories.map((i) => <option key={i} value={i}>{i}</option>)}</select>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="">All call statuses</option>{statuses.map((i) => <option key={i} value={i}>{i}</option>)}</select>
+          <select value={limit} onChange={(e) => setLimit(Number(e.target.value))} aria-label="Rows to show">{[25,50,100,250].map((s) => <option key={s} value={s}>{s} rows</option>)}</select>
+          <span className="muted">Sample {rows.length} of {fmtNum(totalCompanies)} Â· {selectedRows.length} selected</span>
         </div>
         <div className="table-wrap marketing-desktop-table">
           <table>
-            <thead>
-              <tr>
-                <th></th>
-                <th>Company</th>
-                <th>Name / contact</th>
-                <th>Mail</th>
-                <th>Previous</th>
-                <th>Next action</th>
-                <th>Mail / viewed</th>
-                <th>Message</th>
-              </tr>
-            </thead>
+            <thead><tr><th></th><th>Company / person</th><th>Reach</th><th>Status</th><th>Last</th><th></th></tr></thead>
             <tbody>
               {rows.map((row) => {
-                const editingRequirements = (editing[row.id]?.requirements ?? row.requirements) || "";
                 const act = activity[row.id];
                 return (
                   <tr key={row.id}>
                     <td><input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleSelect(row.id)} aria-label={`Select ${row.company}`} /></td>
-                    <td><b>{row.company}</b><br /><small className="muted">{row.category || ""}</small></td>
-                    <td className="table-person">
-                      <span>{row.contact_name || "-"}</span>
-                      <small>{row.phone || ""}</small>
-                    </td>
-                    <td><small>{row.email || "-"}</small></td>
+                    <td><b>{row.company}</b><br /><small className="muted">{row.contact_name || "-"}</small></td>
+                    <td className="table-person"><small>{row.email || "â€”"}{row.phone ? ` Â· ${row.phone}` : ""}</small></td>
+                    <td><small>{(row.call_status || "pending").slice(0, 24)}</small></td>
+                    <td>{act ? <span className="activity-badges"><span className="contact-tag">âœ‰ {act.sent}</span><span className="contact-tag">ðŸ‘ {act.opened}</span></span> : <small className="muted">â€”</small>}</td>
                     <td>
                       <details className="requirements-details">
-                        <summary>{(row.call_status || "Previous").slice(0, 30) || "Previous"}</summary>
+                        <summary>Edit</summary>
                         <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 220 }}>
-                          <input value={editing[row.id]?.call_status ?? row.call_status ?? ""} onChange={(event) => setEditing((previous) => ({ ...previous, [row.id]: { ...(previous[row.id] || {}), call_status: event.target.value } }))} onBlur={(event) => { if (event.target.value !== row.call_status) updateField(row.id, "call_status", event.target.value); }} placeholder="Previous messages / discussion" aria-label={`Call comment for ${row.company}`} />
-                          <textarea rows={2} value={editingRequirements} onChange={(event) => setEditing((previous) => ({ ...previous, [row.id]: { ...(previous[row.id] || {}), requirements: event.target.value } }))} onBlur={(event) => { if (event.target.value !== row.requirements) updateField(row.id, "requirements", event.target.value); }} placeholder="Discussion points / requirements" />
-                          <small className="muted">Comments save on blur.</small>
+                          <input value={editing[row.id]?.call_status ?? row.call_status ?? ""} onChange={(e) => setEditing((p) => ({ ...p, [row.id]: { ...(p[row.id] || {}), call_status: e.target.value } }))} onBlur={(e) => { if (e.target.value !== row.call_status) updateField(row.id, "call_status", e.target.value); }} placeholder="Previous / call comments" />
+                          <textarea rows={2} value={editing[row.id]?.requirements ?? row.requirements ?? ""} onChange={(e) => setEditing((p) => ({ ...p, [row.id]: { ...(p[row.id] || {}), requirements: e.target.value } }))} onBlur={(e) => { if (e.target.value !== row.requirements) updateField(row.id, "requirements", e.target.value); }} placeholder="Discussion / requirements / comments" />
+                          <textarea rows={2} value={editing[row.id]?.next_action ?? row.next_action ?? ""} onChange={(e) => setEditing((p) => ({ ...p, [row.id]: { ...(p[row.id] || {}), next_action: e.target.value } }))} onBlur={(e) => { if (e.target.value !== row.next_action) updateField(row.id, "next_action", e.target.value); }} placeholder="Follow-up message / next action" />
+                          <input type="date" value={row.follow_up_date || ""} onChange={(e) => updateField(row.id, "follow_up_date", e.target.value)} />
+                          {selTemplate?._curated && <button className="secondary-button" type="button" onClick={() => copyText(fillMsg(selTemplate.body, row))}><Copy size={14} /> Copy msg</button>}
+                          {selTemplate?._curated && row.phone && <button className="secondary-button" type="button" onClick={() => window.open(whatsappHref(fillMsg(selTemplate.body, row), row.phone), "_blank", "noopener")}><MessageCircle size={14} /> WhatsApp</button>}
                         </div>
                       </details>
                     </td>
-                    <td>
-                      <details className="requirements-details">
-                        <summary>{(row.next_action || "Add follow-up").slice(0, 30) || "Add follow-up"}</summary>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 220 }}>
-                          <textarea rows={2} value={editing[row.id]?.next_action ?? row.next_action ?? ""} onChange={(event) => setEditing((previous) => ({ ...previous, [row.id]: { ...(previous[row.id] || {}), next_action: event.target.value } }))} onBlur={(event) => { if (event.target.value !== row.next_action) updateField(row.id, "next_action", event.target.value); }} placeholder="Follow-up message / next action" />
-                          <input type="date" value={row.follow_up_date || ""} onChange={(event) => updateField(row.id, "follow_up_date", event.target.value)} />
-                          <select value={row.sales_progress || "new"} onChange={(event) => updateField(row.id, "sales_progress", event.target.value)}>{progressOptions.map((progress) => <option key={progress} value={progress}>{progress.replaceAll("_", " ")}</option>)}</select>
-                          <small className="muted">Funnel: {row.funnel_stage || "awareness"}</small>
-                        </div>
-                      </details>
-                    </td>
-                    <td>
-                      {act ? (
-                        <span className="activity-badges" title={`Last: ${act.last_status || "-"}${act.last_subject ? ` · ${act.last_subject}` : ""}`}>
-                          <span className="contact-tag">✉ {act.sent}</span>
-                          <span className="contact-tag">👁 {act.opened}</span>
-                          {act.failed > 0 && <span className="contact-tag failed-tag">✕ {act.failed}</span>}
-                          {act.last_opened_at && <small className="muted">viewed {String(act.last_opened_at).slice(5, 16)}</small>}
-                        </span>
-                      ) : <small className="muted">not mailed</small>}
-                    </td>
-                    <td><button className="secondary-button" onClick={() => selectRowForSend(row)}><MessageCircle size={16} /> Select</button></td>
                   </tr>
                 );
               })}
-              {!rows.length && <tr><td colSpan={8}><div className="empty-state"><BriefcaseBusiness size={22} /><p>No marketing companies yet.</p><small>Sync the latest marketing workbook and customers CSV from GCS.</small></div></td></tr>}
+              {!rows.length && <tr><td colSpan={6}><div className="empty-state"><BriefcaseBusiness size={22} /><p>No contacts yet.</p></div></td></tr>}
             </tbody>
           </table>
         </div>
-        <div className="marketing-mobile-list">
-          {rows.map((row) => {
-            const editingRequirements = (editing[row.id]?.requirements ?? row.requirements) || "";
-            const phoneHref = String(row.phone || "").replace(/[^\d+]/g, "");
-            return (
-              <article className="marketing-company-card" key={row.id}>
-                <div className="marketing-company-heading">
-                  <div><b>{row.company}</b><small>{row.contact_name || "Contact not listed"}</small></div>
-                  <span className="contact-tag">{row.funnel_stage || "awareness"}</span>
-                </div>
-                <div className="marketing-company-meta"><span>{row.category || "Uncategorized"}</span><span>{row.call_status || "No call status"}</span><span>{(row.sales_progress || "new").replaceAll("_", " ")}</span>{row.follow_up_date && <span>Follow-up {row.follow_up_date}</span>}</div>
-                {activity[row.id] && (
-                  <div className="marketing-company-meta">
-                    <span>✉ {activity[row.id].sent} sent</span>
-                    <span>👁 {activity[row.id].opened} viewed</span>
-                    {activity[row.id].failed > 0 && <span>✕ {activity[row.id].failed} failed</span>}
-                    {activity[row.id].last_opened_at && <span>last view {String(activity[row.id].last_opened_at).slice(5, 16)}</span>}
-                  </div>
-                )}
-                <div className="marketing-company-actions">
-                  {row.phone && <>
-                    <a className="secondary-button" href={`tel:${phoneHref}`} aria-label={`Call ${row.phone}`}><PhoneCall size={16} /> Call</a>
-                    <button className="icon-button" type="button" title="Copy phone number" aria-label={`Copy ${row.phone}`} onClick={() => copyPhone(row.phone)}><Copy size={17} /></button>
-                  </>}
-                  {row.email && <a className="secondary-button" href={`mailto:${row.email}`}><Mail size={16} /> Email</a>}
-                  <label className="secondary-button"><input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleSelect(row.id)} /> Select</label>
-                  <button className="primary-button" type="button" onClick={() => selectRowForSend(row)}><MessageCircle size={16} /> Message</button>
-                </div>
-                <details className="marketing-company-details">
-                  <summary>Progress, follow-up and contact details</summary>
-                  <label>Funnel stage<select value={row.funnel_stage || "awareness"} onChange={(event) => updateField(row.id, "funnel_stage", event.target.value)}>{funnelStages.map((stage) => <option key={stage} value={stage}>{stage}</option>)}</select></label>
-                  <label>Progress<select value={row.sales_progress || "new"} onChange={(event) => updateField(row.id, "sales_progress", event.target.value)}>{progressOptions.map((progress) => <option key={progress} value={progress}>{progress.replaceAll("_", " ")}</option>)}</select></label>
-                  <label>Call status<input value={editing[row.id]?.call_status ?? row.call_status ?? ""} onChange={(event) => setEditing((previous) => ({ ...previous, [row.id]: { ...(previous[row.id] || {}), call_status: event.target.value } }))} onBlur={(event) => { if (event.target.value !== row.call_status) updateField(row.id, "call_status", event.target.value); }} placeholder="Not called, answered, call later..." /></label>
-                  <label>Next follow-up<input type="date" value={row.follow_up_date || ""} onChange={(event) => updateField(row.id, "follow_up_date", event.target.value)} /></label>
-                  <label>Next action<input value={editing[row.id]?.next_action ?? row.next_action ?? ""} onChange={(event) => setEditing((previous) => ({ ...previous, [row.id]: { ...(previous[row.id] || {}), next_action: event.target.value } }))} onBlur={(event) => { if (event.target.value !== row.next_action) updateField(row.id, "next_action", event.target.value); }} placeholder="Call about quote, send catalog..." /></label>
-                  <label>Requirements<textarea
-                    rows={3}
-                    value={editingRequirements}
-                    onChange={(event) => setEditing((previous) => ({
-                      ...previous,
-                      [row.id]: { ...(previous[row.id] || {}), requirements: event.target.value },
-                    }))}
-                    onBlur={(event) => {
-                      if (event.target.value !== row.requirements) updateField(row.id, "requirements", event.target.value);
-                    }}
-                  /></label>
-                  {row.email && <p><b>Email:</b> <a href={`mailto:${row.email}`}>{row.email}</a></p>}
-                  <p><b>Source:</b> {row.source_sheet || "Not recorded"}{row.source_row ? ` · row ${row.source_row}` : ""}</p>
-                </details>
-              </article>
-            );
-          })}
-          {!rows.length && <div className="empty-state"><BriefcaseBusiness size={22} /><p>No marketing companies yet.</p><small>Import the Kalika marketing workbook to populate this view.</small></div>}
-        </div>
-      </section>
-      {sendTarget && (
-        <div className="modal-overlay" onClick={() => setSendTarget(null)}>
-          <div className="modal-content marketing-send-modal" onClick={(event) => event.stopPropagation()}>
-            <div className="modal-header">
-              <div><div className="section-kicker">MARKETING / TEMPLATE</div><h2>Message {sendTarget.company}</h2></div>
-              <button className="icon-button" onClick={() => setSendTarget(null)} aria-label="Close"><X size={20} /></button>
-            </div>
-            <div className="modal-body">
-              <div className="mini-stats">
-                <span><b>Contact</b> {sendTarget.contact_name || "Not listed"}</span>
-                <span><b>Phone</b> {sendTarget.phone || "—"}</span>
-                <span><b>Email</b> {sendTarget.email || "—"}</span>
-              </div>
-              {sendTarget.requirements && <p className="muted"><b>Requirements:</b> {sendTarget.requirements}</p>}
-              <label>Template
-                <select value={sendTemplateId} onChange={(event) => applyTemplate(event.target.value)}>
-                  <option value="">Choose a template…</option>
-                  {templates.map((template) => <option key={template.id} value={template.id}>{template.name} ({template.channel})</option>)}
-                </select>
-              </label>
-              <label>Subject<input value={sendSubject} onChange={(event) => setSendSubject(event.target.value)} placeholder="Email subject" /></label>
-              <label>Message<textarea rows={8} value={sendText} onChange={(event) => setSendText(event.target.value)} placeholder="Write the WhatsApp message or email body…" /></label>
-              <div className="button-row">
-                <label className="secondary-button"><UploadCloud size={15} /> Add image
-                  <input ref={mediaUploadRef} type="file" accept="image/*" onChange={(e) => { mediaKindRef.current = "image"; uploadMedia(e); }} style={{ display: "none" }} />
-                </label>
-                <label className="secondary-button"><UploadCloud size={15} /> Add video
-                  <input type="file" accept="video/*" onChange={(e) => { mediaKindRef.current = "video"; uploadMedia(e); }} style={{ display: "none" }} />
-                </label>
-                {defaultVideos.length > 0 && (
-                  <select aria-label="Default video" onChange={(e) => { const v = defaultVideos.find((x) => x.url === e.target.value); if (v) pickDefaultVideo(v); e.target.value = ""; }}>
-                    <option value="">Use default video…</option>
-                    {defaultVideos.map((v) => <option key={v.id} value={v.url}>{v.name}</option>)}
-                  </select>
-                )}
-              </div>
-              <small className="muted">Images are stored in GCS ``kalika_enterprises/images/`` and videos in ``kalika_enterprises/videos/``; uploaded URLs get appended to the message. Default Instagram manufacturing reels are selectable above.</small>
-              <div className="button-row">
-                <button className="secondary-button" onClick={copySendText}><Copy size={15} /> Copy</button>
-                <button className="secondary-button" disabled={!sendTarget.email} onClick={sendEmail}><Mail size={15} /> Email</button>
-                <button className="primary-button" disabled={!sendTarget.phone} onClick={sendWhatsApp}><MessageCircle size={15} /> WhatsApp</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* --- Send bar: template ✓ + contacts ✓ → create campaign --- */}
-      {selTemplate && selectedRows.length > 0 && (
-        <div className="send-bar">
-          <span className="muted">{selectedRows.length} selected · {selectedEmail} with email · {selectedPhone} with phone · Template: {selTemplate.name}</span>
-          <select value={cChannel} onChange={(e) => setCChannel(e.target.value)} aria-label="Send channel">
-            <option value="email">Email ({selectedEmail})</option>
-            <option value="whatsapp">WhatsApp ({selectedPhone})</option>
-            <option value="wechat">WeChat ({selectedPhone})</option>
-          </select>
-          <button className="primary-button" onClick={createSelectedCampaign} disabled={cBusy || selectedForChannel === 0}>{cBusy ? "Working..." : `Send to ${selectedForChannel} via ${cChannel}`}</button>
-        </div>
-      )}
-      <section className="panel" style={{ marginTop: 16 }} aria-label="Task presets">
-        <div className="panel-heading"><div><div className="section-kicker">PERFORM A TASK</div><h3>Bulk tasks for selected contacts</h3></div><span className="muted">Select contacts (checkbox) + template, then run a preset</span></div>
-        <div className="button-row">
-          <button className="secondary-button" onClick={() => runTaskPreset("bulk")} disabled={cBusy}>Bulk marketing</button>
-          <button className="secondary-button" onClick={() => runTaskPreset("followup")} disabled={cBusy}>Follow-up</button>
-          <button className="secondary-button" onClick={() => runTaskPreset("catalog")} disabled={cBusy}>Product catalog</button>
-          <button className="secondary-button" onClick={() => runTaskPreset("video")} disabled={cBusy}>Manufacturing video</button>
-        </div>
-        <small className="muted">Presets set the campaign name + strategy for the selected contacts and template above. Manufacturing video messages include the default Instagram reel link when a whatsapp template is used.</small>
-      </section>
-      <section className="panel studio-panel" style={{ marginTop: 16 }} aria-label="Google Analytics insights">
-        <div className="panel-heading">
-          <div><div className="section-kicker">GOOGLE ANALYTICS SYNC</div><h3>Insights &amp; stats</h3></div>
-          <button className="secondary-button" onClick={loadGa}><RefreshCw size={15} /> Sync again</button>
-        </div>
-        {ga ? (
-          <>
-            <p className="muted">{ga.data_available ? `Latest: ${ga.latest_file} · ${ga.rows} rows · synced ${String(ga.synced_at || "").slice(0, 16)}` : ga.message}</p>
-            <div className="marketing-stat-grid">
-              {Object.entries(ga.stats || {}).slice(0, 8).map(([label, value]) => (
-                <div className="marketing-stat" key={label}><small>{label}</small><b>{String(value)}</b><span>GA</span></div>
-              ))}
-              {!Object.keys(ga.stats || {}).length && <div className="marketing-stat"><small>Rows</small><b>{ga.rows || 0}</b><span>GA</span></div>}
-            </div>
-            {(ga.insights || []).slice(0, 6).map((text, i) => <p key={i} className="muted" style={{ margin: "4px 0" }}>• {text}</p>)}
-            {(ga.files || []).length > 1 && <details className="marketing-breakdown"><summary>Synced files ({(ga.files || []).length})</summary><div className="marketing-breakdown-grid"><div><b>Exports</b>{(ga.files || []).map((f) => <span key={f.name}>{f.name}<strong>{f.updated ? String(f.updated).slice(0, 16) : ""}</strong></span>)}</div></div></details>}
-            <small className="muted">Exports are read from ``kalika_enterprises/docs/kalika-google-analytics/``.</small>
-          </>
-        ) : <p className="muted">Loading Google Analytics insights…</p>}
-      </section>
-      <section className="panel" style={{ marginTop: 16 }} aria-label="Build campaign">
-        <div className="panel-heading"><h3>Send to filtered group</h3><span className="muted">{selTemplate ? `Using: ${selTemplate.name}` : "Select a template above"} · {rows.length} in current filter · name + email</span></div>
-        <div className="form-grid">
-          <label>Campaign name<input value={cName} onChange={(e) => setCName(e.target.value)} /></label>
-          <label>Channel
-            <select value={cChannel} onChange={(e) => setCChannel(e.target.value)}>
-              {(tplMeta.channels.length ? tplMeta.channels : ["email", "whatsapp", "linkedin", "wechat"]).map((o) => <option key={o}>{o}</option>)}
-            </select>
-          </label>
-          <label>Strategy
-            <select value={cStrategy} onChange={(e) => setCStrategy(e.target.value)}>
-              {(tplMeta.strategies.length ? tplMeta.strategies : ["cold_outreach", "follow_up", "nurture"]).map((o) => <option key={o}>{o}</option>)}
-            </select>
-          </label>
-          <label>AI personalise
-            <select value={useAi ? "yes" : "no"} onChange={(e) => setUseAi(e.target.value === "yes")}>
-              <option value="yes">Yes (Gemma)</option>
-              <option value="no">No (template as-is)</option>
-            </select>
-          </label>
-          <label>Max recipients<input type="number" min="1" max="1000" value={cLimit} onChange={(e) => setCLimit(e.target.value)} /></label>
-        </div>
-        <small className="muted">Recipients = current table filters (search, category, call status, funnel). Only contacts with an email (or phone for WhatsApp) are included. Generated messages go to review before sending.</small>
-        <div className="button-row" style={{ marginTop: 8 }}>
-          <button className="primary-button" onClick={createCampaign} disabled={cBusy || !selTemplate}>{cBusy ? "Working..." : "Generate for review"}</button>
-        </div>
       </section>
 
-      {/* --- Review / send / progress / who viewed + mail details --- */}
+      {selTemplate && selectedRows.length > 0 && (
+        <div className="send-bar">
+          <span className="muted">{selectedRows.length} selected Â· {selectedEmail} email Â· {selectedPhone} phone Â· {selTemplate.name}</span>
+          {cChannel === "both" ? (
+            <button className="primary-button" onClick={sendBoth} disabled={cBusy || selTemplate?._curated}>{cBusy ? "Working..." : `Send both (${selectedEmail} email Â· ${selectedPhone} WA)`}</button>
+          ) : (
+            <button className="primary-button" onClick={createSelectedCampaign} disabled={cBusy || selectedForChannel === 0 || selTemplate?._curated}>{cBusy ? "Working..." : `Send ${selectedForChannel} via ${cChannel}`}</button>
+          )}
+          {selTemplate?._curated && <small className="muted">Use row Edit â†’ Copy/WhatsApp for curated messages.</small>}
+        </div>
+      )}
+
       {cDetail && (
         <section className="panel" style={{ marginTop: 16 }} aria-label="Review and send">
-          <div className="panel-heading">
-            <h3>Review — {cDetail.name} (#{cDetail.id})</h3>
-            <span className="contact-tag">{cDetail.status}</span>
-          </div>
-          <div className="bar-track" style={{ margin: "4px 0 8px" }}>
-            <div className="bar-fill" style={{ width: `${progressPct}%` }} />
-          </div>
-          <p className="campaign-recipient-count">
-            Sent {cDetail.sent_count}/{cDetail.total} · Failed {cDetail.failed_count} · Viewed {cDetail.opened_count || 0} ({openRate}% of sent)
-          </p>
-          <div className="button-row" style={{ marginBottom: 10 }}>
-            <button className="secondary-button" onClick={approveCampaign} disabled={cBusy || cDetail.status !== "pending_review"}>Approve all</button>
-            <button className="primary-button" onClick={sendCampaign} disabled={cBusy || cDetail.status !== "approved"}><Send size={16} /> Send approved</button>
-          </div>
-          <div className="campaign-recipient-list" role="list">
-            {cDetail.messages.map((message) => (
-              <details className="campaign-recipient" key={message.id} role="listitem">
-                <summary>
-                  <span><b>{message.contact_name || "(no name)"}</b><small>{message.to_address || "(no address)"}{message.contact_id ? ` · #${message.contact_id}` : ""}</small></span>
-                  <span className="contact-tag">{message.status}</span>
-                  {message.status === "opened" && <span className="contact-tag">viewed {message.opened_at ? String(message.opened_at).slice(0, 16) : ""}</span>}
-                </summary>
-                <div className="campaign-message-detail">
-                  <b>{message.rendered_subject || "(no subject)"}</b>
-                  <p style={{ whiteSpace: "pre-wrap" }}>{htmlToText(message.rendered_body)}</p>
-                  <small className="muted">Sent: {message.sent_at ? String(message.sent_at).slice(0, 16) : "—"} · Viewed: {message.opened_at ? `${String(message.opened_at).slice(0, 16)} sighted` : "not yet"}</small>
-                  {message.error && <small className="message-error">{message.error}</small>}
-                </div>
-              </details>
-            ))}
-          </div>
+          <div className="panel-heading"><h3>Review â€” {cDetail.name}</h3><span className="contact-tag">{cDetail.status}</span></div>
+          <div className="bar-track" style={{ margin: "4px 0 8px" }}><div className="bar-fill" style={{ width: `${progressPct}%` }} /></div>
+          <p className="campaign-recipient-count">Sent {cDetail.sent_count}/{cDetail.total} Â· Viewed {cDetail.opened_count || 0} ({openRate}% of sent) Â· Failed {cDetail.failed_count}</p>
+          <div className="button-row"><button className="secondary-button" onClick={approveCampaign} disabled={cBusy || cDetail.status !== "pending_review"}>Approve all</button><button className="primary-button" onClick={sendCampaign} disabled={cBusy || cDetail.status !== "approved"}><Send size={16} /> Send approved</button></div>
         </section>
       )}
 
-      {/* --- Campaign history --- */}
       <section className="panel" style={{ marginTop: 16 }} aria-label="Campaign history">
         <div className="panel-heading"><h3>Campaign history ({campaigns.length})</h3><button className="icon-button" onClick={loadCampaigns} aria-label="Refresh campaigns"><RefreshCw size={16} /></button></div>
         <div className="contact-list" role="list">
-          {campaigns.map((cmp) => {
-            const pct = cmp.total ? Math.min(100, Math.round(((cmp.sent_count || 0) / cmp.total) * 100)) : 0;
-            return (
-              <button key={cmp.id} role="listitem" className="contact-row" style={{ width: "100%", textAlign: "left", border: 0, background: "transparent" }} onClick={() => openCampaign(cmp.id)}>
-                <span className="contact-main"><b>{cmp.name}</b><small>{cmp.channel} · {cmp.strategy} · {cmp.total} messages · viewed {cmp.opened_count || 0}</small><span className="bar-track" style={{ display: "block", marginTop: 4 }}><span className="bar-fill" style={{ width: `${pct}%` }} /></span></span>
-                <span className="contact-tag">{cmp.status}</span>
-                <span className="contact-tag">{cmp.sent_count} sent · {cmp.failed_count} failed</span>
-              </button>
-            );
-          })}
-          {!campaigns.length && <div className="empty-state"><Send size={22} /><p>No campaigns yet.</p><small>Select a template and generate a campaign above.</small></div>}
+          {campaigns.slice(0, 12).map((cmp) => (
+            <button key={cmp.id} role="listitem" className="contact-row" style={{ width: "100%", textAlign: "left", border: 0, background: "transparent" }} onClick={() => openCampaign(cmp.id)}>
+              <span className="contact-main"><b>{cmp.name}</b><small>{cmp.channel} Â· {cmp.total} messages Â· viewed {cmp.opened_count || 0}</small></span>
+              <span className="contact-tag">{cmp.status}</span>
+            </button>
+          ))}
+          {!campaigns.length && <div className="empty-state"><Send size={22} /><p>No campaigns yet.</p></div>}
         </div>
       </section>
 
-      {/* --- Template preview / edit modals (from Templates tab) --- */}
       {previewTemplate && (
         <div className="modal-overlay" onClick={() => setPreviewTemplate(null)}>
           <div className="modal-content template-preview-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>{previewTemplate.name}</h2>
-              <button className="icon-button" onClick={() => setPreviewTemplate(null)}><X size={20} /></button>
-            </div>
-            <div className="modal-body">
-              <div className="template-preview-info">
-                <div><strong>Channel:</strong> {previewTemplate.channel}</div>
-                <div><strong>Subject:</strong> {previewTemplate.subject}</div>
-                <div><strong>Updated:</strong> {previewTemplate.updated_at ? new Date(previewTemplate.updated_at).toLocaleString() : "—"}</div>
-              </div>
-              <div className="template-html-preview">
-                <iframe srcDoc={previewTemplate.body} title="Template Preview" sandbox="allow-same-origin" style={{ width: "100%", height: "500px", border: "1px solid #ddd", borderRadius: "8px", background: "white" }} />
-              </div>
-            </div>
+            <div className="modal-header"><h2>{previewTemplate.name}</h2><button className="icon-button" onClick={() => setPreviewTemplate(null)}><X size={20} /></button></div>
+            <div className="modal-body"><iframe srcDoc={previewTemplate.body} title="Template Preview" sandbox="allow-same-origin" style={{ width: "100%", height: "420px", border: "1px solid #ddd", borderRadius: "8px", background: "white" }} /></div>
           </div>
         </div>
       )}
       {editTemplate && (
         <div className="modal-overlay" onClick={() => setEditTemplate(null)}>
           <div className="modal-content template-edit-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Edit Template</h2>
-              <button className="icon-button" onClick={() => setEditTemplate(null)}><X size={20} /></button>
-            </div>
+            <div className="modal-header"><h2>Edit Template</h2><button className="icon-button" onClick={() => setEditTemplate(null)}><X size={20} /></button></div>
             <div className="modal-body">
               <div className="form-grid">
                 <label>Name<input value={editTemplate.name} onChange={(e) => setEditTemplate({ ...editTemplate, name: e.target.value })} /></label>
-                <label>Channel
-                  <select value={editTemplate.channel} onChange={(e) => setEditTemplate({ ...editTemplate, channel: e.target.value })}>
-                    {(tplMeta.channels?.length ? tplMeta.channels : ["email", "whatsapp", "linkedin", "wechat"]).map((ch) => <option key={ch} value={ch}>{ch}</option>)}
-                  </select>
-                </label>
+                <label>Channel<select value={editTemplate.channel} onChange={(e) => setEditTemplate({ ...editTemplate, channel: e.target.value })}>{(tplMeta.channels?.length ? tplMeta.channels : ["email", "whatsapp", "linkedin", "wechat"]).map((ch) => <option key={ch} value={ch}>{ch}</option>)}</select></label>
                 <label>Subject<input value={editTemplate.subject} onChange={(e) => setEditTemplate({ ...editTemplate, subject: e.target.value })} /></label>
               </div>
-              <label style={{ marginTop: "16px", display: "block" }}>HTML Body
-                <textarea rows={20} value={editTemplate.body} onChange={(e) => setEditTemplate({ ...editTemplate, body: e.target.value })} style={{ fontFamily: "monospace", fontSize: "12px" }} />
-              </label>
-              <div className="button-row" style={{ marginTop: "16px" }}>
-                <button className="primary-button" onClick={() => updateTemplate(editTemplate.id, editTemplate)}>Save Changes</button>
-                <button className="secondary-button" onClick={() => setEditTemplate(null)}>Cancel</button>
-              </div>
+              <label style={{ marginTop: 16, display: "block" }}>HTML Body<textarea rows={16} value={editTemplate.body} onChange={(e) => setEditTemplate({ ...editTemplate, body: e.target.value })} style={{ fontFamily: "monospace", fontSize: 12 }} /></label>
+              <div className="button-row" style={{ marginTop: 16 }}><button className="primary-button" onClick={() => updateTemplate(editTemplate.id, editTemplate)}>Save</button><button className="secondary-button" onClick={() => setEditTemplate(null)}>Cancel</button></div>
             </div>
           </div>
         </div>
       )}
-      {/* --- Message library (was MessageStudio, kept at the end, not blocking the list) --- */}
-      <MessageStudio onNotice={onNotice} />
     </div>
   );
 }
@@ -2634,19 +2328,19 @@ export function KnowledgeGraphReview({ onNotice, user, config }) {
   return (
     <div className="content dash knowledge-graph-page">
       <div className="page-heading">
-        <div><div className="section-kicker">{summary?.environment || config?.deploy_env || "DEV / UAT"} · REVIEW WORKSPACE</div><h2>Knowledge graph</h2><p className="muted">Explore normalized contacts, companies, mail and visit links. Suggested relationships stay pending until reviewed.</p></div>
+        <div><div className="section-kicker">{summary?.environment || config?.deploy_env || "DEV / UAT"} Â· REVIEW WORKSPACE</div><h2>Knowledge graph</h2><p className="muted">Explore normalized contacts, companies, mail and visit links. Suggested relationships stay pending until reviewed.</p></div>
         <div className="button-row">
           {isAdmin && <button className="secondary-button" onClick={() => request("/sync/all", { method: "POST" }).then(() => onNotice({ type: "success", text: "Source sync completed." })).then(load).catch((error) => onNotice({ type: "error", text: error.message }))} disabled={busy}><RefreshCw size={15} /> Sync sources</button>}
           <button className="primary-button" onClick={build} disabled={busy}><Activity size={15} className={busy ? "spin" : ""} /> {busy ? "Building..." : "Build snapshot"}</button>
         </div>
       </div>
-      <div className="kg-environment-note"><ShieldCheck size={16} /><span><b>{summary?.environment || config?.deploy_env || "development"}</b> · {summary?.uat?.uat_active ? `UAT window active until ${summary.uat.enabled_until}` : "DEV / pre-production review"} · {summary?.storage || "snapshot not built"} · {summary?.generated_at ? `updated ${String(summary.generated_at).slice(0, 16).replace("T", " ")}` : "no snapshot yet"}</span></div>
+      <div className="kg-environment-note"><ShieldCheck size={16} /><span><b>{summary?.environment || config?.deploy_env || "development"}</b> Â· {summary?.uat?.uat_active ? `UAT window active until ${summary.uat.enabled_until}` : "DEV / pre-production review"} Â· {summary?.storage || "snapshot not built"} Â· {summary?.generated_at ? `updated ${String(summary.generated_at).slice(0, 16).replace("T", " ")}` : "no snapshot yet"}</span></div>
 
       <div className="metric-grid kg-stats">
-        <Metric icon={Building2} label="Nodes" value={summary?.stats?.nodes ?? 0} detail={Object.entries(summary?.stats?.nodes_by_kind || {}).map(([kind, count]) => `${count} ${kind}`).join(" · ") || "no data"} accent />
+        <Metric icon={Building2} label="Nodes" value={summary?.stats?.nodes ?? 0} detail={Object.entries(summary?.stats?.nodes_by_kind || {}).map(([kind, count]) => `${count} ${kind}`).join(" Â· ") || "no data"} accent />
         <Metric icon={Link2} label="Relationships" value={summary?.stats?.edges ?? 0} detail={`${Object.keys(summary?.stats?.edges_by_relation || {}).length} relation types`} />
         <Metric icon={Clock} label="Needs review" value={summary?.pending_reviews ?? 0} detail="suggestions are not confirmed" accent />
-        <Metric icon={Database} label="Sources" value={Object.keys(summary?.stats?.sources || {}).length} detail={Object.entries(summary?.stats?.sources || {}).map(([key, count]) => `${count} ${key.replaceAll("_", " ")}`).join(" · ") || "sync sources first"} />
+        <Metric icon={Database} label="Sources" value={Object.keys(summary?.stats?.sources || {}).length} detail={Object.entries(summary?.stats?.sources || {}).map(([key, count]) => `${count} ${key.replaceAll("_", " ")}`).join(" Â· ") || "sync sources first"} />
       </div>
 
       <div className="two-column">
@@ -2677,7 +2371,7 @@ export function KnowledgeGraphReview({ onNotice, user, config }) {
         <div className="kg-review-list">
           {reviews.map((item) => <article className="kg-review" key={`${item.graph_owner_id}-${item.edge_key}`}>
             <div className="kg-edge-flow"><b>{item.source}</b><span>{item.relation.replaceAll("_", " ")}</span><b>{item.target}</b></div>
-            <p>{item.evidence}</p><small className="muted">{Math.round(item.confidence * 100)}% similarity · {item.graph_version}{teamQueue ? ` · user ${item.graph_owner_id}` : ""}</small>
+            <p>{item.evidence}</p><small className="muted">{Math.round(item.confidence * 100)}% similarity Â· {item.graph_version}{teamQueue ? ` Â· user ${item.graph_owner_id}` : ""}</small>
             {item.status === "pending" && <div className="button-row"><button className="primary-button" onClick={() => decide(item, "accept")}><Check size={15} /> Accept</button><button className="secondary-button danger-button" onClick={() => decide(item, "reject")}><X size={15} /> Reject</button></div>}
             {item.status !== "pending" && <span className={`status-pill ${item.status === "accepted" ? "approved" : "rejected"}`}>{item.status} by {item.reviewer}</span>}
           </article>)}
@@ -2688,10 +2382,10 @@ export function KnowledgeGraphReview({ onNotice, user, config }) {
       <section className="panel" style={{ marginTop: 14 }}>
         <div className="panel-heading"><div><div className="section-kicker">GRAPH ASSISTANT</div><h3>Ask, verify, then give feedback</h3></div><Bot size={19} className="muted" /></div>
         <form onSubmit={ask} className="kg-chat-form"><select value={selectedNode} onChange={(event) => setSelectedNode(event.target.value)}><option value="">Whole graph</option>{nodes.map((node) => <option key={node.id} value={node.id}>{node.kind}: {node.label}</option>)}</select><textarea value={question} onChange={(event) => setQuestion(event.target.value)} rows={2} placeholder="Ask about a company, source, or relationship..." /><button className="primary-button" disabled={busy || !summary?.version}><Send size={15} /> {busy ? "Reviewing..." : "Ask about graph"}</button></form>
-        {answer && <div className="kg-chat-answer"><div className="chat-head"><b>{answer.model} · {answer.provider}</b><small>{answer.cost_micros} micro-USD</small></div><p>{answer.reply}</p><div className="kg-feedback-form"><label>Rating<select value={rating} onChange={(event) => setRating(Number(event.target.value))}><option value={5}>Helpful</option><option value={4}>Mostly helpful</option><option value={3}>Needs review</option><option value={2}>Mostly incorrect</option><option value={1}>Incorrect</option></select></label><label>Correction / evidence<textarea rows={2} value={correction} onChange={(event) => setCorrection(event.target.value)} placeholder="Optional correction for human evaluation" /></label><button className="secondary-button" onClick={submitFeedback} disabled={busy}><MessageSquarePlus size={15} /> Submit feedback</button></div></div>}
+        {answer && <div className="kg-chat-answer"><div className="chat-head"><b>{answer.model} Â· {answer.provider}</b><small>{answer.cost_micros} micro-USD</small></div><p>{answer.reply}</p><div className="kg-feedback-form"><label>Rating<select value={rating} onChange={(event) => setRating(Number(event.target.value))}><option value={5}>Helpful</option><option value={4}>Mostly helpful</option><option value={3}>Needs review</option><option value={2}>Mostly incorrect</option><option value={1}>Incorrect</option></select></label><label>Correction / evidence<textarea rows={2} value={correction} onChange={(event) => setCorrection(event.target.value)} placeholder="Optional correction for human evaluation" /></label><button className="secondary-button" onClick={submitFeedback} disabled={busy}><MessageSquarePlus size={15} /> Submit feedback</button></div></div>}
         <small className="muted">Feedback is stored for human evaluation; it does not update model weights automatically.</small>
       </section>
-      {!!feedback.length && <section className="panel" style={{ marginTop: 14 }}><div className="panel-heading"><div><div className="section-kicker">HUMAN-EVALUATED CHAT SAMPLES</div><h3>{feedback.length} recent sample(s)</h3></div><span className="status-pill">{teamQueue ? "team" : "mine"}</span></div><div className="kg-feedback-history-list">{feedback.slice(0, 20).map((item) => <article className="kg-review" key={`${item.graph_owner_id || user?.id}-${item.id}`}><div className="chat-head"><b>Rating {item.rating}/5 · {item.status}</b><small>{String(item.created_at).slice(0, 16).replace("T", " ")}{item.graph_owner_id ? ` · user ${item.graph_owner_id}` : ""}</small></div><p><b>Question:</b> {item.question}</p>{item.correction && <p><b>Human correction:</b> {item.correction}</p>}{item.review_note && <small className="muted">Reviewer note: {item.review_note}</small>}{isAdmin && item.status === "pending_evaluation" && <div className="button-row"><button className="primary-button" onClick={() => reviewFeedback(item, "accept")}><Check size={15} /> Accept sample</button><button className="secondary-button danger-button" onClick={() => reviewFeedback(item, "reject")}><X size={15} /> Reject</button></div>}</article>)}</div></section>}
+      {!!feedback.length && <section className="panel" style={{ marginTop: 14 }}><div className="panel-heading"><div><div className="section-kicker">HUMAN-EVALUATED CHAT SAMPLES</div><h3>{feedback.length} recent sample(s)</h3></div><span className="status-pill">{teamQueue ? "team" : "mine"}</span></div><div className="kg-feedback-history-list">{feedback.slice(0, 20).map((item) => <article className="kg-review" key={`${item.graph_owner_id || user?.id}-${item.id}`}><div className="chat-head"><b>Rating {item.rating}/5 Â· {item.status}</b><small>{String(item.created_at).slice(0, 16).replace("T", " ")}{item.graph_owner_id ? ` Â· user ${item.graph_owner_id}` : ""}</small></div><p><b>Question:</b> {item.question}</p>{item.correction && <p><b>Human correction:</b> {item.correction}</p>}{item.review_note && <small className="muted">Reviewer note: {item.review_note}</small>}{isAdmin && item.status === "pending_evaluation" && <div className="button-row"><button className="primary-button" onClick={() => reviewFeedback(item, "accept")}><Check size={15} /> Accept sample</button><button className="secondary-button danger-button" onClick={() => reviewFeedback(item, "reject")}><X size={15} /> Reject</button></div>}</article>)}</div></section>}
     </div>
   );
 }
@@ -2752,10 +2446,10 @@ export function ReviewHub({ onNotice, user }) {
     <div className="content dash">
       <div className="page-heading">
         <div><div className="section-kicker">FUTURE SCOPE / HUMAN REVIEW</div><h2>Subtasks &amp; sync control</h2>
-          <p className="muted">Cost-effective Gemma → Gemini-Flash proposals stay pending until you accept them. Data auto-refreshes every {syncStatus?.refresh_interval_minutes || 120} minutes.</p></div>
+          <p className="muted">Cost-effective Gemma â†’ Gemini-Flash proposals stay pending until you accept them. Data auto-refreshes every {syncStatus?.refresh_interval_minutes || 120} minutes.</p></div>
         <div style={{ display: "flex", gap: 8 }}>
           {isAdmin && <button className="secondary-button" onClick={generate} disabled={busy}><Sparkles size={15} /> Propose subtasks</button>}
-          {isAdmin && <button className="primary-button" onClick={syncAll} disabled={busy}><RefreshCw size={15} /> {busy ? "Syncing…" : "Sync all now"}</button>}
+          {isAdmin && <button className="primary-button" onClick={syncAll} disabled={busy}><RefreshCw size={15} /> {busy ? "Syncingâ€¦" : "Sync all now"}</button>}
           <button className="secondary-button" onClick={load}><RefreshCw size={15} /> Refresh</button>
         </div>
       </div>
@@ -2767,7 +2461,7 @@ export function ReviewHub({ onNotice, user }) {
           {Object.entries(jobs).map(([job, info]) => (
             <tr key={job}><td><b>{job.replace(/_/g, " ")}</b></td>
               <td><span className={`status-pill ${info.status === "ok" ? "approved" : info.status === "never" ? "" : "rejected"}`}>{info.status}</span></td>
-              <td>{info.finished_at ? String(info.finished_at).slice(0, 19).replace("T", " ") : "—"}</td></tr>
+              <td>{info.finished_at ? String(info.finished_at).slice(0, 19).replace("T", " ") : "â€”"}</td></tr>
           ))}
         </tbody></table></div>
       </section>
@@ -2777,7 +2471,7 @@ export function ReviewHub({ onNotice, user }) {
         {!pending.length && <div className="empty-state"><Check size={22} /><p>No pending subtasks. Use "Propose subtasks" to generate refined tasks.</p></div>}
         {pending.map((item) => (
           <div className="panel form-panel" key={item.id} style={{ marginBottom: 12 }}>
-            <div className="panel-heading"><div><div className="section-kicker">{item.area} · {item.source}</div><h3>{item.title}</h3></div>
+            <div className="panel-heading"><div><div className="section-kicker">{item.area} Â· {item.source}</div><h3>{item.title}</h3></div>
               <span className="status-pill">{Math.round((item.confidence || 0) * 100)}% conf</span></div>
             {item.detail && <p className="muted">{item.detail}</p>}
             {isAdmin && <div style={{ display: "flex", gap: 8 }}>
@@ -2795,7 +2489,7 @@ export function ReviewHub({ onNotice, user }) {
             <tr key={item.id}><td><b>{item.title}</b><small className="muted"> {item.area}</small></td>
               <td>{Math.round((item.confidence || 0) * 100)}%</td>
               <td><span className={`status-pill ${item.status === "approved" ? "approved" : "rejected"}`}>{item.status}</span></td>
-              <td>{item.decided_by || "—"}</td></tr>
+              <td>{item.decided_by || "â€”"}</td></tr>
           ))}
         </tbody></table></div>
       </section>}
@@ -2804,7 +2498,7 @@ export function ReviewHub({ onNotice, user }) {
         <div className="panel-heading"><div><div className="section-kicker">ISSUES LOG (ai.solutions only)</div><h3>Sync &amp; audit errors</h3></div><ShieldCheck size={19} className="muted" /></div>
         <div className="table-wrap"><table><thead><tr><th>Type</th><th>Name</th><th>Status</th><th>Detail</th><th>When</th></tr></thead><tbody>
           {(issues.sync_failures || []).map((f) => (
-            <tr key={`sync-${f.id}`}><td>sync</td><td><b>{f.job}</b></td><td><span className="status-pill rejected">{f.status}</span></td><td>{f.detail}</td><td>{f.finished_at ? String(f.finished_at).slice(0, 19).replace("T", " ") : "—"}</td></tr>
+            <tr key={`sync-${f.id}`}><td>sync</td><td><b>{f.job}</b></td><td><span className="status-pill rejected">{f.status}</span></td><td>{f.detail}</td><td>{f.finished_at ? String(f.finished_at).slice(0, 19).replace("T", " ") : "â€”"}</td></tr>
           ))}
           {(issues.audit_errors || []).map((e) => (
             <tr key={`audit-${e.id}`}><td>audit</td><td><b>{e.action}</b></td><td><span className="status-pill rejected">{e.status}</span></td><td>{e.resource_type}</td><td>{String(e.created_at).slice(0, 19).replace("T", " ")}</td></tr>
@@ -2817,3 +2511,4 @@ export function ReviewHub({ onNotice, user }) {
     </div>
   );
 }
+
