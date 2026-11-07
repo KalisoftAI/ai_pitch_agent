@@ -93,8 +93,6 @@ function App() {
           <NavItem icon={Users} label="Contacts" active={tab === "contacts"} onClick={() => { setTab("contacts"); setMobileNav(false); }} />
           <NavItem icon={Mic} label="Field desk" active={tab === "field"} onClick={() => { setTab("field"); setMobileNav(false); }} />
           <NavItem icon={Mail} label="Email connections" active={tab === "email"} onClick={() => { setTab("email"); setMobileNav(false); }} />
-          <NavItem icon={BriefcaseBusiness} label="Signal desk" active={tab === "signals"} onClick={() => { setTab("signals"); setMobileNav(false); }} />
-          <NavItem icon={CalendarDays} label="Events" active={tab === "events"} onClick={() => { setTab("events"); setMobileNav(false); }} />
           <NavItem icon={Clock} label="Scheduler" active={tab === "scheduler"} onClick={() => { setTab("scheduler"); setMobileNav(false); }} />
           <NavItem icon={BarChart3} label="KPIs" active={tab === "kpis"} onClick={() => { setTab("kpis"); setMobileNav(false); }} />
           <NavItem icon={MessageSquarePlus} label="Feedback" active={tab === "feedback"} onClick={() => { setTab("feedback"); setMobileNav(false); }} />
@@ -107,14 +105,12 @@ function App() {
       </aside>
       {mobileNav && <button className="scrim" aria-label="Close menu" onClick={() => setMobileNav(false)} />}
       <main className="main">
-        <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open navigation menu"><Menu size={25} /><span>Menu</span></button><div className="topbar-title"><div className="eyebrow">{isKalikaUser ? "KALIKA ENTERPRISES" : "KALISOFT AI"} / SALES PIPELINE</div><h1>{tab === "overview" ? "Good work starts with a clear signal." : tab === "sales-bi" ? "Sales analytics & BI" : tab === "graph-review" ? "Knowledge graph review" : tab === "contacts" ? "Contacts" : tab === "email" ? "Email connections" : tab === "events" ? "Events" : tab === "signals" ? "Signal desk" : tab === "scheduler" ? "Scheduler" : tab === "kpis" ? "Business KPIs" : tab === "feedback" ? "Feedback" : tab === "field" ? "Field desk" : tab === "uat" ? "UAT & operations" : "Outreach · templates · contacts · mail"}</h1></div><div className="topbar-actions"><EnvBadge env={health?.env} /><button className="text-button" onClick={() => setTour(true)}><Sparkles size={15} /> Take the tour</button><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Settings"><Settings2 size={18} /></button></div></header>
+        <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open navigation menu"><Menu size={25} /><span>Menu</span></button><div className="topbar-title"><div className="eyebrow">{isKalikaUser ? "KALIKA ENTERPRISES" : "KALISOFT AI"} / SALES PIPELINE</div><h1>{tab === "overview" ? "Good work starts with a clear signal." : tab === "sales-bi" ? "Sales analytics & BI" : tab === "graph-review" ? "Knowledge graph review" : tab === "contacts" ? "Contacts" : tab === "email" ? "Email connections" : tab === "scheduler" ? "Scheduler" : tab === "kpis" ? "Business KPIs" : tab === "feedback" ? "Feedback" : tab === "field" ? "Field desk" : tab === "uat" ? "UAT & operations" : "Outreach · templates · contacts · mail"}</h1></div><div className="topbar-actions"><EnvBadge env={health?.env} /><button className="text-button" onClick={() => setTour(true)}><Sparkles size={15} /> Take the tour</button><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Settings"><Settings2 size={18} /></button></div></header>
         {tab === "overview" && <Overview onNavigate={setTab} onNotice={setNotice} health={health} setHealth={setHealth} />}
         {tab === "sales-bi" && <SalesBi onNotice={setNotice} />}
         {tab === "graph-review" && config.knowledge_graph_review_enabled && <KnowledgeGraphReview onNotice={setNotice} user={user} config={config} />}
         {tab === "contacts" && <Contacts onNotice={setNotice} />}
         {tab === "email" && <EmailConnections onNotice={setNotice} config={config} />}
-        {tab === "events" && <Events onNotice={setNotice} />}
-        {tab === "signals" && <Signals onNotice={setNotice} />}
         {tab === "outreach" && <MarketingCompanies onNotice={setNotice} />}
         {tab === "scheduler" && <Scheduler onNotice={setNotice} />}
         {tab === "kpis" && <Kpis onNotice={setNotice} />}

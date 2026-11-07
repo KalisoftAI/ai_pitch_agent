@@ -1282,6 +1282,9 @@ export function MarketingCompanies({ onNotice }) {
   const [editing, setEditing] = useState({});
   const [busy, setBusy] = useState(false);
   const [templates, setTemplates] = useState([]);
+  const [ga, setGa] = useState(null);
+  const loadGa = async () => { try { setGa(await request("/analytics/google")); } catch (e) { setGa({ data_available: false, message: e.message, insights: [], stats: {}, files: [] }); } };
+  useEffect(() => { loadGa(); }, []);
   const [limit, setLimit] = useState(25);
   const [requirementsOnly, setRequirementsOnly] = useState(false);
   const [sendTarget, setSendTarget] = useState(null);
@@ -1291,6 +1294,7 @@ export function MarketingCompanies({ onNotice }) {
   const [sortBy, setSortBy] = useState("company");
   const [syncPath, setSyncPath] = useState("");
   const [activity, setActivity] = useState({});
+  const [mTab, setMTab] = useState("send");
 
   const loadActivity = async () => {
     try {
@@ -1498,16 +1502,12 @@ export function MarketingCompanies({ onNotice }) {
   const [newTemplate, setNewTemplate] = useState(null);
   const [newContact, setNewContact] = useState(null);
   const [defaultVideos, setDefaultVideos] = useState([]);
-  const [ga, setGa] = useState(null);
   const tplUploadRef = React.useRef(null);
   const mediaUploadRef = React.useRef(null);
   const mediaKindRef = React.useRef("image");
 
   const loadDefaultVideos = async () => {
     try { setDefaultVideos(await request("/media/default-videos")); } catch { setDefaultVideos([]); }
-  };
-  const loadGa = async () => {
-    try { setGa(await request("/analytics/google")); } catch (e) { setGa({ data_available: false, message: e.message, insights: [], stats: {} }); }
   };
   useEffect(() => { loadDefaultVideos(); loadGa(); }, []);
   const pickDefaultVideo = (video) => {
@@ -1691,6 +1691,7 @@ export function MarketingCompanies({ onNotice }) {
   const selectRowForSend = (row) => fillSendArea(row);
   const sumWith = (key) => stats ? (stats[key] || 0) : 0;
   const totalCompanies = stats?.total || 0;
+
   const curatedFor = (ch) => ch === "whatsapp" || ch === "both" ? CURATED_MESSAGES : [];
   const tplFor = (ch) => (templates || []).filter((t) => {
     const tc = (t.channel || "email").toLower();
