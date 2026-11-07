@@ -1596,6 +1596,7 @@ export function MarketingCompanies({ onNotice }) {
   const [newContact, setNewContact] = useState(null);
   const [defaultVideos, setDefaultVideos] = useState([]);
   const [ga, setGa] = useState(null);
+  const [gaBusy, setGaBusy] = useState(false);
   const tplUploadRef = React.useRef(null);
   const mediaUploadRef = React.useRef(null);
   const mediaKindRef = React.useRef("image");
@@ -1605,6 +1606,16 @@ export function MarketingCompanies({ onNotice }) {
   };
   const loadGa = async () => {
     try { setGa(await request("/analytics/google")); } catch (e) { setGa({ data_available: false, message: e.message, insights: [], stats: {} }); }
+  };
+  const gaSync = async () => {
+    setGaBusy(true);
+    try {
+      const result = await request("/analytics/google/sync", { method: "POST" });
+      setGa(result);
+      if (result.status === "no_new_files") onNotice({ type: "success", text: result.message || "No new file detected." });
+      else if (result.status === "processed") onNotice({ type: "success", text: `Processed ${result.new_files?.length || 0} new GA file(s) ? insights updated.` });
+      else onNotice({ type: "error", text: result.message || "GA sync failed." });
+    } catch (error) { onNotice({ type: "error", text: error.message }); } finally { setGaBusy(false); }
   };
   useEffect(() => { loadDefaultVideos(); loadGa(); }, []);
   const pickDefaultVideo = (video) => {
@@ -1827,8 +1838,17 @@ export function MarketingCompanies({ onNotice }) {
         <div className="marketing-stat-grid">{stats ? [["Companies",stats.total,100],["Name + email",sumWith("with_email"),totalCompanies?Math.round(sumWith("with_email")/totalCompanies*100):0],["Phone",sumWith("with_phone"),totalCompanies?Math.round(sumWith("with_phone")/totalCompanies*100):0],["Templates",templates.length,totalCompanies?Math.round(templates.length/totalCompanies*100):0],["Follow-ups due",sumWith("follow_up_due"),0],["With requirements",sumWith("with_requirements"),totalCompanies?Math.round(sumWith("with_requirements")/totalCompanies*100):0]].map(([label,value,pct])=>(<div className="marketing-stat" key={label}><small>{label}</small><b>{fmtNum(value)}</b><span>{pct}%</span></div>)) : <div className="marketing-stat"><small>Templates</small><b>{templates.length}</b></div>}</div>
         <div className="mini-charts"><div><b>Top domains</b>{topDomains.length?topDomains.map(([label,count])=>(<div key={label} className="mini-chart-row"><span>{label}</span>{bar(count,maxDomain)}<strong>{fmtNum(count)}</strong></div>)):<small className="muted">No domains.</small>}</div><div><b>Call status</b>{Object.entries(statusBuckets).map(([label,count])=>(<div key={label} className="mini-chart-row"><span>{label}</span>{bar(count,Math.max(1,...Object.values(statusBuckets)))}<strong>{fmtNum(count)}</strong></div>))}</div></div>
         <details className="marketing-breakdown"><summary>Domains ? call status ? categories</summary><div className="marketing-breakdown-grid"><div><b>Domains</b>{Object.entries(stats?.by_domain||{}).slice(0,12).map(([l,c])=><span key={l}>{l}<strong>{c}</strong></span>)}</div><div><b>Call status</b>{Object.entries(stats?.by_call_status||{}).map(([l,c])=><span key={l}>{l}<strong>{c}</strong></span>)}</div><div><b>Categories</b>{Object.entries(stats?.by_category||{}).slice(0,12).map(([l,c])=><span key={l}>{l}<strong>{c}</strong></span>)}</div></div></details></section>
-      <section className="panel studio-panel"><div className="panel-heading"><div><div className="section-kicker">GOOGLE ANALYTICS SYNC</div><h3>Insights &amp; stats (city/country &amp; more)</h3></div><button className="secondary-button" onClick={loadGa}><RefreshCw size={15}/> Sync</button></div>
-        {ga ? (<><p className="muted">{ga.data_available ? `Latest: ${ga.latest_file||"-"} ? ${ga.rows||0} rows ? ${String(ga.synced_at||"").slice(0,16)}` : (ga.message||"No analytics export synced.")}</p><div className="marketing-stat-grid">{Object.entries(ga.stats||{}).slice(0,8).map(([k,v])=><div className="marketing-stat" key={k}><small>{k}</small><b>{String(v)}</b></div>)}</div><div className="marketing-breakdown-grid"><div><b>Insights</b>{(ga.insights||[]).slice(0,12).map((x,i)=><span key={i}>{x}</span>)}{!(ga.insights||[]).length && <span>Sync analytics exports to extract city/country and other stats.</span>}</div>{Array.isArray(ga.sample)&&ga.sample[0] && <div><b>Sample fields</b>{Object.keys(ga.sample[0]).slice(0,14).map((k)=><span key={k}>{k}</span>)}</div>}</div></>) : <p className="muted">Loading analytics?</p>}</section></>}
+      <section className="panel studio-panel"><div className="panel-heading"><div><div className="section-kicker">GOOGLE ANALYTICS SYNC</div><h3>Insights &amp; stats (city/country &amp; more)</h3></div><div className="button-row"><button className="secondary-button" onClick={loadGa} title="Reload cached insights"><RefreshCw size={14}/> Reload</button><button className="primary-button" onClick={gaSync} disabled={gaBusy}><Database size={14}/> {gaBusy?"Processing...":"GA Sync"}</button></div></div>
+        {ga ? (<>
+          <p className="muted">{ga.status === "no_new_files" ? (ga.message||"No new file detected.") : ga.data_available ? `${(ga.files||[]).length} file(s) ? ${(ga.rows||0).toLocaleString()} rows ? processed ${String(ga.synced_at||"").slice(0,10)}${ga.from_cache?" (cached)":""}` : (ga.message||"No analytics export processed yet ? press GA Sync.")}</p>
+          {(ga.range?.from) && <div className="outreach-chip-row"><span className="outreach-chip">Period: {ga.range.from} ? {ga.range.to}</span>{ga.metric && <span className="outreach-chip">Weight: {ga.metric}</span>}</div>}
+          <div className="marketing-stat-grid">{Object.entries(ga.stats||{}).slice(0,8).map(([k,v])=><div className="marketing-stat" key={k}><small>{k}</small><b>{typeof v === "number" ? v.toLocaleString() : String(v)}</b></div>)}</div>
+          {Object.keys(ga.groups||{}).length ? <div className="mini-charts">{Object.entries(ga.groups).slice(0,6).map(([g,items]) => { const max = items?.[0]?.value || 1; return (<div key={g}><b>{g}</b>{items.slice(0,6).map((x) => (<div key={x.label} className="mini-chart-row"><span title={x.label}>{String(x.label).slice(0,18)}</span>{bar(x.value,max)}<strong>{x.value.toLocaleString()}<em className="muted"> {x.share}%</em></strong></div>))}</div>); })}</div> : (ga.data_available ? <small className="muted">No city/country dimensions in this export.</small> : null)}
+          {(ga.insights||[]).length ? <details open className="marketing-breakdown"><summary>Auto insights</summary><div className="marketing-breakdown-grid"><div>{(ga.insights||[]).slice(0,12).map((x,i)=><span key={i}>{x}</span>)}</div></div></details> : null}
+          {ga.warnings?.length ? <small className="muted">Warnings: {ga.warnings.slice(0,3).join("; ")}</small> : null}
+          {Array.isArray(ga.sample)&&ga.sample[0] && <details className="marketing-breakdown"><summary>Sample fields ({(ga.files||[]).length} file{(ga.files||[]).length===1?"":"s"})</summary><div className="marketing-breakdown-grid"><div>{Object.keys(ga.sample[0]).slice(0,16).map((k)=><span key={k}>{k}</span>)}</div></div></details>}
+        </>) : <p className="muted">Loading analytics?</p>}
+      </section></>}
       {mTab==="library" && <MarketingLibrary onNotice={onNotice} orders={mOrders} videos={mVideos.length?mVideos:CHANNEL_VIDEOS} />}
       {mTab==="signals" && <MarketingSignals onNotice={onNotice} />}
       {mTab==="events" && <MarketingEvents onNotice={onNotice} />}
@@ -1836,7 +1856,7 @@ export function MarketingCompanies({ onNotice }) {
       <section className="panel outreach-send-top" aria-label="Send and progress">
         <div className="panel-heading"><div><div className="section-kicker">SEND ? PROGRESS</div><h3>Campaign send</h3></div>
           <div className="button-row"><select value={cChannel} onChange={(e)=>{setCChannel(e.target.value);setSelTemplate(null);}} aria-label="Channel"><option value="email">Email</option><option value="whatsapp">WhatsApp</option><option value="both">Both (email + WhatsApp)</option></select>
-          <input value={cName} onChange={(e)=>setCName(e.target.value)} placeholder="Campaign name" style={{minWidth:160}} />
+          <input className="campaign-name" value={cName} onChange={(e)=>setCName(e.target.value)} placeholder="Campaign name" />
           {selTemplate && selectedRows.length>0 ? (cChannel==="both"
             ? <button className="primary-button" onClick={sendBoth} disabled={cBusy}><Send size={15}/> {cBusy?"Working...":`Create campaigns (${selectedEmail}? ${selectedPhone}WA)`}</button>
             : <><button className="secondary-button" onClick={createSelectedCampaign} disabled={cBusy || selectedForChannel===0}>{cBusy?"Working...":`Send for review (${selectedForChannel})`}</button><button className="primary-button" onClick={()=>createCampaign(selectedRows,true)} disabled={cBusy || selectedForChannel===0}><Send size={15}/> {cBusy?"Working...":`Send now (${selectedForChannel})`}</button></>)
