@@ -1964,3 +1964,53 @@ tr:hover .reach-actions,.reach-actions:focus-within{opacity:1}
 .picker-row.tick-selected{background:#f3faf4}
 .picker-main{display:flex;flex-direction:column;min-width:140px}
 .picker-edit{width:100%;display:flex;flex-direction:column;gap:6px}
+
+/* mobile + touch refinements (outreach/marketing) */
+@media (hover: none), (max-width: 700px) { .reach-actions { opacity: .95; } }
+@media (max-width: 640px) {
+  .outreach-tabs { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+  .outreach-tabs .secondary-button, .outreach-tabs .primary-button { white-space: nowrap; flex: 0 0 auto; padding: 7px 11px; font-size: 13px; }
+  .outreach-send-top { padding: 8px; margin-bottom: 8px; }
+  .outreach-send-top .panel-heading, .outreach-send-top .button-row { flex-direction: column; align-items: stretch; }
+  .outreach-send-top .button-row { width: 100%; }
+  .outreach-send-top .button-row button { flex: 1; }
+  .campaign-name { min-width: 0; width: 100%; }
+  .outreach-send-top select { width: 100%; }
+  .outreach-pane { max-height: none; padding: 8px; }
+  .outreach-chip-row { gap: 4px; }
+  .outreach-chip { font-size: 11px; padding: 2px 8px; }
+  .source-tiles { grid-template-columns: repeat(auto-fill, minmax(126px, 1fr)); }
+  .marketing-stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .mini-charts { grid-template-columns: 1fr; }
+  .picker-row { flex-direction: column; align-items: stretch; }
+  .picker-row .button-row { width: 100%; }
+  .modal-content { width: min(96vw, 640px) !important; max-height: 88vh; overflow: auto; }
+  .outreach-compact .table-wrap { overflow-x: auto; }
+  .outreach-compact table td, .outreach-compact table th { font-size: 12px; padding: 5px 6px; }
+  .outreach-compact input, .outreach-compact select, .outreach-compact textarea { font-size: 14px; }
+  .inline-edit { grid-template-columns: 1fr; }
+  .reach-actions a, .reach-actions button { flex: 1; text-align: center; }
+}
+
+/* outreach/marketing mobile refinement pass */
+@media (max-width: 640px) {
+  .content.outreach-compact { padding: 20px 14px 44px; }
+  .outreach-compact .panel { padding: 14px; }
+  .marketing-breakdown-grid { grid-template-columns: 1fr; gap: 10px; }
+  .marketing-breakdown-grid span { flex-wrap: wrap; word-break: break-word; }
+  .studio-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 7px; }
+  .studio-card .studio-actions button { flex: 1; }
+  .studio-panel .panel-heading { flex-direction: column; align-items: stretch; gap: 8px; }
+  .studio-panel .panel-heading .button-row { width: 100%; }
+  .studio-panel .panel-heading .button-row button { flex: 1; }
+  .contact-row { min-height: 52px; padding: 7px 0; }
+  .contact-row .contact-main small { white-space: normal; }
+  .send-bar { flex-direction: column; align-items: stretch; }
+  .send-bar button { width: 100%; }
+  .outreach-compact .studio-text { max-height: none; }
+  .table-toolbar { flex-wrap: wrap; gap: 6px; }
+  .table-toolbar > * { flex: 1 1 auto; }
+  .inline-edit textarea { min-height: 34px; }
+  .requirements-details summary { cursor: pointer; padding: 4px 0; }
+  .signal-action { min-height: auto; padding: 15px; }
+}
