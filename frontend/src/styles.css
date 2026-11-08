@@ -2140,3 +2140,18 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .ep-subject { padding:10px 12px; font-weight:700; border-bottom:1px solid #eef1ec; background:#fafaf5; }
 .email-preview iframe { width:100%; height:260px; border:0; display:block; background:#fff; }
 @media (max-width:640px){ .wa-bubble { max-width:100%; } .email-preview iframe { height:220px; } .catalog-row .field-inline { flex:1 1 100%; } }
+
+/* mobile nav + sticky topbar + overflow guard */
+.topbar { position: sticky; top: 0; z-index: 30; }
+.topbar-left { display: inline-flex; align-items: center; gap: 4px; }
+.main { overflow-y: auto; overflow-x: hidden; }
+.content { overflow-x: hidden; }
+.preview-head { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+.preview-meta { display:flex; flex-wrap:wrap; gap:8px 14px; font-size:12px; color:var(--muted,#5c6b62); padding:6px 0; }
+.preview-meta .status-pill.error { background:#fee2e2; color:#b91c1c; }
+@media (max-width: 768px) {
+  .topbar { position: sticky; top: 0; }
+  .topbar-left .icon-button { display: inline-flex; }
+  .content { padding-left: 10px; padding-right: 10px; }
+  .contact-table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}

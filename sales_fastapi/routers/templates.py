@@ -471,17 +471,17 @@ def sync_specific_templates(
 
 @router.post("/import-whatsapp")
 def import_whatsapp_templates(
-    path: str = Query(default="Mail_templates/Kalika_WhatsApp_Message_Templates.xlsx"),
+    path: str = Query(default="sales-metadata/whatsapp-msg-templates/Kalika_WhatsApp_Message_Templates.xlsx"),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Import the WhatsApp message template library from the GCS Excel file.
 
-    Reads ``kalika_enterprises/Mail_templates/Kalika_WhatsApp_Message_Templates.xlsx``,
-    preserves each template's category, emojis and line formatting, resolves the
-    ``{{...}}`` personalization fields and upserts them as ``channel="whatsapp"``
-    templates. Email templates are untouched; re-running the import updates rows in
-    place instead of creating duplicates (matched on user + whatsapp + name + category).
+    Reads the Kalika WhatsApp templates workbook, preserves each template's
+    category, emojis and line formatting, resolves the ``{{...}}`` personalization
+    fields and upserts them as ``channel="whatsapp"`` templates. Email templates
+    are untouched; re-running the import updates rows in place instead of creating
+    duplicates (matched on user + whatsapp + name + category).
     """
     from io import BytesIO
 
@@ -493,9 +493,15 @@ def import_whatsapp_templates(
     gcs = GCSStorage(bucket_name="kalika_enterprises")
     if not gcs.available:
         raise HTTPException(status_code=503, detail="GCS is not available")
-    raw = gcs.download_blob(path)
+    tried = [path, "Mail_templates/Kalika_WhatsApp_Message_Templates.xlsx"]
+    raw = b""
+    for candidate in dict.fromkeys(tried):
+        raw = gcs.download_blob(candidate) or b""
+        if raw:
+            path = candidate
+            break
     if not raw:
-        raise HTTPException(status_code=404, detail=f"Template file not found at {path}")
+        raise HTTPException(status_code=404, detail=f"Template file not found (tried: {', '.join(dict.fromkeys(tried))})")
 
     try:
         workbook = load_workbook(BytesIO(raw), data_only=True, read_only=True)

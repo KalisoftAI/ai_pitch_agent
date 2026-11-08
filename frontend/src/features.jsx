@@ -903,6 +903,7 @@ export function SocialAi({ onNotice }) {
   const [social, setSocial] = useState(null);
   const [recs, setRecs] = useState(null);
   const [analytics, setAnalytics] = useState(null);
+  const [outreachAn, setOutreachAn] = useState(null);
   const [status, setStatus] = useState(null);
   const [busy, setBusy] = useState(false);
   const load = async () => {
@@ -1352,6 +1353,8 @@ export function MarketingCompanies({ onNotice }) {
   const [waCategory, setWaCategory] = useState("");
   const [composeSubject, setComposeSubject] = useState("");
   const [composeBody, setComposeBody] = useState("");
+  const [previewIdx, setPreviewIdx] = useState(0);
+  const [previewRows, setPreviewRows] = useState(null);
   const catalogUploadRef = React.useRef(null);
   const imgUploadRef = React.useRef(null);
   const [showTplPicker, setShowTplPicker] = useState(false);
@@ -1623,6 +1626,7 @@ export function MarketingCompanies({ onNotice }) {
   const [cLimit, setCLimit] = useState(50);
   const [cDetail, setCDetail] = useState(null);
   const [cBusy, setCBusy] = useState(false);
+  const loadOutreachAn = async () => { try { setOutreachAn(await request("/campaigns/analytics")); } catch {} };
   const loadCampaigns = async () => {
     try {
       const [camps, m] = await Promise.all([request("/campaigns"), request("/templates/meta")]);
@@ -1630,7 +1634,7 @@ export function MarketingCompanies({ onNotice }) {
       setTplMeta(m || { channels: [], strategies: [], funnel_stages: [] });
     } catch { setCampaigns([]); }
   };
-  useEffect(() => { loadCampaigns(); }, []);
+  useEffect(() => { loadCampaigns(); loadOutreachAn(); }, []);
   const pickTemplate = (t) => { setSelTemplate(t); if (t) { setCChannel(t.channel || "email"); setCStrategy(t.strategy || "cold_outreach"); setComposeSubject(t.subject || ""); setComposeBody(t.body || ""); } else { setComposeSubject(""); setComposeBody(""); } };
 
   // Templates tab content (preview/edit/delete) folded in, minus the giant page heading
@@ -1737,14 +1741,24 @@ export function MarketingCompanies({ onNotice }) {
       setBusy(false); if (mediaUploadRef.current) mediaUploadRef.current.value = "";
     }
   };
-  const resolveVars = (text, sample) => String(text || "")
-    .replaceAll("{{contact_name}}", sample?.contact_name || sample?.company || "")
-    .replaceAll("{{company_name}}", sample?.company || "")
-    .replaceAll("{{product_name}}", "Kalika Enterprises packaging")
-    .replaceAll("{{name}}", sample?.contact_name || sample?.company || "")
-    .replaceAll("{{company}}", sample?.company || "")
-    .replaceAll("{{email}}", sample?.email || "")
-    .replaceAll("{{phone}}", sample?.phone || "");
+  const resolveVars = (text, sample) => {
+    const s = sample || {};
+    const name = s.contact_name || s.name || s.company || "there";
+    const company = s.company || "your organization";
+    const mobile = s.phone || s.mobile || "";
+    const email = s.email || "";
+    const designation = s.designation || s.purchase_contact_role || s.role || "Team";
+    const product = "Kalika Enterprises packaging";
+    const map = {
+      name, contact_name: name, contact: name, full_name: name, person: name,
+      company, company_name: company, organisation: company, organization: company, org: company,
+      email, mail: email, email_address: email,
+      phone: mobile, mobile, mobile_number: mobile, phone_number: mobile,
+      designation, role: designation, title: designation, position: designation,
+      product_name: product, product,
+    };
+    return String(text || "").replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, k) => (map[k] != null && map[k] !== "" ? String(map[k]) : (map[k.toLowerCase()] != null ? String(map[k.toLowerCase()]) : "")));
+  };
   const waTemplates = (templates || []).filter((x) => (x.channel || "").toLowerCase() === "whatsapp");
   const waCategories = Array.from(new Set(waTemplates.map((x) => x.category || "General")));
   const importWhatsapp = async () => {
@@ -1962,8 +1976,30 @@ export function MarketingCompanies({ onNotice }) {
   return (
     <div className="content outreach-compact">
       <div className="page-heading"><div><div className="section-kicker">OUTREACH / TEMPLATES / MARKETING</div><h2>Outreach &amp; marketing</h2><p className="muted">Channel-first send, curated templates, insights, videos, signals and events.</p></div>
-        <div className="button-row"><button className="secondary-button" onClick={() => { load(); loadActivity(); loadCampaigns(); }}><RefreshCw size={16}/> Refresh</button><button className="secondary-button" onClick={syncFromGCS} disabled={busy}><Database size={16}/>{busy?"Syncing...":"Sync"}</button></div></div>
+        <div className="button-row"><button className="secondary-button" onClick={() => { load(); loadActivity(); loadCampaigns(); loadOutreachAn(); }}><RefreshCw size={16}/> Refresh</button><button className="secondary-button" onClick={syncFromGCS} disabled={busy}><Database size={16}/>{busy?"Syncing...":"Sync"}</button></div></div>
       <div className="outreach-tabs" role="tablist">{[["send","Send & templates"],["insights","Insights & stats"],["library","Videos & ERP"],["signals","Signal desk"],["events","Events"]].map(([id,label])=>(<button key={id} role="tab" aria-selected={mTab===id} className={`secondary-button ${mTab===id?"primary-button":""}`} onClick={()=>setMTab(id)}>{label}</button>))}</div>
+      {mTab==="insights" && outreachAn && (() => { const oa=outreachAn; const t=oa.totals||{}; const maxDay=Math.max(1,...(oa.daily||[]).map(d=>Math.max(d.email_sent||0,d.whatsapp_sent||0,d.failed||0,1))); const mxC=Math.max(1,...(oa.by_campaign||[]).map(c=>Math.max(c.sent||0,1))); const mxG=Math.max(1,...(oa.by_group||[]).map(g=>Math.max((g.sent||0)+(g.failed||0),1))); const bar=(v,mx,c)=> <span className="mini-bar"><i style={{width:`${Math.max(3,Math.round(((v||0)/(mx||1))*100))}%`,background:c||undefined}} /></span>; return (
+      <section className="panel studio-panel"><div className="panel-heading"><div><div className="section-kicker">OUTREACH ANALYTICS (REAL)</div><h3>Progress dashboard</h3></div><span className="muted">{oa.note}</span></div>
+        <div className="marketing-stat-grid">
+          <div className="marketing-stat"><small>Emails sent</small><b>{t.email_sent||0}</b></div>
+          <div className="marketing-stat"><small>WhatsApp sent</small><b>{t.whatsapp_sent||0}</b></div>
+          <div className="marketing-stat"><small>Successful (accepted)</small><b>{t.delivered||0}</b></div>
+          <div className="marketing-stat"><small>Failed</small><b>{t.failed||0}</b></div>
+          <div className="marketing-stat"><small>Opened</small><b>{t.opened||0}</b></div>
+          <div className="marketing-stat"><small>Campaigns</small><b>{t.campaigns||0}</b></div>
+        </div>
+        <div className="mini-charts">
+          <div><b>Daily activity (last 14 days)</b>{(oa.daily||[]).length ? (oa.daily||[]).map(d=>(
+            <div key={d.day} className="mini-chart-row"><span>{d.day.slice(5)}</span>{bar(d.email_sent,maxDay,'#3b82f6')}<small>E {d.email_sent||0}</small>{bar(d.whatsapp_sent,maxDay,'#22c55e')}<small>W {d.whatsapp_sent||0}</small>{bar(d.failed,maxDay,'#ef4444')}<small>F {d.failed||0}</small></div>
+          )) : <small className="muted">No campaign activity yet.</small>}</div>
+          <div><b>Campaign-wise</b>{(oa.by_campaign||[]).length ? (oa.by_campaign||[]).map(c=>(
+            <div key={c.id} className="mini-chart-row"><span title={c.name}>{c.channel[0].toUpperCase()} {String(c.name).slice(0,14)}</span>{bar(c.sent,mxC,'#22c55e')}<small>{c.sent}/{c.total} ok</small>{bar(c.failed,mxC,'#ef4444')}<small>{c.failed} fail</small></div>
+          )) : <small className="muted">No campaigns.</small>}</div>
+        </div>
+        {(oa.by_group||[]).length > 0 && <div className="mini-charts" style={{marginTop:8}}><div><b>Contact group-wise progress</b>{(oa.by_group||[]).map(g=>(
+          <div key={g.group} className="mini-chart-row"><span title={g.group}>{String(g.group).slice(0,18)}</span>{bar(g.sent,mxG,'#22c55e')}<small>{g.sent} sent</small>{bar(g.failed,mxG,'#ef4444')}<small>{g.failed} fail</small></div>
+        ))}</div><div /></div>}
+      </section>); })()}
       {mTab==="insights" && <><section className="panel studio-panel"><div className="panel-heading"><div><div className="section-kicker">MARKETING HIGH-LEVEL</div><h3>Exact details for sending</h3></div><span className="muted">{fmtNum(totalCompanies)} companies ? {fmtNum(sumWith("with_email"))} with email ? {fmtNum(sumWith("with_phone"))} with phone</span></div>
         <div className="marketing-stat-grid">{stats ? [["Companies",stats.total,100],["Name + email",sumWith("with_email"),totalCompanies?Math.round(sumWith("with_email")/totalCompanies*100):0],["Phone",sumWith("with_phone"),totalCompanies?Math.round(sumWith("with_phone")/totalCompanies*100):0],["Templates",templates.length,totalCompanies?Math.round(templates.length/totalCompanies*100):0],["Follow-ups due",sumWith("follow_up_due"),0],["With requirements",sumWith("with_requirements"),totalCompanies?Math.round(sumWith("with_requirements")/totalCompanies*100):0]].map(([label,value,pct])=>(<div className="marketing-stat" key={label}><small>{label}</small><b>{fmtNum(value)}</b><span>{pct}%</span></div>)) : <div className="marketing-stat"><small>Templates</small><b>{templates.length}</b></div>}</div>
         <div className="mini-charts"><div><b>Top domains</b>{topDomains.length?topDomains.map(([label,count])=>(<div key={label} className="mini-chart-row"><span>{label}</span>{bar(count,maxDomain)}<strong>{fmtNum(count)}</strong></div>)):<small className="muted">No domains.</small>}</div><div><b>Call status</b>{Object.entries(statusBuckets).map(([label,count])=>(<div key={label} className="mini-chart-row"><span>{label}</span>{bar(count,Math.max(1,...Object.values(statusBuckets)))}<strong>{fmtNum(count)}</strong></div>))}</div></div>
@@ -2120,17 +2156,41 @@ export function MarketingCompanies({ onNotice }) {
             <input className="field-inline" value={attachCatalog} onChange={(e)=>setAttachCatalog(e.target.value)} placeholder="or paste a catalogue/PDF link" aria-label="Catalogue link" />
             <input ref={catalogUploadRef} type="file" accept="application/pdf" hidden onChange={uploadCatalog} />
           </div>
-          <b className="sub-label">Preview{selectedRows[0] ? ` (as ${selectedRows[0].contact_name || selectedRows[0].company})` : " (select a contact to personalize)"}</b>
-          {(cChannel === "whatsapp" || cChannel === "both") ? (
-            <div className="wa-preview" aria-label="WhatsApp preview"><div className="wa-bubble">
-              {resolveVars(composeBody, selectedRows[0] || {}).split("\n").map((line, i) => <span key={i}>{line}<br /></span>)}
-              {attachImage && <img className="wa-media" src={attachImage} alt="attachment" />}
-              {attachVideo && <div className="wa-link">Video: {attachVideo}</div>}
-              {attachCatalog && <div className="wa-link">Catalogue: {attachCatalog}</div>}
-            </div></div>
-          ) : (
-            <div className="email-preview" aria-label="Email preview"><div className="ep-subject">{resolveVars(composeSubject, selectedRows[0] || {}) || "(no subject)"}</div><iframe title="Email preview" sandbox="allow-same-origin" srcDoc={resolveVars(composeBody, selectedRows[0] || {})} /></div>
-          )}
+          {(() => {
+            const pv = selectedRows.length ? selectedRows[Math.min(previewIdx, selectedRows.length - 1)] : null;
+            const pvTo = pv ? (cChannel === "whatsapp" ? (pv.phone || "no mobile") : (pv.email || "no email")) : "";
+            const pvSubj = resolveVars(composeSubject, pv || {});
+            const pvBody = resolveVars(composeBody, pv || {});
+            const unresolved = (pvSubj + pvBody).includes("{{");
+            const channelOk = pv ? (cChannel === "whatsapp" ? !!pv.phone : !!pv.email) : true;
+            return (<>
+              <div className="preview-head">
+                <b className="sub-label">Preview (personalized)</b>
+                <div className="button-row">
+                  <button className="secondary-button" disabled={selectedRows.length <= 1} onClick={() => setPreviewIdx((i) => Math.max(0, i - 1))}>Prev</button>
+                  <span className="contact-tag">{selectedRows.length ? `${Math.min(previewIdx, selectedRows.length - 1) + 1} / ${selectedRows.length}` : "0 / 0"}</span>
+                  <button className="secondary-button" disabled={selectedRows.length <= 1} onClick={() => setPreviewIdx((i) => Math.min(selectedRows.length - 1, i + 1))}>Next</button>
+                </div>
+              </div>
+              {pv && <div className="preview-meta">
+                <span><b>To:</b> {pv.contact_name || pv.company || "(no name)"} &lt;{pvTo}&gt;</span>
+                <span><b>Company:</b> {pv.company || "-"}</span>
+                <span><b>Email:</b> {pv.email || "-"} &nbsp; <b>Mobile:</b> {pv.phone || "-"}</span>
+                {!channelOk && <span className="status-pill error">No valid {cChannel === "whatsapp" ? "mobile" : "email"} for this channel</span>}
+                {unresolved && <span className="status-pill error">Unresolved placeholder detected</span>}
+              </div>}
+              {(cChannel === "whatsapp" || cChannel === "both") ? (
+                <div className="wa-preview" aria-label="WhatsApp preview"><div className="wa-bubble">
+                  {pvBody.split("\n").map((line, i) => <span key={i}>{line}<br /></span>)}
+                  {attachImage && <img className="wa-media" src={attachImage} alt="attachment" />}
+                  {attachVideo && <div className="wa-link">Video: {attachVideo}</div>}
+                  {attachCatalog && <div className="wa-link">Catalogue: {attachCatalog}</div>}
+                </div></div>
+              ) : (
+                <div className="email-preview" aria-label="Email preview"><div className="ep-subject">{pvSubj || "(no subject)"}</div><iframe title="Email preview" sandbox="allow-same-origin" srcDoc={pvBody} /></div>
+              )}
+            </>);
+          })()}
         </div>}
         <details className="marketing-breakdown" open><summary>Preview recipients ({selectedRows.length})</summary>
           <div className="preview-list">{selectedRows.slice(0,60).map((r)=>(<div className="preview-item" key={r.id}><b>{r.contact_name||r.company}</b><small>{r.email||"No email"}{r.phone?` ? ${r.phone}`:""}</small></div>))}{selectedRows.length>60 && <small className="muted">+{selectedRows.length-60} more</small>}</div>

@@ -105,7 +105,7 @@ function App() {
       </aside>
       {mobileNav && <button className="scrim" aria-label="Close menu" onClick={() => setMobileNav(false)} />}
       <main className="main">
-        <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open navigation menu"><Menu size={25} /><span>Menu</span></button><div className="topbar-title"><div className="eyebrow">{isKalikaUser ? "KALIKA ENTERPRISES" : "KALISOFT AI"} / SALES PIPELINE</div><h1>{tab === "overview" ? "Good work starts with a clear signal." : tab === "sales-bi" ? "Sales analytics & BI" : tab === "graph-review" ? "Knowledge graph review" : tab === "contacts" ? "Contacts" : tab === "email" ? "Email connections" : tab === "scheduler" ? "Scheduler" : tab === "kpis" ? "Business KPIs" : tab === "feedback" ? "Feedback" : tab === "field" ? "Field desk" : tab === "uat" ? "UAT & operations" : "Outreach · templates · contacts · mail"}</h1></div><div className="topbar-actions"><EnvBadge env={health?.env} /><button className="text-button" onClick={() => setTour(true)}><Sparkles size={15} /> Take the tour</button><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Settings"><Settings2 size={18} /></button></div></header>
+        <header className="topbar"><div className="topbar-left"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open navigation menu"><Menu size={25} /><span>Menu</span></button><button className="icon-button" onClick={() => setTab("overview")} aria-label="Back"><ArrowLeft size={18} /></button><button className="icon-button" onClick={() => window.location.reload()} aria-label="Refresh"><RefreshCw size={18} /></button></div><div className="topbar-title"><div className="eyebrow">{isKalikaUser ? "KALIKA ENTERPRISES" : "KALISOFT AI"} / SALES PIPELINE</div><h1>{tab === "overview" ? "Good work starts with a clear signal." : tab === "sales-bi" ? "Sales analytics & BI" : tab === "graph-review" ? "Knowledge graph review" : tab === "contacts" ? "Contacts" : tab === "email" ? "Email connections" : tab === "scheduler" ? "Scheduler" : tab === "kpis" ? "Business KPIs" : tab === "feedback" ? "Feedback" : tab === "field" ? "Field desk" : tab === "uat" ? "UAT & operations" : "Outreach - templates - contacts - mail"}</h1></div><div className="topbar-actions"><EnvBadge env={health?.env} /><button className="text-button" onClick={() => setTour(true)}><Sparkles size={15} /> Take the tour</button><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Settings"><Settings2 size={18} /></button></div></header>
         {tab === "overview" && <Overview onNavigate={setTab} onNotice={setNotice} health={health} setHealth={setHealth} />}
         {tab === "sales-bi" && <SalesBi onNotice={setNotice} />}
         {tab === "graph-review" && config.knowledge_graph_review_enabled && <KnowledgeGraphReview onNotice={setNotice} user={user} config={config} />}
@@ -116,6 +116,7 @@ function App() {
         {tab === "kpis" && <Kpis onNotice={setNotice} />}
         {tab === "feedback" && <Feedback onNotice={setNotice} />}
         {tab === "field" && <FieldDesk onNotice={setNotice} user={user} onNavigate={setTab} />}
+        {tab === "visits" && <Visits onNotice={setNotice} />}
         {tab === "uat" && config.knowledge_graph_review_enabled && <UatOps onNotice={setNotice} />}
       </main>
       {tour && <Walkthrough onClose={() => setTour(false)} />}
@@ -525,6 +526,14 @@ function Events({ onNotice }) {
         </select>
       </div>
 
+
+        <section className="panel" style={{marginBottom:14}}>
+          <div className="panel-heading"><div><div className="section-kicker">LAST VISIT DATA (KALIKA SALES TRACKER)</div><h3>Recent visits</h3></div><button className="secondary-button" onClick={syncVisits}><RefreshCw size={14}/> Sync</button></div>
+          <div className="contact-table" style={{overflowX:'auto'}}><table><thead><tr><th>Date</th><th>Company</th><th>Contact / Mobile</th><th>Purpose</th><th>Outcome</th><th>Location</th><th>Follow-up</th><th>Notes</th></tr></thead><tbody>
+            {visits.map(v => (<tr key={v.id}><td><small>{v.visit_date||'-'}</small></td><td><b>{v.company}</b><br/><small className="muted">{v.sales_person||''}</small></td><td><small>{v.meet_person||v.contact_name||'-'}</small><br/><small>{v.contact_phone||'-'}</small></td><td><small>{v.purpose||'-'}</small></td><td><small>{v.outcome||'-'}</small></td><td><small>{(v.meet_home_location||v.map_location||'-').slice(0,40)}</small></td><td><small>{v.follow_up_date||'-'}</small></td><td><small title={v.notes}>{(v.notes||'-').slice(0,60)}</small></td></tr>))}
+            {!visits.length && <tr><td colSpan={8}><small className="muted">No visit records. Click Sync to import from Sales Tracker.</small></td></tr>}
+          </tbody></table></div>
+        </section>
       <div className="two-column">
         <section className="panel">
           <div className="panel-heading">
@@ -1313,12 +1322,14 @@ function FieldDesk({ onNotice, user, onNavigate }) {
   const [recording, setRecording] = useState(false);
   const [recSupported, setRecSupported] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [visits, setVisits] = useState([]);
   const recogRef = React.useRef(null);
 
   const load = async () => {
-    try { setTeam(await request("/team/messages?limit=40")); }
+    try { const [tm, vs] = await Promise.all([request("/team/messages?limit=40"), request("/visits?limit=20").catch(()=>[])]); setTeam(tm); setVisits(Array.isArray(vs)?vs:[]); }
     catch (error) { onNotice({ type: "error", text: error.message }); }
   };
+  const syncVisits = async () => { try { const r = await request("/visits/samples", { method: "POST" }); onNotice({ type: "success", text: `Visits synced: ${r.created} new, ${r.existing} existing.` }); load(); } catch (e) { onNotice({ type: "error", text: e.message }); } };
   useEffect(() => { load(); }, []);
 
   const startVoice = () => {
@@ -1371,7 +1382,7 @@ function FieldDesk({ onNotice, user, onNavigate }) {
           <h2>Field desk</h2>
           <p className="muted">Record a voice update from the field — it converts to text, then a sales executive approves or rejects it before it reaches the team.</p>
         </div>
-        <div className="button-row"><button className="secondary-button" onClick={() => onNavigate?.("visits")}><MapPin size={15} /> Company history</button><button className="secondary-button" onClick={() => onNavigate?.("erp")}><Calculator size={15} /> Rate calculator</button><button className="secondary-button" onClick={load}><RefreshCw size={15} /> Refresh</button></div>
+        <div className="button-row"><button className="secondary-button" onClick={() => onNavigate?.("visits")}><MapPin size={15} /> Company history</button><button className="secondary-button" onClick={syncVisits}><RefreshCw size={15} /> Sync visits</button><button className="secondary-button" onClick={() => onNavigate?.("erp")}><Calculator size={15} /> Rate calculator</button><button className="secondary-button" onClick={load}><RefreshCw size={15} /> Refresh</button></div>
       </div>
 
       <div className="two-column">
@@ -1428,6 +1439,46 @@ function FieldDesk({ onNotice, user, onNavigate }) {
       </div>
     </div>
   );
+}
+
+
+function Visits({ onNotice }) {
+  const [rows, setRows] = React.useState([]);
+  const [q, setQ] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const load = async () => {
+    setBusy(true);
+    try { setRows(await request(`/visits?company=${encodeURIComponent(q)}&limit=100`)); }
+    catch (e) { onNotice({ type: "error", text: e.message }); }
+    finally { setBusy(false); }
+  };
+  const syncSamples = async () => {
+    try { const r = await request("/visits/samples", { method: "POST" }); onNotice({ type: "success", text: `Synced: ${r.created} new, ${r.existing} existing.` }); load(); }
+    catch (e) { onNotice({ type: "error", text: e.message }); }
+  };
+  React.useEffect(() => { load(); }, []);
+  return (
+    <div className="content">
+      <div className="page-heading"><div><div className="section-kicker">FIELD-DESK / LAST VISIT DATA</div><h2>Company visit history</h2><p className="muted">Latest visit records (Kalika Sales Tracker) with contact, outcome, follow-up and notes. Sync is de-duplicated.</p></div>
+        <div className="button-row"><button className="secondary-button" onClick={syncSamples}><RefreshCw size={15} /> Sync tracker records</button><button className="secondary-button" onClick={load} disabled={busy}><RefreshCw size={15} /> Refresh</button></div></div>
+      <section className="panel">
+        <div className="search-field" style={{maxWidth:360, marginBottom:10}}><Search size={16} /><input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Search company" onKeyDown={(e)=>{ if(e.key==='Enter') load(); }} /></div>
+        <div className="contact-table" role="region" tabIndex={0}><table><thead><tr><th>Visit date</th><th>Company</th><th>Contact / Mobile</th><th>Purpose</th><th>Outcome</th><th>Location</th><th>Follow-up</th><th>Notes</th></tr></thead><tbody>
+          {rows.map(v => (
+            <tr key={v.id}>
+              <td><small>{v.visit_date||"-"}</small></td>
+              <td><b>{v.company}</b><br/><small className="muted">{v.sales_person||""}</small></td>
+              <td><small>{v.meet_person||v.contact_name||"-"}</small><br/><small>{v.contact_phone||"-"}</small></td>
+              <td><small>{v.purpose||"-"}</small></td>
+              <td><small>{v.outcome||"-"}</small></td>
+              <td><small>{v.meet_home_location||v.map_location||"-"}</small></td>
+              <td><small>{v.follow_up_date||"-"}</small></td>
+              <td><small title={v.notes}>{(v.notes||"-").slice(0,80)}{(v.notes||"").length>80?"...":""}</small></td>
+            </tr>))}
+          {!rows.length && <tr><td colSpan={8}><div className="empty-state"><p>No visit records yet. Use "Sync tracker records".</p></div></td></tr>}
+        </tbody></table></div>
+      </section>
+    </div>);
 }
 
 function Outreach({ onNotice }) {
