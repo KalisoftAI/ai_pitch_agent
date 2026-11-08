@@ -93,6 +93,35 @@ class EmailConnection(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
+class MailSyncState(Base):
+    """Persistent IMAP sync checkpoint per connection (UIDVALIDITY/last UID/dedup).
+
+    Backs incremental "new mail only" fetches; message_ids keeps the last
+    processed Message-IDs so repeated UIDs never reprocess. Daily stats power the
+    outreach dashboard KPIs (fetched/processed) without re-scanning GCS.
+    """
+
+    __tablename__ = "mail_sync_states"
+    __table_args__ = (UniqueConstraint("connection_id", name="uq_mail_sync_connection"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    connection_id: Mapped[int] = mapped_column(Integer, index=True)
+    mailbox: Mapped[str] = mapped_column(String(64), default="INBOX")
+    uidvalidity: Mapped[int] = mapped_column(Integer, default=0)
+    last_uid: Mapped[int] = mapped_column(Integer, default=0)
+    message_ids: Mapped[list] = mapped_column(JSON, default=list)  # capped to recent ids
+    stats: Mapped[dict] = mapped_column(JSON, default=dict)  # {"daily": {"YYYY-MM-DD": {...}}}
+    gcs_last_prefix: Mapped[str] = mapped_column(String(512), default="")
+    last_status: Mapped[str] = mapped_column(String(32), default="")
+    last_error: Mapped[str] = mapped_column(String(512), default="")
+    last_sync_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
 class GoogleMailbox(Base):
     __tablename__ = "google_mailboxes"
     __table_args__ = (

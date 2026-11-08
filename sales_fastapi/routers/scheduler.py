@@ -59,6 +59,35 @@ def run_scheduler(
         executed["erp_dispatch_sync"] = sync_erp_report(db)
     except Exception as exc:  # noqa: BLE001 - surface the failure to the UI
         executed["erp_dispatch_sync"] = {"ok": False, "error": str(exc)[:400]}
+    # incremental IMAP sync for every workspace mailbox (checkpoint + dedup)
+    from ..mail_sync import (  # local import: keeps module graph light
+        cleanup_retention,
+        sync_connection,
+    )
+
+    mail_results: list[dict[str, Any]] = []
+    for connection in db.query(EmailConnection).filter(EmailConnection.user_id == user.id).all():
+        if not connection.imap_host:
+            continue
+        try:
+            summary = sync_connection(db, connection, user)
+            mail_results.append({"connection_id": connection.id, **{k: v for k, v in summary.items() if k != "sample"}})
+        except Exception as exc:  # noqa: BLE001
+            mail_results.append({"connection_id": connection.id, "ok": False, "error": str(exc)[:200]})
+    if mail_results:
+        executed["email_new_mail_sync"] = mail_results
+    # retention sweep at most once per day
+    from ..models import SyncRun
+
+    last_retention = (
+        db.query(SyncRun).filter(SyncRun.job == "mail_retention").order_by(SyncRun.id.desc()).first()
+    )
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    if last_retention is None or str(last_retention.started_at)[:10] != today:
+        try:
+            executed["mail_retention_cleanup"] = cleanup_retention(db)
+        except Exception as exc:  # noqa: BLE001
+            executed["mail_retention_cleanup"] = {"ok": False, "error": str(exc)[:200]}
     result = {
         "enqueued": len(task_ids),
         "task_ids": task_ids,

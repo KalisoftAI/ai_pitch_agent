@@ -119,6 +119,10 @@ STANDARD_TASKS: List[Dict[str, Any]] = [
         "description": "Nightly: networkx graph preprocessing (contacts x domains x intents x chats x ERP customers) -> nodes/edges/gexf for future graph DB",
     },
     {"name": "kpi_snapshot", "cron": "0 23 * * *", "description": "Nightly business-KPI snapshot"},
+    {"name": "email_new_mail_sync", "cron": "*/30 * * * *",
+     "description": "Incremental IMAP sync (UID checkpoint, Message-ID dedup) -> Kalika_gmail_data raw/processed on GCS"},
+    {"name": "mail_retention_cleanup", "cron": "30 4 * * *",
+     "description": "GCS retention: raw 180d, processed 365d, attachments 90d, logs 365d (mailbox untouched)"},
     {
         "name": "sync_all_data",
         "cron": "0 */2 * * *",

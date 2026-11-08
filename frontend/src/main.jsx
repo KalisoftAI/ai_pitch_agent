@@ -781,6 +781,12 @@ function EmailConnections({ onNotice, config }) {
     } catch (error) { onNotice({ type: "error", text: error.message }); }
     finally { setGmailBusy(false); }
   };
+  const useEnvMailbox = async () => {
+    setGmailBusy(true);
+    try { const conn = await request("/email/default-connection", { method: "POST" }); onNotice({ type: "success", text: `Workspace mailbox ${conn.email_address} configured from .env (password encrypted, never exposed).` }); setSelected({ source: "imap", id: conn.id }); load(); }
+    catch (error) { onNotice({ type: "error", text: error.message }); }
+    finally { setGmailBusy(false); }
+  };
   const runFetch = async () => {
     if (!selected.id) return onNotice({ type: "error", text: "Select a mailbox first." });
     setBusy(true);
@@ -795,11 +801,102 @@ function EmailConnections({ onNotice, config }) {
   const selectedLabel = selected.source === "gmail" ? googleMailboxes.find((mailbox) => mailbox.id === selected.id)?.email_address : connections.find((connection) => connection.id === selected.id)?.email_address;
 
   return <div className="content">
-    <div className="page-heading"><div><div className="section-kicker">OUTREACH INFRASTRUCTURE</div><h2>Email connections</h2><p className="muted">Test a mailbox, filter a small sample, and keep only the context you need.</p></div><button className="primary-button" onClick={() => setShow(!show)}><Plus size={17} /> Add IMAP mailbox</button></div>
+    <div className="page-heading"><div><div className="section-kicker">OUTREACH INFRASTRUCTURE</div><h2>Email connections</h2><p className="muted">Test a mailbox, filter a small sample, and keep only the context you need.</p></div><button className="secondary-button" onClick={useEnvMailbox} disabled={gmailBusy}><Database size={16} /> Use .env mailbox</button><button className="primary-button" onClick={() => setShow(!show)}><Plus size={17} /> Add IMAP mailbox</button></div>
     {show && <form className="panel form-panel" onSubmit={add}><div className="form-heading"><div><div className="section-kicker">IMAP / SMTP</div><h3>Add an encrypted mailbox</h3></div><button type="button" className="icon-button" onClick={() => setShow(false)} aria-label="Close"><X size={18} /></button></div><div className="form-grid"><input required type="email" placeholder="Mailbox email" value={form.email_address} onChange={(event) => setForm({ ...form, email_address: event.target.value })} /><input required type="password" placeholder="App password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} /><input placeholder="IMAP host" value={form.imap_host} onChange={(event) => setForm({ ...form, imap_host: event.target.value })} /><input type="number" placeholder="IMAP port" value={form.imap_port} onChange={(event) => setForm({ ...form, imap_port: Number(event.target.value) })} /><input placeholder="SMTP host" value={form.smtp_host} onChange={(event) => setForm({ ...form, smtp_host: event.target.value })} /><input type="number" placeholder="SMTP port" value={form.smtp_port} onChange={(event) => setForm({ ...form, smtp_port: Number(event.target.value) })} /></div><small className="muted">Use a Google app password for Gmail IMAP/SMTP. It is encrypted before storage.</small><button className="primary-button" type="submit">Save mailbox</button></form>}
     <section className="panel email-source-panel"><div className="panel-heading"><div><div className="section-kicker">MAILBOX SOURCES</div><h3>Choose a source to inspect</h3></div><span className="muted">Read-only test mode</span></div><div className="mailbox-source-list">{connections.map((connection) => <button key={`imap-${connection.id}`} className={`mailbox-source ${selected.source === "imap" && selected.id === connection.id ? "active" : ""}`} onClick={() => { setSelected({ source: "imap", id: connection.id }); setResult(null); }}><Mail size={16} /><span><b>{connection.email_address}</b><small>IMAP · {connection.is_connected ? "connected" : "not tested"}</small></span><ArrowUpRight size={15} /></button>)}{googleMailboxes.map((mailbox) => <button key={`gmail-${mailbox.id}`} className={`mailbox-source ${selected.source === "gmail" && selected.id === mailbox.id ? "active" : ""}`} onClick={() => { setSelected({ source: "gmail", id: mailbox.id }); setResult(null); }}><ShieldCheck size={16} /><span><b>{mailbox.email_address}</b><small>Gmail OAuth · {mailbox.is_connected ? "connected" : "reconnect"}</small></span><ArrowUpRight size={15} /></button>)}</div><div className="button-row"><button className="secondary-button" onClick={connectGmail} disabled={gmailBusy || !config.google_gmail_oauth_configured}><ShieldCheck size={16} /> {gmailBusy ? "Opening Google..." : "Connect Gmail with OAuth"}</button>{selected.source === "imap" && selected.id && <button className="secondary-button" onClick={() => test(selected.id)}><Activity size={16} /> Test IMAP / SMTP</button>}</div>{!config.google_gmail_oauth_configured && <small className="muted">Gmail OAuth is available after the server client secret and redirect URI are configured.</small>}</section>
+    {selected.id && selected.source === "imap" && <MailSyncPanel key={`sync-${selected.id}`} connId={selected.id} accountEmail={selectedLabel || ""} onNotice={onNotice} />}
     {selected.id && <EmailFetchInspector selectedLabel={selectedLabel} options={options} updateOption={updateOption} runFetch={runFetch} busy={busy} result={result} />}
   </div>;
+}
+
+
+function MailSyncPanel({ connId, accountEmail, onNotice }) {
+  const [state, setState] = useState(null);
+  const [result, setResult] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [retention, setRetention] = useState(null);
+  const [templates, setTemplates] = useState([]);
+  const [contacts, setContacts] = useState([]);
+  const [testForm, setTestForm] = useState({ template_id: "", contact_id: "", to: "" });
+  const [testResult, setTestResult] = useState(null);
+  const [testError, setTestError] = useState("");
+
+  const loadState = () => request(`/email/connections/${connId}/sync/state`).then(setState).catch(() => {});
+  useEffect(() => {
+    loadState();
+    request("/templates").then((rows) => setTemplates(Array.isArray(rows) ? rows : [])).catch(() => {});
+    request("/marketing-companies?has_email=1&limit=100").then((rows) => setContacts(Array.isArray(rows) ? rows : [])).catch(() => {});
+  }, [connId]);
+
+  const runSync = async (opts = {}) => {
+    setBusy(true); setResult(null);
+    try {
+      const r = await request(`/email/connections/${connId}/sync`, { method: "POST", body: JSON.stringify({ batch: 25, ...opts }) });
+      setResult(r); loadState();
+      onNotice({ type: "success", text: `Sync: ${r.new} new, ${r.duplicates_skipped} deduped, ${r.raw_uploaded} raw + ${r.processed_uploaded} processed to GCS.` });
+    } catch (e) { onNotice({ type: "error", text: e.message }); loadState(); }
+    finally { setBusy(false); }
+  };
+  const runRetention = async () => {
+    setBusy(true);
+    try { const r = await request("/email/retention/cleanup", { method: "POST" }); setRetention(r); onNotice({ type: "success", text: `Retention: removed ${r.removed.raw} raw, ${r.removed.processed} processed, ${r.removed.attachments} attachments, ${r.removed.logs} log rows.` }); }
+    catch (e) { onNotice({ type: "error", text: e.message }); }
+    finally { setBusy(false); }
+  };
+  const runTestSend = async (event) => {
+    event.preventDefault(); setTestResult(null); setTestError("");
+    setBusy(true);
+    try {
+      const body = { to: testForm.to, subject: "", body: "", html: true };
+      if (testForm.template_id) body.template_id = Number(testForm.template_id);
+      if (testForm.contact_id) body.contact_id = Number(testForm.contact_id);
+      const r = await request(`/email/connections/${connId}/test-send`, { method: "POST", body: JSON.stringify(body) });
+      setTestResult(r); onNotice({ type: "success", text: `Test sent to ${r.to}${r.rendered_for ? ` (personalized for ${r.rendered_for})` : ""}.` });
+    } catch (e) { setTestError(e.message); onNotice({ type: "error", text: e.message }); }
+    finally { setBusy(false); }
+  };
+
+  const cp = state && (state.stats ? { last_uid: state.last_uid, uidvalidity: state.uidvalidity, dedup: state.dedup_ids } : null);
+  return <section className="panel mail-sync-panel">
+    <div className="panel-heading"><div><div className="section-kicker">IMAP SYNC / CHECKPOINTS / GCS</div><h3>Mail sync & test send</h3><p className="muted">Read-only incremental fetch (20-50 per batch) - original mailbox is never modified.</p></div>
+      <div className="button-row">
+        <button className="primary-button" onClick={() => runSync({})} disabled={busy}>{busy ? "Working..." : "Sync new mail"}</button>
+        <button className="secondary-button" onClick={() => runSync({ full: true })} disabled={busy}>Full resync</button>
+        {result?.checkpoint?.next_before_uid > 0 && <button className="secondary-button" onClick={() => runSync({ before_uid: result.checkpoint.next_before_uid, last_uid_ignore: true })} disabled={busy}>Load older</button>}
+        <button className="secondary-button" onClick={runRetention} disabled={busy}>Retention cleanup</button>
+      </div>
+    </div>
+    <div className="mini-stats">
+      <span><b>{state?.last_uid ?? 0}</b> last UID</span>
+      <span><b>{state?.uidvalidity ?? 0}</b> UIDVALIDITY</span>
+      <span><b>{state?.dedup_ids ?? 0}</b> Message-IDs cached</span>
+      <span><b>{state?.totals?.fetched ?? 0}</b> fetched (all time)</span>
+      <span><b>{state?.totals?.processed ?? 0}</b> processed</span>
+      <span><b>{state?.totals?.duplicates_skipped ?? 0}</b> deduped</span>
+      <span>Last sync: <b>{state?.last_sync_at ? String(state.last_sync_at).slice(0, 16) : "never"}</b> <span className="contact-tag">{state?.last_status || "idle"}</span></span>
+      {state?.last_error && <span className="status-pill error">{state.last_error.slice(0, 80)}</span>}
+    </div>
+    {result && <div className="fetch-result"><div className="result-summary"><b>Batch: {result.fetched} fetched / {result.new} new</b><span>{result.duplicates_skipped} duplicates skipped - raw {result.raw_uploaded} EML + {result.attachments_uploaded} attachments + {result.processed_uploaded} processed docs uploaded{result.gcs_available ? "" : " (GCS unavailable)"}</span></div>
+      {(result.errors || []).length > 0 && <p className="status-pill error">{result.errors.join("; ").slice(0, 200)}</p>}
+      {(result.sample || []).length > 0 && <div className="table-wrap" style={{ marginTop: 8 }}><table><thead><tr><th>Date</th><th>From</th><th>Subject</th><th>Intent</th><th>Client/Company</th></tr></thead><tbody>{result.sample.map((m, i) => <tr key={m.id || i}><td><small>{String(m.date || "").slice(0, 16)}</small></td><td><small>{m.from_email || "-"}</small></td><td><small>{m.subject || "(no subject)"}</small></td><td><span className="contact-tag">{m.intent || "general"}</span></td><td><small>{m.client_name || m.company || "-"}</small></td></tr>)}</tbody></table></div>}
+    </div>}
+    {retention && <p className="muted" style={{ marginTop: 6 }}>Retention removed: {retention.removed.raw} raw (&gt;180d), {retention.removed.processed} processed (&gt;365d), {retention.removed.attachments} attachments (&gt;90d), {retention.removed.logs} log rows (&gt;365d). Mailbox untouched.</p>}
+    <form onSubmit={runTestSend} className="form-panel" style={{ marginTop: 12 }}>
+      <div className="form-heading"><div><div className="section-kicker">TEST SEND</div><h3>Preview = exactly what gets sent</h3></div></div>
+      <div className="form-grid">
+        <label>Template<select value={testForm.template_id} onChange={(e) => setTestForm({ ...testForm, template_id: e.target.value })}><option value="">Custom message</option>{templates.map((tpl) => <option key={tpl.id} value={tpl.id}>{tpl.name} ({tpl.channel})</option>)}</select></label>
+        <label>Personalize for (email contact)<select value={testForm.contact_id} onChange={(e) => setTestForm({ ...testForm, contact_id: e.target.value })}><option value="">No contact</option>{contacts.map((c) => <option key={c.id} value={c.id}>{c.company} - {c.contact_name || "n/a"}</option>)}</select></label>
+        <label>Send to<input value={testForm.to} onChange={(e) => setTestForm({ ...testForm, to: e.target.value })} placeholder={accountEmail || "defaults to your mailbox"} /></label>
+        <button className="primary-button" disabled={busy || !testForm.template_id}>{busy ? "Sending..." : "Render + send test"}</button>
+      </div>
+      <small className="muted">Runs the same personalization pipeline as campaigns (fallbacks applied, unresolved placeholders blocked). Needs a template; add subject/body in the library first.</small>
+      {testError && <p className="status-pill error">{testError}</p>}
+      {testResult && <div className="fetch-result"><div className="result-summary"><b>Sent to {testResult.to}</b><span>{testResult.rendered_for ? `personalized for ${testResult.rendered_for} - ` : ""}Message-ID {testResult.message_id || "ok"}</span></div>
+        <p><b>{testResult.subject}</b></p><details open><summary>Rendered body preview</summary><pre style={{ whiteSpace: "pre-wrap", maxHeight: 240, overflow: "auto" }}>{String(testResult.preview_body || "").replace(/<[^>]+>/g, " ").slice(0, 1200)}</pre></details>
+      </div>}
+    </form>
+    {!!state?.recent_runs?.length && <details className="marketing-breakdown" style={{ marginTop: 10 }}><summary>Recent sync runs ({state.recent_runs.length})</summary><div className="table-wrap"><table><thead><tr><th>When</th><th>Job</th><th>Status</th><th>Detail</th></tr></thead><tbody>{state.recent_runs.map((r) => <tr key={r.id}><td><small>{String(r.started_at).slice(0, 16)}</small></td><td><small>{r.job}</small></td><td><span className="contact-tag">{r.status}</span></td><td><small>{r.detail.slice(0, 120)}</small></td></tr>)}</tbody></table></div></details>}
+  </section>;
 }
 
 function EmailFetchInspector({ selectedLabel, options, updateOption, runFetch, busy, result }) {

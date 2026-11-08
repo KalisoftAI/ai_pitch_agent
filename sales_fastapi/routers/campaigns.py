@@ -12,6 +12,7 @@ approve / edit -> send (email / WhatsApp / WeChat) -> status updates.
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from functools import lru_cache
 from types import SimpleNamespace
@@ -43,10 +44,20 @@ from ..schemas import (
 )
 from ..security import get_current_user
 from ..services import MailSender
-from ..templating import contact_context, render_resolved
+from ..templating import contact_context, looks_html, render_resolved
 from ..wechaty import WechatyGateway
 
 router = APIRouter(prefix="/campaigns", tags=["campaigns"])
+
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]{2,}$")
+
+
+def _valid_email(value: str | None) -> bool:
+    return bool(_EMAIL_RE.fullmatch((value or "").strip()))
+
+
+def _valid_phone(value: str | None) -> bool:
+    return len(re.sub(r"\D", "", value or "")) >= 8
 
 
 
@@ -210,7 +221,7 @@ def create_campaign(
 
                 for record in records
 
-                if (record.phone if phone_channel else record.email)
+                if (_valid_phone(record.phone) if phone_channel else _valid_email(record.email))
 
             ]
 
@@ -232,11 +243,11 @@ def create_campaign(
 
             if phone_channel:
 
-                contacts = [c for c in contacts if c.phone]
+                contacts = [c for c in contacts if _valid_phone(c.phone)]
 
             else:
 
-                contacts = [c for c in contacts if c.email]
+                contacts = [c for c in contacts if _valid_email(c.email)]
 
     elif payload.filter.contact_type == "marketing_companies":
 
@@ -304,6 +315,7 @@ def create_campaign(
 
             for record in records
 
+            if (_valid_phone(record.phone) if phone_channel else _valid_email(record.email))
         ]
 
     else:
@@ -339,6 +351,36 @@ def create_campaign(
     if not contacts:
 
         raise HTTPException(status_code=400, detail="No contacts matched the campaign filter")
+
+
+
+    # --- Channel format compatibility: never auto-convert, never send incompatible formats ---
+
+    if payload.channel in {"whatsapp", "wechat"}:
+
+        _body_src = payload.body_override if payload.body_override is not None else template.body
+
+        if looks_html(_body_src or ""):
+
+            raise HTTPException(
+
+                status_code=400,
+
+                detail=(
+
+                    "WhatsApp messages must be plain text. The selected content is HTML and is never "
+
+                    "converted automatically - pick an existing WhatsApp template, or write and save a "
+
+                    "WhatsApp-specific plain-text version, then confirm before sending."
+
+                ),
+
+            )
+
+        if not (_body_src or "").strip() and payload.body_override is None and not (template.body or "").strip():
+
+            raise HTTPException(status_code=400, detail="WhatsApp message text is missing - add a plain-text message before sending.")
 
 
 
@@ -849,6 +891,16 @@ def send_campaign(
                 sent += 1
 
             elif campaign.channel in {"whatsapp", "wechat"}:
+
+                if looks_html(message.rendered_body or ""):
+
+                    message.status = "failed"
+
+                    message.error = "Incompatible format: HTML content cannot be sent to WhatsApp"
+
+                    failed += 1
+
+                    continue
 
                 if not settings.WHATSAPP_ENABLED:
 

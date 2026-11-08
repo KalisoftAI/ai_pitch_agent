@@ -31,6 +31,13 @@ class Settings(BaseSettings):
         default="gcs_data/instore_mails.json", alias="INSTORE_MAIL_CACHE_PATH"
     )
     INSTORE_MAIL_SYNC_LIMIT: int = Field(default=50, alias="INSTORE_MAIL_SYNC_LIMIT")
+    # --- IMAP incremental sync -> gs://kalika_enterprises/Kalika_gmail_data/ ---
+    GCS_PATH_GMAIL: str = Field(default="Kalika_gmail_data/", alias="GCS_PATH_GMAIL")
+    MAIL_SYNC_BATCH: int = Field(default=25, alias="MAIL_SYNC_BATCH")  # clamped 20..50
+    MAIL_RETENTION_RAW_DAYS: int = Field(default=180, alias="MAIL_RETENTION_RAW_DAYS")
+    MAIL_RETENTION_PROCESSED_DAYS: int = Field(default=365, alias="MAIL_RETENTION_PROCESSED_DAYS")
+    MAIL_RETENTION_ATTACHMENTS_DAYS: int = Field(default=90, alias="MAIL_RETENTION_ATTACHMENTS_DAYS")
+    MAIL_RETENTION_LOGS_DAYS: int = Field(default=365, alias="MAIL_RETENTION_LOGS_DAYS")
     KNOWLEDGE_GRAPH_GCS_PREFIX: str = Field(
         default="sales-app/knowledge_graph/", alias="KNOWLEDGE_GRAPH_GCS_PREFIX"
     )

@@ -148,3 +148,14 @@ def contact_context(contact: Any, extra: dict[str, Any] | None = None) -> dict[s
     if extra:
         context.update(extra)
     return context
+
+
+_HTML_TAG_RE = re.compile(
+    r"<\s*/?\s*(?:br|p|div|span|html|body|head|title|a|img|table|tr|td|th|tbody|thead|ul|ol|li|h[1-6]|strong|b|i|em|u|font|pre|blockquote|center|hr|meta|style|script|link)\b[^>]*>",
+    re.IGNORECASE,
+)
+
+
+def looks_html(text: str | None) -> bool:
+    """True when the content contains HTML markup (used for channel compatibility)."""
+    return bool(_HTML_TAG_RE.search(text or ""))

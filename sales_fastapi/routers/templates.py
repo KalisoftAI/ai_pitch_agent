@@ -22,7 +22,7 @@ from ..outreach_templates import (
 from ..schemas import TemplateCreate, TemplateOut, TemplateUpdate
 from ..security import get_current_user
 from ..services import GCSStorage
-from ..templating import variables_used
+from ..templating import looks_html, variables_used
 
 router = APIRouter(prefix="/templates", tags=["templates"])
 
@@ -187,6 +187,12 @@ def create_template(
     db: Session = Depends(get_db),
 ):
     variables = payload.variables or variables_used(payload.subject + " " + payload.body)
+    channel = (payload.channel or "email").lower()
+    if channel in {"whatsapp", "wechat"} and looks_html(payload.body):
+        raise HTTPException(
+            status_code=400,
+            detail="WhatsApp/WeChat templates must be plain text - HTML is rejected (never auto-converted). Create a separate WhatsApp version.",
+        )
     template = MessageTemplate(
         user_id=user.id, **payload.model_dump(exclude={"variables"}), variables=variables
     )
@@ -223,6 +229,11 @@ def update_template(
     changed = payload.model_dump(exclude_unset=True)
     for field, value in changed.items():
         setattr(template, field, value)
+    if (template.channel or "").lower() in {"whatsapp", "wechat"} and looks_html(template.body or ""):
+        raise HTTPException(
+            status_code=400,
+            detail="WhatsApp/WeChat templates must stay plain text - HTML rejected. Save the HTML version under the Email channel instead.",
+        )
     if "subject" in changed or "body" in changed:
         template.variables = variables_used(template.subject + " " + template.body)
     db.commit()

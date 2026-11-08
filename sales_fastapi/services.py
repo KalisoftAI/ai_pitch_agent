@@ -181,6 +181,138 @@ class EmailExtractor:
         self.connection.select("INBOX")
         return True
 
+    def get_uidvalidity(self) -> int:
+        """UIDVALIDITY of the selected mailbox (0 when unavailable)."""
+        if self.connection is None:
+            self.connect()
+        assert self.connection is not None
+        candidates: list[str] = []
+        try:  # most IMAP servers stash it from the SELECT untagged response
+            data = getattr(self.connection, "untagged_responses", {}) or {}
+            for value in data.get("UIDVALIDITY", []) or []:
+                candidates.append(value.decode(errors="ignore") if isinstance(value, bytes) else str(value))
+        except Exception:  # noqa: BLE001
+            pass
+        try:
+            _status, data = self.connection.response("UIDVALIDITY")
+            if data and data[0]:
+                candidates.append(data[0].decode(errors="ignore") if isinstance(data[0], bytes) else str(data[0]))
+        except Exception:  # noqa: BLE001
+            pass
+        try:
+            _status, data = self.connection.status("INBOX", "(UIDVALIDITY)")
+            if data and data[0]:
+                candidates.append(data[0].decode(errors="ignore") if isinstance(data[0], bytes) else str(data[0]))
+        except Exception:  # noqa: BLE001
+            pass
+        for value in candidates:
+            digits = re.sub(r"\D", "", value)
+            if digits:
+                return int(digits)
+        return 0
+
+    def sync_emails(
+        self,
+        *,
+        last_uid: int = 0,
+        batch: int = 25,
+        full: bool = False,
+        since: datetime | None = None,
+        until: datetime | None = None,
+        query: str = "",
+        sender: str = "",
+        unread_only: bool = False,
+        before_uid: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Read-only incremental UID sync (never flags, moves or deletes mailbox mail).
+
+        With ``last_uid`` set only messages with UID > last_uid are fetched (new
+        mail since the checkpoint); otherwise today's mail by default (or all when
+        ``full``). Batch size is clamped to 20-50. Returns parsed dicts including
+        raw bytes, Message-ID and attachments for checkpointing + GCS upload.
+        """
+        if self.connection is None:
+            self.connect()
+        assert self.connection is not None
+        batch = max(20, min(int(batch or 25), 50))
+        criteria: list[str] = []
+        if not full:
+            if last_uid > 0:
+                criteria.extend(["UID", f"{int(last_uid) + 1}:*"])
+            else:
+                criteria.extend(["SINCE", (since or datetime.now(timezone.utc)).strftime("%d-%b-%Y")])
+        elif since is not None:
+            criteria.extend(["SINCE", since.strftime("%d-%b-%Y")])
+        if until is not None and (full or since is not None):
+            criteria.extend(["BEFORE", (until + timedelta(days=1)).strftime("%d-%b-%Y")])
+        if not full and last_uid == 0 and (since is not None or until is not None):
+            # honour explicit date window on a first sync too (replace default SINCE above)
+            pass
+        if unread_only:
+            criteria.append("UNSEEN")
+        if query.strip():
+            criteria.extend(["TEXT", query.strip()])
+        if sender.strip():
+            criteria.extend(["FROM", f'"{sender.strip()}"'])
+        if not criteria:
+            criteria = ["ALL"]
+        status, data = self.connection.uid("SEARCH", None, *criteria)
+        if status != "OK":
+            raise RuntimeError("IMAP UID SEARCH failed")
+        uids = [int(u) for u in (data[0].split() if data and data[0] else [])]
+        if before_uid:
+            uids = [u for u in uids if u < int(before_uid)]
+        uids = sorted(uids)[-batch:]  # newest slice; caller paginates with before_uid
+        out: list[dict[str, Any]] = []
+        for uid in uids:
+            status, msg_data = self.connection.uid("FETCH", str(uid), "(BODY.PEEK[])")
+            if status != "OK" or not msg_data or not msg_data[0]:
+                continue
+            raw = b""
+            for part in msg_data:
+                if isinstance(part, tuple) and len(part) >= 2:
+                    raw = part[1]
+                    break
+            if not raw:
+                continue
+            msg = email.message_from_bytes(raw)
+            body = self._extract_body(msg)
+            attachments: list[dict[str, Any]] = []
+            if msg.is_multipart():
+                for part in msg.walk():
+                    disposition = (part.get_content_disposition() or "").lower()
+                    filename = part.get_filename()
+                    if disposition == "attachment" or (filename and disposition != "inline"):
+                        payload = part.get_payload(decode=True) or b""
+                        if payload and len(payload) <= 25_000_000:
+                            attachments.append(
+                                {
+                                    "name": filename or f"attachment-{len(attachments) + 1}",
+                                    "mime_type": part.get_content_type(),
+                                    "size": len(payload),
+                                    "data": payload,
+                                }
+                            )
+            out.append(
+                {
+                    "uid": str(uid),
+                    "message_id": str(msg.get("Message-ID", "")).strip(),
+                    "subject": str(msg.get("Subject", "")),
+                    "from": str(msg.get("From", "")),
+                    "to": str(msg.get("To", "")),
+                    "date": str(msg.get("Date", "")),
+                    "intent": infer_intent(f"{msg.get('Subject', '')} {compact_text(body, 800)}"),
+                    "body": body[:50_000],
+                    "snippet": compact_text(body, 400),
+                    "attachments": [
+                        {k: v for k, v in a.items() if k != "data"} for a in attachments
+                    ],
+                    "_attachments_data": attachments,
+                    "_raw": raw,
+                }
+            )
+        return out
+
     def fetch_emails(
         self,
         limit: int = 25,
@@ -480,20 +612,45 @@ class MailSender:
         self.password = password
 
     def send(
-        self, to: str, subject: str, body: str, from_email: str | None = None
+        self,
+        to: str,
+        subject: str,
+        body: str,
+        from_email: str | None = None,
+        *,
+        html: bool = False,
+        retries: int = 2,
     ) -> dict[str, Any]:
+        """Send one message with Message-ID header and bounded retries.
+
+        Returns provider id (Message-ID) and final status; raises RuntimeError with
+        the last SMTP error text when all attempts fail so callers can log per-
+        recipient failures honestly.
+        """
         from_email = from_email or self.user
-        msg = MIMEMultipart()
+        message_id = (
+            f"<{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S.%f')}"
+            f"@{from_email.split('@')[-1] if '@' in from_email else 'kalika.local'}>"
+        )
+        msg = MIMEMultipart("alternative")
         msg["From"] = from_email
         msg["To"] = to
         msg["Subject"] = subject
-        msg.attach(MIMEText(body, "plain"))
-        with smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=20) as server:
-            server.starttls()
-            if self.user:
-                server.login(self.user, self.password)
-            server.send_message(msg)
-        return {"sent": True, "to": to, "from": from_email}
+        msg["Message-ID"] = message_id
+        msg["X-Mailer"] = "Kalika Sales Outreach"
+        msg.attach(MIMEText(body, "html" if html else "plain", "utf-8"))
+        last_error = ""
+        for _attempt in range(max(1, retries)):
+            try:
+                with smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=30) as server:
+                    server.starttls()
+                    if self.user:
+                        server.login(self.user, self.password)
+                    server.send_message(msg)
+                return {"sent": True, "to": to, "from": from_email, "message_id": message_id}
+            except Exception as exc:  # noqa: BLE001 - retry then surface
+                last_error = f"{type(exc).__name__}: {exc}"
+        raise RuntimeError(last_error or "SMTP send failed")
 
 
 # ==========================================================================

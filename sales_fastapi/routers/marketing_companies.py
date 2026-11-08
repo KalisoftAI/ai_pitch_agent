@@ -10,6 +10,7 @@ the workspace can filter, edit requirements and re-import without touching the
 from __future__ import annotations
 
 import csv
+import json
 import re
 import time
 from datetime import date, datetime
@@ -26,12 +27,13 @@ from fastapi import (
     Request,
     UploadFile,
 )
+from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..governance.audit import log_event
-from ..models import Campaign, CampaignMessage, MarketingCompany, User
+from ..models import Campaign, CampaignMessage, IntegrationSetting, MarketingCompany, User
 from ..schemas import (
     MarketingCompanyCreate,
     MarketingCompanyOut,
@@ -349,6 +351,9 @@ def list_marketing_companies(
     has_email: bool = False,
     sort: str = Query(default="company"),
     limit: int = Query(default=25, ge=1, le=250),
+    offset: int = Query(default=0, ge=0),
+    missing_email: bool = False,
+    missing_phone: bool = False,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -381,6 +386,10 @@ def list_marketing_companies(
         query = query.filter(MarketingCompany.phone != "")
     if has_email:
         query = query.filter(MarketingCompany.email != "")
+    if missing_email:
+        query = query.filter(MarketingCompany.email == "")
+    if missing_phone:
+        query = query.filter(MarketingCompany.phone == "")
     order_by = {
         "company": MarketingCompany.company.asc(),
         "follow_up": MarketingCompany.follow_up_date.asc(),
@@ -389,7 +398,7 @@ def list_marketing_companies(
         "contact": MarketingCompany.contact_name.asc(),
         "updated": MarketingCompany.updated_at.desc(),
     }.get(sort, MarketingCompany.company.asc())
-    return query.order_by(order_by).limit(limit).all()
+    return query.order_by(order_by).offset(offset).limit(limit).all()
 
 
 _stats_mem: tuple[float, int, dict[str, Any]] | None = None
@@ -867,3 +876,109 @@ def marketing_sources(
             )
     items.sort(key=lambda x: (not x["processed"], x["file"].lower()))
     return {"folder": f"gs://{DEFAULT_BUCKET}/sales-contacts/", "items": items}
+
+# ---------------------------------------------------------------------------
+# Duplicate detection + saved segments (real data, no schema changes)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/duplicates")
+def duplicate_contacts(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Contact rows that repeat by email, phone or company-name (grounded counts)."""
+
+    rows = (
+        db.query(MarketingCompany)
+        .filter(MarketingCompany.user_id == user.id)
+        .all()
+    )
+    by_email: dict[str, list[int]] = {}
+    by_phone: dict[str, list[int]] = {}
+    by_company: dict[str, list[int]] = {}
+    for r in rows:
+        email = (r.email or "").strip().lower()
+        if email:
+            by_email.setdefault(email, []).append(r.id)
+        digits = re.sub(r"\D", "", r.phone or "")
+        if len(digits) >= 7:
+            by_phone.setdefault(digits[-10:], []).append(r.id)
+        key = (r.company_key or "").strip().lower()
+        if key:
+            by_company.setdefault(key, []).append(r.id)
+    def groups(mapping):
+        return [
+            {"ids": ids, "count": len(ids)}
+            for ids in mapping.values()
+            if len(ids) > 1
+        ]
+
+    return {
+        "by_email": groups(by_email),
+        "by_phone": groups(by_phone),
+        "by_company": groups(by_company),
+        "total_duplicate_rows": len(
+            {i for g in groups(by_email) + groups(by_phone) + groups(by_company) for i in g["ids"]}
+        ),
+    }
+
+
+class SegmentIn(BaseModel):
+    name: str = Field(..., min_length=1, max_length=80)
+    filters: dict = Field(default_factory=dict)
+
+
+def _segments_key(user_id: int) -> str:
+    return f"outreach_segments_{user_id}"
+
+
+@router.get("/segments")
+def list_segments(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Saved contact segments (persisted in the existing integration_settings table)."""
+    row = db.query(IntegrationSetting).filter(IntegrationSetting.key == _segments_key(user.id)).first()
+    if row is None:
+        return {"segments": []}
+    try:
+        return {"segments": json.loads(row.value or "[]")}
+    except json.JSONDecodeError:
+        return {"segments": []}
+
+
+@router.post("/segments", status_code=201)
+def save_segment(
+    payload: SegmentIn,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    row = db.query(IntegrationSetting).filter(IntegrationSetting.key == _segments_key(user.id)).first()
+    try:
+        items = json.loads(row.value) if row and row.value else []
+    except json.JSONDecodeError:
+        items = []
+    items = [s for s in items if s.get("name") != payload.name]
+    items.append({"name": payload.name, "filters": payload.filters, "saved_at": datetime.now().isoformat()})
+    items = items[-20:]
+    if row is None:
+        row = IntegrationSetting(key=_segments_key(user.id), value=json.dumps(items))
+        db.add(row)
+    else:
+        row.value = json.dumps(items)
+    db.commit()
+    return {"segments": items}
+
+
+@router.delete("/segments/{name}")
+def delete_segment(
+    name: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    row = db.query(IntegrationSetting).filter(IntegrationSetting.key == _segments_key(user.id)).first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="No saved segments")
+    try:
+        items = json.loads(row.value or "[]")
+    except json.JSONDecodeError:
+        items = []
+    items = [s for s in items if s.get("name") != name]
+    row.value = json.dumps(items)
+    db.commit()
+    return {"segments": items}
