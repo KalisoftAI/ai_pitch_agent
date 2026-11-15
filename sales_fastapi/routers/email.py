@@ -253,10 +253,16 @@ def ensure_default_connection(
     address = (settings.IMAP_USER or settings.SMTP_USER or settings.GMAIL_ADDRESS).strip()
     password = (settings.SMTP_PASSWORD or settings.GMAIL_APP_PASSWORD).strip()
     if not address or not password:
-        raise HTTPException(status_code=400, detail="IMAP/SMTP credentials are not configured in .env")
+        raise HTTPException(
+            status_code=400, detail="IMAP/SMTP credentials are not configured in .env"
+        )
     imap_host = (settings.IMAP_HOST or "imap.gmail.com").strip()
     smtp_host = (settings.SMTP_HOST or "smtp.gmail.com").strip()
-    conn = db.query(EmailConnection).filter(EmailConnection.user_id == user.id, EmailConnection.email_address == address).first()
+    conn = (
+        db.query(EmailConnection)
+        .filter(EmailConnection.user_id == user.id, EmailConnection.email_address == address)
+        .first()
+    )
     if conn is None:
         conn = EmailConnection(user_id=user.id, email_address=address)
         db.add(conn)
@@ -336,7 +342,13 @@ def sync_state(
             "duplicates_skipped": sum(v.get("duplicates_skipped", 0) for v in daily.values()),
         },
         "recent_runs": [
-            {"id": r.id, "job": r.job, "status": r.status, "detail": r.detail[:300], "started_at": str(r.started_at)}
+            {
+                "id": r.id,
+                "job": r.job,
+                "status": r.status,
+                "detail": r.detail[:300],
+                "started_at": str(r.started_at),
+            }
             for r in runs
         ],
     }
@@ -356,7 +368,9 @@ def sync_analytics(
     connections = db.query(EmailConnection).filter(EmailConnection.user_id == user.id).all()
     conn_ids = [c.id for c in connections]
     states = (
-        db.query(MailSyncState).filter(MailSyncState.connection_id.in_(conn_ids)).all() if conn_ids else []
+        db.query(MailSyncState).filter(MailSyncState.connection_id.in_(conn_ids)).all()
+        if conn_ids
+        else []
     )
     cutoff = (datetime.now(timezone.utc).date() - timedelta(days=days - 1)).isoformat()
     daily: dict[str, dict[str, int]] = {}
@@ -369,46 +383,66 @@ def sync_analytics(
             row["processed"] += int(counters.get("processed", 0))
             row["duplicates_skipped"] += int(counters.get("duplicates_skipped", 0))
 
-    # outreach (email channel) real message states
-    def _msg_count(*statuses: str) -> int:
+    # outreach: real message states across email + WhatsApp/WeChat (last N days)
+    since_day = datetime.now(timezone.utc).date() - timedelta(days=days - 1)
+    since_dt = datetime.combine(since_day, datetime.min.time())
+
+    def _msg_count(statuses: tuple[str, ...], *, created: bool = False) -> int:
+        column = CampaignMessage.created_at if created else CampaignMessage.sent_at
         q = (
             db.query(func.count(CampaignMessage.id))
             .join(Campaign, Campaign.id == CampaignMessage.campaign_id)
-            .filter(CampaignMessage.user_id == user.id, Campaign.channel == "email")
+            .filter(CampaignMessage.user_id == user.id, column.isnot(None), column >= since_dt)
         )
         if statuses:
             q = q.filter(CampaignMessage.status.in_(statuses))
         return int(q.scalar() or 0)
 
-    sent = _msg_count("sent", "opened")
-    delivered = _msg_count("opened")  # confirmed via tracking pixel
-    failed = _msg_count("failed")
-    pending = _msg_count("pending_review", "approved", "queued")
+    sent = _msg_count(("sent", "opened"))
+    delivered = _msg_count(("opened",))  # confirmed via tracking pixel
+    failed = _msg_count(("failed",))
+    pending = _msg_count(("pending_review", "approved", "queued"), created=True)
 
     channel_rows = (
-        db.query(Campaign.channel, func.coalesce(func.sum(Campaign.sent_count), 0), func.coalesce(func.sum(Campaign.failed_count), 0))
-        .filter(Campaign.user_id == user.id)
+        db.query(
+            Campaign.channel,
+            func.coalesce(func.sum(Campaign.sent_count), 0),
+            func.coalesce(func.sum(Campaign.failed_count), 0),
+            func.coalesce(func.sum(Campaign.total), 0),
+        )
+        .filter(Campaign.user_id == user.id, Campaign.created_at >= since_dt)
         .group_by(Campaign.channel)
         .all()
     )
     by_channel = [
-        {"channel": ch or "email", "sent": int(s or 0), "failed": int(f or 0)} for ch, s, f in channel_rows
+        {
+            "channel": ch or "email",
+            "sent": int(s or 0),
+            "failed": int(f or 0),
+            "pending": max(0, int(t or 0) - int(s or 0) - int(f or 0)),
+        }
+        for ch, s, f, t in channel_rows
     ]
 
-    # daily sent (by real sent_at dates)
+    # daily sent (by real sent_at dates, all channels)
     day_expr = func.date(CampaignMessage.sent_at)
     sent_rows = (
         db.query(day_expr, CampaignMessage.status, func.count(CampaignMessage.id))
         .join(Campaign, Campaign.id == CampaignMessage.campaign_id)
-        .filter(CampaignMessage.user_id == user.id, CampaignMessage.sent_at.isnot(None), Campaign.channel == "email")
+        .filter(CampaignMessage.user_id == user.id, CampaignMessage.sent_at.isnot(None))
         .group_by(day_expr, CampaignMessage.status)
         .all()
     )
     sent_daily: dict[str, dict[str, int]] = {}
-    since_day = datetime.now(timezone.utc).date() - timedelta(days=days - 1)
     for day, status, count in sent_rows:
         try:
-            d = day if isinstance(day, str) else day.strftime("%Y-%m-%d") if hasattr(day, "strftime") else str(day)
+            d = (
+                day
+                if isinstance(day, str)
+                else day.strftime("%Y-%m-%d")
+                if hasattr(day, "strftime")
+                else str(day)
+            )
         except Exception:  # noqa: BLE001
             continue
         if d < since_day.isoformat():
@@ -438,7 +472,9 @@ def sync_analytics(
                 {"day": k, **v, **{sk: sv for sk, sv in sent_daily.get(k, {}).items()}}
                 for k, v in sorted(daily.items())
             ],
-            "last_sync_at": str(max((st.last_sync_at for st in states if st.last_sync_at), default="") or ""),
+            "last_sync_at": str(
+                max((st.last_sync_at for st in states if st.last_sync_at), default="") or ""
+            ),
         },
         "outreach": {
             "sent": sent,
@@ -511,7 +547,10 @@ def test_send(
             if payload.contact_type == "marketing_companies":
                 record = (
                     db.query(MarketingCompany)
-                    .filter(MarketingCompany.id == payload.contact_id, MarketingCompany.user_id == user.id)
+                    .filter(
+                        MarketingCompany.id == payload.contact_id,
+                        MarketingCompany.user_id == user.id,
+                    )
                     .first()
                 )
                 if record is None:
@@ -532,15 +571,42 @@ def test_send(
         subject = render_resolved(subject, ctx)
         body = render_resolved(body, ctx)
     if "{{" in subject or "{{" in body:
-        raise HTTPException(status_code=400, detail="Unresolved personalization placeholder - fix the template")
+        raise HTTPException(
+            status_code=400, detail="Unresolved personalization placeholder - fix the template"
+        )
     to = payload.to.strip() or conn.email_address
-    sender = MailSender(conn.smtp_host, conn.smtp_port, conn.email_address, decrypt_secret(conn.secret_encrypted))
+    sender = MailSender(
+        conn.smtp_host, conn.smtp_port, conn.email_address, decrypt_secret(conn.secret_encrypted)
+    )
     try:
-        result = sender.send(to, subject or "Kalika test send", body, conn.email_address, html=payload.html)
+        result = sender.send(
+            to, subject or "Kalika test send", body, conn.email_address, html=payload.html
+        )
     except Exception as exc:  # noqa: BLE001
-        db.add(SyncRun(job="email_sync", status="error", detail=f"test-send to {to}: {exc}"[:1000], finished_at=datetime.now(timezone.utc)))
+        db.add(
+            SyncRun(
+                job="email_sync",
+                status="error",
+                detail=f"test-send to {to}: {exc}"[:1000],
+                finished_at=datetime.now(timezone.utc),
+            )
+        )
         db.commit()
         raise HTTPException(status_code=502, detail=f"SMTP test-send failed: {exc}") from exc
-    db.add(SyncRun(job="email_sync", status="ok", detail=f"test-send to {to}: OK", finished_at=datetime.now(timezone.utc)))
+    db.add(
+        SyncRun(
+            job="email_sync",
+            status="ok",
+            detail=f"test-send to {to}: OK",
+            finished_at=datetime.now(timezone.utc),
+        )
+    )
     db.commit()
-    return {"ok": True, "to": to, "subject": subject, "rendered_for": rendered_for, "preview_body": body[:2000], **result}
+    return {
+        "ok": True,
+        "to": to,
+        "subject": subject,
+        "rendered_for": rendered_for,
+        "preview_body": body[:2000],
+        **result,
+    }

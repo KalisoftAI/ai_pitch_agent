@@ -64,6 +64,8 @@ def _invalidate_stats_cache() -> None:
         _stats_store().delete("marketing_stats")
     except Exception:
         pass
+
+
 FUNNEL_STAGES = ("awareness", "interest", "decision", "action")
 SALES_PROGRESS = (
     "new",
@@ -158,7 +160,9 @@ def _parse_customers_csv(raw: bytes) -> list[dict[str, Any]]:
             {
                 "company": company,
                 "contact_name": first("contact name", "contact person", "person", "buyer name"),
-                "phone": first("phone", "phone number", "mobile", "contact", "contact no", "contact no."),
+                "phone": first(
+                    "phone", "phone number", "mobile", "contact", "contact no", "contact no."
+                ),
                 "email": first("email", "email address", "email id", "e-mail"),
                 "category": first("category", "segment", "customer type"),
                 "call_status": first("call status", "status"),
@@ -253,14 +257,8 @@ def _upsert_rows(
     # Load every existing row for this user in a single query instead of one
     # SELECT per company. Large marketing workbooks otherwise spend most of the
     # request budget on round trips and hit the Cloud Run timeout.
-    existing_rows = (
-        db.query(MarketingCompany)
-        .filter(MarketingCompany.user_id == user_id)
-        .all()
-    )
-    by_key: dict[str, MarketingCompany] = {
-        row.company_key: row for row in existing_rows
-    }
+    existing_rows = db.query(MarketingCompany).filter(MarketingCompany.user_id == user_id).all()
+    by_key: dict[str, MarketingCompany] = {row.company_key: row for row in existing_rows}
     pending: set[str] = set()
 
     limits = {
@@ -314,11 +312,19 @@ def _upsert_rows(
             "requirements",
         ):
             new_value = _clip(row.get(field), limits[field])
-            if new_value and (refresh_source_values or not getattr(target, field)) and new_value != getattr(target, field):
+            if (
+                new_value
+                and (refresh_source_values or not getattr(target, field))
+                and new_value != getattr(target, field)
+            ):
                 setattr(target, field, new_value)
                 changed = True
         contact_name = _clip(row.get("contact_name"), 255)
-        if contact_name and (refresh_source_values or not target.contact_name) and contact_name != target.contact_name:
+        if (
+            contact_name
+            and (refresh_source_values or not target.contact_name)
+            and contact_name != target.contact_name
+        ):
             target.contact_name = contact_name
             changed = True
         source_sheet = _clip(row.get("source_sheet"), 255)
@@ -338,26 +344,23 @@ def _upsert_rows(
 
 
 # ----------------------------------------------------------------- routes
-@router.get("", response_model=list[MarketingCompanyOut])
-def list_marketing_companies(
-    q: str | None = Query(default=None),
-    category: str | None = Query(default=None),
-    call_status: str | None = Query(default=None),
-    funnel_stage: str | None = Query(default=None),
-    sales_progress: str | None = Query(default=None),
+def _apply_filters(
+    query,
+    *,
+    q: str | None = None,
+    category: str | None = None,
+    call_status: str | None = None,
+    funnel_stage: str | None = None,
+    sales_progress: str | None = None,
     due_follow_up: bool = False,
     requirements_only: bool = False,
     has_phone: bool = False,
     has_email: bool = False,
-    sort: str = Query(default="company"),
-    limit: int = Query(default=25, ge=1, le=250),
-    offset: int = Query(default=0, ge=0),
     missing_email: bool = False,
     missing_phone: bool = False,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    ids: str | None = None,
 ):
-    query = db.query(MarketingCompany).filter(MarketingCompany.user_id == user.id)
+    """Shared filter builder so list/count/ids stay perfectly in sync."""
     if q:
         like = f"%{q}%"
         query = query.filter(
@@ -390,7 +393,16 @@ def list_marketing_companies(
         query = query.filter(MarketingCompany.email == "")
     if missing_phone:
         query = query.filter(MarketingCompany.phone == "")
-    order_by = {
+    if ids:
+        wanted = {int(part) for part in ids.split(",") if part.strip().isdigit()}
+        if not wanted:
+            return query.filter(MarketingCompany.id == -1)
+        query = query.filter(MarketingCompany.id.in_(wanted))
+    return query
+
+
+def _order_for(sort: str):
+    return {
         "company": MarketingCompany.company.asc(),
         "follow_up": MarketingCompany.follow_up_date.asc(),
         "progress": MarketingCompany.sales_progress.asc(),
@@ -398,7 +410,116 @@ def list_marketing_companies(
         "contact": MarketingCompany.contact_name.asc(),
         "updated": MarketingCompany.updated_at.desc(),
     }.get(sort, MarketingCompany.company.asc())
-    return query.order_by(order_by).offset(offset).limit(limit).all()
+
+
+@router.get("", response_model=list[MarketingCompanyOut])
+def list_marketing_companies(
+    q: str | None = Query(default=None),
+    category: str | None = Query(default=None),
+    call_status: str | None = Query(default=None),
+    funnel_stage: str | None = Query(default=None),
+    sales_progress: str | None = Query(default=None),
+    due_follow_up: bool = False,
+    requirements_only: bool = False,
+    has_phone: bool = False,
+    has_email: bool = False,
+    sort: str = Query(default="company"),
+    limit: int = Query(default=25, ge=1, le=250),
+    offset: int = Query(default=0, ge=0),
+    missing_email: bool = False,
+    missing_phone: bool = False,
+    ids: str | None = Query(default=None, description="Comma-separated company ids"),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    query = _apply_filters(
+        db.query(MarketingCompany).filter(MarketingCompany.user_id == user.id),
+        q=q,
+        category=category,
+        call_status=call_status,
+        funnel_stage=funnel_stage,
+        sales_progress=sales_progress,
+        due_follow_up=due_follow_up,
+        requirements_only=requirements_only,
+        has_phone=has_phone,
+        has_email=has_email,
+        missing_email=missing_email,
+        missing_phone=missing_phone,
+        ids=ids,
+    )
+    return query.order_by(_order_for(sort)).offset(offset).limit(limit).all()
+
+
+@router.get("/count")
+def count_marketing_companies(
+    q: str | None = Query(default=None),
+    category: str | None = Query(default=None),
+    call_status: str | None = Query(default=None),
+    funnel_stage: str | None = Query(default=None),
+    sales_progress: str | None = Query(default=None),
+    due_follow_up: bool = False,
+    requirements_only: bool = False,
+    has_phone: bool = False,
+    has_email: bool = False,
+    missing_email: bool = False,
+    missing_phone: bool = False,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Filter-aware total (the cached /stats endpoint is global, not filtered)."""
+    query = _apply_filters(
+        db.query(MarketingCompany.id).filter(MarketingCompany.user_id == user.id),
+        q=q,
+        category=category,
+        call_status=call_status,
+        funnel_stage=funnel_stage,
+        sales_progress=sales_progress,
+        due_follow_up=due_follow_up,
+        requirements_only=requirements_only,
+        has_phone=has_phone,
+        has_email=has_email,
+        missing_email=missing_email,
+        missing_phone=missing_phone,
+    )
+    return {"total": query.count()}
+
+
+@router.get("/ids")
+def marketing_company_ids(
+    q: str | None = Query(default=None),
+    category: str | None = Query(default=None),
+    call_status: str | None = Query(default=None),
+    funnel_stage: str | None = Query(default=None),
+    sales_progress: str | None = Query(default=None),
+    due_follow_up: bool = False,
+    requirements_only: bool = False,
+    has_phone: bool = False,
+    has_email: bool = False,
+    missing_email: bool = False,
+    missing_phone: bool = False,
+    sort: str = Query(default="company"),
+    max_ids: int = Query(default=5000, ge=1, le=20000),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Ids for every contact matching the current filters (select-all support)."""
+    query = _apply_filters(
+        db.query(MarketingCompany.id).filter(MarketingCompany.user_id == user.id),
+        q=q,
+        category=category,
+        call_status=call_status,
+        funnel_stage=funnel_stage,
+        sales_progress=sales_progress,
+        due_follow_up=due_follow_up,
+        requirements_only=requirements_only,
+        has_phone=has_phone,
+        has_email=has_email,
+        missing_email=missing_email,
+        missing_phone=missing_phone,
+    )
+    rows = query.order_by(_order_for(sort)).limit(max_ids + 1).all()
+    ids = [row[0] for row in rows[:max_ids]]
+    return {"ids": ids, "truncated": len(rows) > max_ids}
 
 
 _stats_mem: tuple[float, int, dict[str, Any]] | None = None
@@ -578,7 +699,9 @@ def update_marketing_company(
             try:
                 date.fromisoformat(value)
             except ValueError as exc:
-                raise HTTPException(status_code=422, detail="Follow-up date must be a valid date") from exc
+                raise HTTPException(
+                    status_code=422, detail="Follow-up date must be a valid date"
+                ) from exc
         setattr(company, field, value or "")
     log_event(
         db,
@@ -877,6 +1000,7 @@ def marketing_sources(
     items.sort(key=lambda x: (not x["processed"], x["file"].lower()))
     return {"folder": f"gs://{DEFAULT_BUCKET}/sales-contacts/", "items": items}
 
+
 # ---------------------------------------------------------------------------
 # Duplicate detection + saved segments (real data, no schema changes)
 # ---------------------------------------------------------------------------
@@ -886,11 +1010,7 @@ def marketing_sources(
 def duplicate_contacts(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Contact rows that repeat by email, phone or company-name (grounded counts)."""
 
-    rows = (
-        db.query(MarketingCompany)
-        .filter(MarketingCompany.user_id == user.id)
-        .all()
-    )
+    rows = db.query(MarketingCompany).filter(MarketingCompany.user_id == user.id).all()
     by_email: dict[str, list[int]] = {}
     by_phone: dict[str, list[int]] = {}
     by_company: dict[str, list[int]] = {}
@@ -904,12 +1024,9 @@ def duplicate_contacts(user: User = Depends(get_current_user), db: Session = Dep
         key = (r.company_key or "").strip().lower()
         if key:
             by_company.setdefault(key, []).append(r.id)
+
     def groups(mapping):
-        return [
-            {"ids": ids, "count": len(ids)}
-            for ids in mapping.values()
-            if len(ids) > 1
-        ]
+        return [{"ids": ids, "count": len(ids)} for ids in mapping.values() if len(ids) > 1]
 
     return {
         "by_email": groups(by_email),
@@ -933,7 +1050,11 @@ def _segments_key(user_id: int) -> str:
 @router.get("/segments")
 def list_segments(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Saved contact segments (persisted in the existing integration_settings table)."""
-    row = db.query(IntegrationSetting).filter(IntegrationSetting.key == _segments_key(user.id)).first()
+    row = (
+        db.query(IntegrationSetting)
+        .filter(IntegrationSetting.key == _segments_key(user.id))
+        .first()
+    )
     if row is None:
         return {"segments": []}
     try:
@@ -948,13 +1069,19 @@ def save_segment(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    row = db.query(IntegrationSetting).filter(IntegrationSetting.key == _segments_key(user.id)).first()
+    row = (
+        db.query(IntegrationSetting)
+        .filter(IntegrationSetting.key == _segments_key(user.id))
+        .first()
+    )
     try:
         items = json.loads(row.value) if row and row.value else []
     except json.JSONDecodeError:
         items = []
     items = [s for s in items if s.get("name") != payload.name]
-    items.append({"name": payload.name, "filters": payload.filters, "saved_at": datetime.now().isoformat()})
+    items.append(
+        {"name": payload.name, "filters": payload.filters, "saved_at": datetime.now().isoformat()}
+    )
     items = items[-20:]
     if row is None:
         row = IntegrationSetting(key=_segments_key(user.id), value=json.dumps(items))
@@ -971,7 +1098,11 @@ def delete_segment(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    row = db.query(IntegrationSetting).filter(IntegrationSetting.key == _segments_key(user.id)).first()
+    row = (
+        db.query(IntegrationSetting)
+        .filter(IntegrationSetting.key == _segments_key(user.id))
+        .first()
+    )
     if row is None:
         raise HTTPException(status_code=404, detail="No saved segments")
     try:
