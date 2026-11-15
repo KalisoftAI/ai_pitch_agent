@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  Activity, ArrowUpRight, BarChart3, Bell, Bot, BriefcaseBusiness, Calculator, CalendarDays, Check, ChevronDown,
+  Activity, ArrowLeft, ArrowUpRight, BarChart3, Bell, Bot, BriefcaseBusiness, Calculator, CalendarDays, Check, ChevronDown,
   CircleAlert, Clock, Database, FileText, Link2, LogOut, Mail, MapPin, Menu, MessageSquarePlus, Mic, Plus, RefreshCw,
   Search, Send, Settings2, ShieldCheck, Sparkles, Square, Star, Trash2, UploadCloud, Users, Video, X,
 } from "lucide-react";
