@@ -304,6 +304,16 @@ class TemplateUpdate(BaseModel):
     is_active: Optional[bool] = None
 
 
+class TemplatePreviewIn(BaseModel):
+    template_id: int
+    channel: str = Field(default="email", max_length=32)
+    contact_type: Literal["contacts", "marketing_companies"] = "marketing_companies"
+    contact_ids: list[int] = Field(default_factory=list)
+    subject_override: Optional[str] = Field(default=None, max_length=255)
+    body_override: Optional[str] = Field(default=None, max_length=20_000)
+    limit: int = Field(default=50, ge=1, le=200)
+
+
 class TemplateOut(TemplateBase):
     model_config = ConfigDict(from_attributes=True)
 

@@ -11,7 +11,9 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..governance.audit import log_event
-from ..models import MessageTemplate, User
+from ..kalika_templates import kalika_library_meta, kalika_template_items
+from ..models import Contact, MarketingCompany, MessageTemplate, User
+from ..outreach_context import outreach_context
 from ..outreach_templates import (
     CHANNELS,
     DEFAULT_TEMPLATES,
@@ -19,10 +21,10 @@ from ..outreach_templates import (
     SENDER,
     STRATEGIES,
 )
-from ..schemas import TemplateCreate, TemplateOut, TemplateUpdate
+from ..schemas import TemplateCreate, TemplateOut, TemplatePreviewIn, TemplateUpdate
 from ..security import get_current_user
 from ..services import GCSStorage
-from ..templating import looks_html, variables_used
+from ..templating import looks_html, render_resolved_report, variables_used
 
 router = APIRouter(prefix="/templates", tags=["templates"])
 
@@ -111,6 +113,210 @@ def templates_meta(user: User = Depends(get_current_user)):
         "strategies": STRATEGIES,
         "funnel_stages": FUNNEL_STAGES,
         "sender": SENDER,
+        "library": kalika_library_meta(),
+    }
+
+
+@router.post("/import-kalika")
+def import_kalika_templates(
+    update: bool = Query(default=True),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Import the bundled Kalika library: 5 HTML emails + 19 WhatsApp templates.
+
+    Rows are upserted per user/channel/name, so re-running the import refreshes
+    categories and bodies without creating duplicates. User edits are kept when
+    ``update=false``.
+    """
+    created = updated = skipped = 0
+    categories: set[str] = set()
+    for item in kalika_template_items():
+        categories.add(item["category"])
+        existing = (
+            db.query(MessageTemplate)
+            .filter(
+                MessageTemplate.user_id == user.id,
+                MessageTemplate.channel == item["channel"],
+                func.lower(MessageTemplate.name) == item["name"].lower(),
+            )
+            .first()
+        )
+        variables = variables_used(item["subject"] + " " + item["body"])
+        if existing is None:
+            db.add(
+                MessageTemplate(
+                    user_id=user.id,
+                    name=item["name"],
+                    channel=item["channel"],
+                    strategy=item["strategy"],
+                    funnel_stage=item["funnel_stage"],
+                    subject=item["subject"],
+                    body=item["body"],
+                    category=item["category"],
+                    variables=variables,
+                    is_active=True,
+                )
+            )
+            created += 1
+            continue
+        if not update:
+            skipped += 1
+            continue
+        changed = (
+            existing.subject != item["subject"]
+            or existing.body != item["body"]
+            or existing.category != item["category"]
+            or existing.channel != item["channel"]
+        )
+        if changed:
+            existing.subject = item["subject"]
+            existing.body = item["body"]
+            existing.category = item["category"]
+            existing.channel = item["channel"]
+            existing.variables = variables
+            existing.is_active = True
+            updated += 1
+        else:
+            skipped += 1
+
+    db.commit()
+    log_event(
+        db,
+        action="template.import_kalika",
+        actor_user_id=user.id,
+        resource_type="template",
+        resource_id="",
+        tenant_id=user.domain,
+        detail={"created": created, "updated": updated, "skipped": skipped},
+        commit=True,
+    )
+    return {
+        "ok": True,
+        "created": created,
+        "updated": updated,
+        "skipped": skipped,
+        "total": created + updated + skipped,
+        "categories": sorted(categories),
+    }
+
+
+def _channel_ok(address: str, channel: str) -> bool:
+    value = str(address or "").strip()
+    if channel in {"whatsapp", "wechat"}:
+        return len(re.sub(r"\D", "", value)) >= 8
+    return bool(re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]{2,}$", value))
+
+
+@router.post("/personalize-preview")
+def personalize_preview(
+    payload: TemplatePreviewIn,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Render the selected template for each recipient using contact/order data.
+
+    Returns resolved content (no ``{{...}}`` left) plus the placeholders whose
+    source value was missing, so the UI can flag personalization gaps before a
+    send. Order/product values are pulled automatically from Tally/ERP records.
+    """
+    template = (
+        db.query(MessageTemplate)
+        .filter(
+            MessageTemplate.id == payload.template_id,
+            MessageTemplate.user_id.in_([user.id, 0]),
+        )
+        .first()
+    )
+    if template is None:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    contact_ids = list(dict.fromkeys(int(x) for x in payload.contact_ids if x))
+    phone_channel = payload.channel in {"whatsapp", "wechat"}
+    if payload.contact_type == "marketing_companies":
+        records = (
+            db.query(MarketingCompany)
+            .filter(MarketingCompany.user_id == user.id, MarketingCompany.id.in_(contact_ids))
+            .order_by(MarketingCompany.company.asc())
+            .all()
+        )
+    else:
+        records = (
+            db.query(Contact)
+            .filter(Contact.user_id == user.id, Contact.id.in_(contact_ids))
+            .order_by(Contact.created_at.desc())
+            .all()
+        )
+
+    subject_src = (
+        payload.subject_override if payload.subject_override is not None else template.subject
+    ) or ""
+    body_src = (
+        payload.body_override if payload.body_override is not None else template.body
+    ) or ""
+    order_cache: dict[str, dict[str, str]] = {}
+    previews: list[dict[str, Any]] = []
+    missing_fields: dict[str, int] = {}
+    recipients_with_missing = 0
+    channel_ready = 0
+
+    for record in records:
+        is_marketing = payload.contact_type == "marketing_companies"
+        company = getattr(record, "company", "") or ""
+        requirements = (getattr(record, "requirements", "") if is_marketing else getattr(record, "context", "")) or ""
+        category = (getattr(record, "category", "") if is_marketing else getattr(record, "intent", "")) or ""
+        ctx = outreach_context(
+            db,
+            record,
+            company=company,
+            requirements=requirements,
+            category=category,
+            cache=order_cache,
+        )
+        subject, subject_missing = render_resolved_report(subject_src, ctx)
+        body, body_missing = render_resolved_report(body_src, ctx)
+        missing = list(dict.fromkeys(subject_missing + body_missing))
+        if missing:
+            recipients_with_missing += 1
+            for key in missing:
+                missing_fields[key] = missing_fields.get(key, 0) + 1
+        to_address = (getattr(record, "phone", "") if phone_channel else getattr(record, "email", "")) or ""
+        if _channel_ok(to_address, payload.channel):
+            channel_ready += 1
+        if len(previews) >= payload.limit:
+            continue
+        previews.append(
+            {
+                "contact_id": record.id,
+                "contact_name": ctx.get("contact_name", ""),
+                "company": company,
+                "email": getattr(record, "email", "") or "",
+                "phone": getattr(record, "phone", "") or "",
+                "to_address": to_address,
+                "subject": subject,
+                "body": body,
+                "missing": missing,
+                "channel_ok": _channel_ok(to_address, payload.channel),
+                "auto_fields": {
+                    "contact_name": ctx.get("contact_name", ""),
+                    "company": ctx.get("company", ""),
+                    "product_name": ctx.get("product_name", ""),
+                    "order_number": ctx.get("order_number", ""),
+                    "order_date": ctx.get("order_date", ""),
+                    "order_value": ctx.get("order_value", ""),
+                    "order_source": ctx.get("order_source", ""),
+                },
+            }
+        )
+
+    return {
+        "channel": payload.channel,
+        "total": len(records),
+        "channel_ready": channel_ready,
+        "recipients_with_missing": recipients_with_missing,
+        "missing_fields": missing_fields,
+        "count": len(previews),
+        "previews": previews,
     }
 
 

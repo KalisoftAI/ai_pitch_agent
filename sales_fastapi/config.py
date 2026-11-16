@@ -121,6 +121,20 @@ class Settings(BaseSettings):
     INSTAGRAM_ACCESS_TOKEN: str = Field(default="", alias="INSTAGRAM_ACCESS_TOKEN")
     INSTAGRAM_ACCOUNT_ID: str = Field(default="", alias="INSTAGRAM_ACCOUNT_ID")
 
+    # --- Outreach template CTA destinations (used for {{REVIEW_URL}} etc.) ---
+    OUTREACH_REVIEW_URL: str = Field(
+        default="mailto:kalikaenterprises@gmail.com?subject=Product%20review",
+        alias="OUTREACH_REVIEW_URL",
+    )
+    OUTREACH_FEEDBACK_URL: str = Field(
+        default="mailto:kalikaenterprises@gmail.com?subject=Customer%20feedback",
+        alias="OUTREACH_FEEDBACK_URL",
+    )
+    OUTREACH_MEETING_URL: str = Field(
+        default="mailto:kalikaenterprises@gmail.com?subject=Product%20enquiry",
+        alias="OUTREACH_MEETING_URL",
+    )
+
     # --- ERP report sync (ERP-V1/Reports -> Dispatch/Orders) ---
     ERP_REPORT_PREFIX: str = Field(default="ERP-V1/Reports/", alias="ERP_REPORT_PREFIX")
     ERP_CACHE_PATH: str = Field(default="gcs_data", alias="ERP_CACHE_PATH")

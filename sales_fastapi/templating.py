@@ -27,6 +27,14 @@ _FALLBACKS: dict[str, str] = {
     "context": "",
     "product_name": "Kalika Enterprises packaging",
     "product": "Kalika Enterprises packaging",
+    "product_or_solution": "Kalika Enterprises packaging",
+    "order_number": "",
+    "order_no": "",
+    "order_date": "",
+    "review_url": "",
+    "review_link": "",
+    "feedback_form_url": "",
+    "meeting_or_enquiry_url": "",
 }
 
 # Aliases -> canonical key (so {{mobile}} resolves from phone, etc.).
@@ -46,6 +54,16 @@ _ALIASES: dict[str, str] = {
     "role": "designation",
     "title": "designation",
     "position": "designation",
+    "voucher_no": "order_number",
+    "order_id": "order_number",
+    "order_no": "order_number",
+    "sale_date": "order_date",
+    "product_or_solution": "product_name",
+    "solution": "product_name",
+    "review_link": "review_url",
+    "feedback_url": "feedback_form_url",
+    "meeting_url": "meeting_or_enquiry_url",
+    "enquiry_url": "meeting_or_enquiry_url",
 }
 
 
@@ -57,14 +75,23 @@ def variables_used(text: str) -> list[str]:
     return seen
 
 
+def _context_value(key: str, context: dict[str, Any]) -> Any:
+    """Look a key up case-insensitively (templates use CONTACT_NAME, context uses contact_name)."""
+    for probe in (key, key.lower(), key.upper()):
+        value = context.get(probe)
+        if value not in (None, ""):
+            return value
+    return None
+
+
 def _resolve_value(key: str, context: dict[str, Any]) -> str | None:
     """Return a display value for *key* from *context* with aliases+fallbacks, or None."""
-    value = context.get(key)
+    value = _context_value(key, context)
     if value not in (None, ""):
         return str(value)
     alias = _ALIASES.get(key.lower(), _ALIASES.get(key, ""))
     if alias:
-        value = context.get(alias)
+        value = _context_value(alias, context)
         if value not in (None, ""):
             return str(value)
     # fallbacks (by key, then by alias target)
@@ -117,6 +144,29 @@ def render_resolved(text: str, context: dict[str, Any]) -> str:
     out = _PLACEHOLDER.sub(replace, text or "")
     # belt-and-suspenders: drop any stray tokens that survived
     return _PLACEHOLDER.sub("", out)
+
+
+def render_resolved_report(text: str, context: dict[str, Any]) -> tuple[str, list[str]]:
+    """Like :func:`render_resolved` but also reports placeholders with no source value.
+
+    Fallbacks are still applied (so a message never ships with ``{{...}}`` left in),
+    but the caller can flag recipients whose contact/order data was incomplete.
+    """
+    missing: list[str] = []
+
+    def replace(match: re.Match[str]) -> str:
+        key = match.group(1)
+        if _context_value(key, context) in (None, ""):
+            alias = _ALIASES.get(key.lower(), _ALIASES.get(key, ""))
+            if not alias or _context_value(alias, context) in (None, ""):
+                normalized = key.lower()
+                if normalized not in missing:
+                    missing.append(normalized)
+        resolved = _resolve_value(key, context)
+        return resolved if resolved is not None else ""
+
+    out = _PLACEHOLDER.sub(replace, text or "")
+    return _PLACEHOLDER.sub("", out), missing
 
 
 def contact_context(contact: Any, extra: dict[str, Any] | None = None) -> dict[str, Any]:

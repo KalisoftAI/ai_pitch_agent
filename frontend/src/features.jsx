@@ -1107,6 +1107,27 @@ const CHANNEL_VIDEOS = [
   { title: "Product demo", link: "https://www.youtube.com/@kalikaenterprises", tag: "YouTube", note: "Attach to follow-ups" },
 ];
 
+const KALIKA_TEMPLATE_CATEGORIES = ["Products", "ERP", "Automation", "Sales", "Customer Feedback", "Instagram"];
+const MISSING_LABELS = {
+  contact_name: "Contact name", name: "Contact name", company: "Company",
+  product_name: "Product", product: "Product", product_or_solution: "Product",
+  order_number: "Order number", order_no: "Order number", order_date: "Order date",
+  review_url: "Review link", review_link: "Review link", feedback_form_url: "Feedback link",
+  meeting_or_enquiry_url: "Meeting/enquiry link", email: "Email", phone: "Mobile",
+};
+
+const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+
+function formatWhatsAppText(text) {
+  const safe = escapeHtml(text).replace(/\r\n/g, "\n");
+  return safe
+    .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noreferrer">$1</a>')
+    .replace(/\*([^*\n]+)\*/g, "<strong>$1</strong>")
+    .replace(/_([^_\n]+)_/g, "<em>$1</em>")
+    .replace(/~([^~\n]+)~/g, "<s>$1</s>")
+    .replace(/\n/g, "<br/>");
+}
+
 function whatsappHref(text, phone) {
   const digits = String(phone || "").replace(/\D/g, "");
   const base = digits ? `https://wa.me/${digits.length === 10 ? `91${digits}` : digits}` : "https://wa.me/";
@@ -1558,6 +1579,11 @@ export function MarketingCompanies({ onNotice }) {
   const [editing, setEditing] = useState({});
   const [busy, setBusy] = useState(false);
   const [templates, setTemplates] = useState([]);
+  const [tsCategory, setTsCategory] = useState("");
+  const [tsQuery, setTsQuery] = useState("");
+  const [studioEdit, setStudioEdit] = useState(null);
+  const [personalization, setPersonalization] = useState(null);
+  const [personalizationBusy, setPersonalizationBusy] = useState(false);
   const [limit, setLimit] = useState(25);
   const [requirementsOnly, setRequirementsOnly] = useState(false);
   const [sendTarget, setSendTarget] = useState(null);
@@ -1710,9 +1736,27 @@ export function MarketingCompanies({ onNotice }) {
   useEffect(() => { load(); loadActivity(); loadSources(); loadImageTemplates(); }, []);
 
 
+  const importKalikaLibrary = async (quiet = false) => {
+    setCBusy(true);
+    try {
+      const result = await request("/templates/import-kalika", { method: "POST" });
+      const rows = await request("/templates");
+      setTemplates(Array.isArray(rows) ? rows : []);
+      if (!quiet) onNotice({ type: "success", text: `Kalika library ready: ${result.created} added, ${result.updated} refreshed (5 email + 19 WhatsApp).` });
+    } catch (error) {
+      if (!quiet) onNotice({ type: "error", text: error.message });
+    } finally { setCBusy(false); }
+  };
+
   useEffect(() => {
     request("/templates")
-      .then((rows) => setTemplates(Array.isArray(rows) ? rows : []))
+      .then(async (rows) => {
+        const list = Array.isArray(rows) ? rows : [];
+        setTemplates(list);
+        const inLibrary = list.filter((t) => KALIKA_TEMPLATE_CATEGORIES.includes(t.category));
+        const hasLibrary = inLibrary.filter((t) => t.channel === "email").length >= 5 && inLibrary.filter((t) => t.channel === "whatsapp").length >= 19;
+        if (!hasLibrary) await importKalikaLibrary(true);
+      })
       .catch(() => setTemplates([]));
   }, []);
 
@@ -2176,6 +2220,37 @@ export function MarketingCompanies({ onNotice }) {
       : selectedRows.filter((r) => validEmail(r.email) || validPhone(r.phone)).length;
   const selectRowForSend = (row) => fillSendArea(row);
 
+  useEffect(() => {
+    if (sendStep !== "configure" || !selTemplate || !selectedRows.length) {
+      setPersonalization(null);
+      return undefined;
+    }
+    const channel = cChannel === "both" ? "email" : cChannel;
+    const ids = selectedRows.map((row) => row.id);
+    const timer = setTimeout(async () => {
+      setPersonalizationBusy(true);
+      try {
+        const result = await request("/templates/personalize-preview", {
+          method: "POST",
+          body: JSON.stringify({
+            template_id: selTemplate.id,
+            channel,
+            contact_type: "marketing_companies",
+            contact_ids: ids,
+            subject_override: composeSubject || "",
+            body_override: composeBody || "",
+            limit: Math.min(200, ids.length),
+          }),
+        });
+        setPersonalization(result);
+      } catch {
+        setPersonalization(null);
+      } finally { setPersonalizationBusy(false); }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [sendStep, selTemplate?.id, cChannel, selectedIds, composeSubject, composeBody]);
+
+
   // mobile long-press multi-select (movement threshold keeps normal scrolling intact)
   const pressStart = (row, ev) => {
     const p = ev.touches?.[0] || { clientX: 0, clientY: 0 };
@@ -2230,6 +2305,47 @@ export function MarketingCompanies({ onNotice }) {
       setTemplates(Array.isArray(rows) ? rows : []);
     } catch (e) { onNotice({ type: "error", text: e.message }); }
   };
+  const saveStudioTemplate = async () => {
+    if (!studioEdit) return;
+    const channel = studioEdit.channel || "email";
+    if (!String(studioEdit.name || "").trim()) return onNotice({ type: "error", text: "Template name is required." });
+    if ((channel === "whatsapp" || channel === "wechat") && looksHtml(studioEdit.body)) {
+      return onNotice({ type: "error", text: "WhatsApp/WeChat templates must stay plain text." });
+    }
+    try {
+      await request(`/templates/${studioEdit.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          name: studioEdit.name, channel, category: studioEdit.category || "",
+          subject: studioEdit.subject || "", body: studioEdit.body || "",
+        }),
+      });
+      onNotice({ type: "success", text: "Template saved." });
+      setStudioEdit(null);
+      const rows = await request("/templates");
+      setTemplates(Array.isArray(rows) ? rows : []);
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+  };
+  const duplicateTemplate = async (tt) => {
+    try {
+      const created = await request("/templates", {
+        method: "POST",
+        body: JSON.stringify({
+          name: `${tt.name} (copy)`.slice(0, 128), channel: tt.channel || "email",
+          strategy: tt.strategy || "cold_outreach", funnel_stage: tt.funnel_stage || "awareness",
+          subject: tt.subject || "", body: tt.body || "", category: tt.category || "",
+        }),
+      });
+      onNotice({ type: "success", text: `Duplicated as "${created.name}".` });
+      const rows = await request("/templates");
+      setTemplates(Array.isArray(rows) ? rows : []);
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+  };
+  const selectStudioTemplate = (tt) => {
+    pickTemplate(tt);
+    setShowTplPicker(false);
+  };
+
   const sendNow = async () => {
     if (!selTemplate) return onNotice({ type: "error", text: "Select a template first." });
     if (!selectedRows.length) return onNotice({ type: "error", text: "No recipients selected." });
@@ -2238,7 +2354,11 @@ export function MarketingCompanies({ onNotice }) {
     if (cChannel === "whatsapp" && selectedPhone === 0) return onNotice({ type: "error", text: "No selected contact has a valid mobile number." });
     if (cChannel === "email" && !String(composeSubject || selTemplate.subject || "").trim()) return onNotice({ type: "error", text: "Add a subject before sending email." });
     if (sendingRef.current) return onNotice({ type: "error", text: "A send is already in progress." });
-    const ok = window.confirm(`Send to ${selectedForChannel || selectedRows.length} recipient(s) via ${cChannel}? This cannot be undone.`);
+    const missingCount = personalization?.recipients_with_missing || 0;
+    const missingNote = missingCount
+      ? `\n\nPersonalization check: ${missingCount} of ${personalization?.total || selectedRows.length} recipient(s) are missing some auto-filled values (${Object.keys(personalization?.missing_fields || {}).slice(0, 5).join(", ")}). Safe fallbacks will be used.`
+      : "\n\nPersonalization check: all recipients have contact/order values.";
+    const ok = window.confirm(`Send to ${selectedForChannel || selectedRows.length} recipient(s) via ${cChannel}? This cannot be undone.${missingNote}`);
     if (!ok) return;
     sendingRef.current = true;
     setSendStep("progress");
@@ -2259,6 +2379,30 @@ export function MarketingCompanies({ onNotice }) {
   const curatedFor = (ch) => ch === "whatsapp" || ch === "both" ? CURATED_MESSAGES : [];
   const tplFor = (ch) => (templates || []).filter((t) => { const tc = (t.channel || "email").toLowerCase(); return ch === "both" ? (tc === "email" || tc === "whatsapp") : tc === ch; });
   const visibleTemplates = tplFor(cChannel);
+  const studioChannel = cChannel === "whatsapp" ? "whatsapp" : "email";
+  const studioTemplates = (templates || []).filter((tt) => {
+    if ((tt.channel || "email").toLowerCase() !== studioChannel) return false;
+    if (tsCategory && (tt.category || "") !== tsCategory) return false;
+    const needle = tsQuery.trim().toLowerCase();
+    if (!needle) return true;
+    return [tt.name, tt.subject, tt.body, tt.category].some((value) => String(value || "").toLowerCase().includes(needle));
+  });
+  const studioCategoryCounts = (templates || []).reduce((acc, tt) => {
+    if ((tt.channel || "email").toLowerCase() !== studioChannel) return acc;
+    const key = tt.category || "General";
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  const previewById = new Map(((personalization && personalization.previews) || []).map((item) => [item.contact_id, item]));
+  const setStudioChannel = (channel) => {
+    setCChannel(channel);
+    setTsCategory("");
+    if ((selTemplate?.channel || "email") !== channel) {
+      setSelTemplate(null);
+      setComposeSubject("");
+      setComposeBody("");
+    }
+  };
   const fillMsg = (raw, row) => resolveVars(String(raw || "").replaceAll("{name}", row?.contact_name || row?.company || "there").replaceAll("{company}", row?.company || "your business").replaceAll("{email}", row?.email || "").replaceAll("{phone}", row?.phone || "").replaceAll("{video}", DIWALI_REEL), row);
   const quickWaText = (row) => {
     const src = composeBody && composeBody.trim() ? composeBody : (selTemplate && !looksHtml(selTemplate.body) ? selTemplate.body : null);
@@ -2518,8 +2662,9 @@ export function MarketingCompanies({ onNotice }) {
           <div><div className="section-kicker">STEP 2: CONFIGURE CAMPAIGN</div><h2>Campaign setup</h2></div>
           <button className="secondary-button" onClick={()=>setSendStep("select")}><Search size={14}/> Back to contacts</button>
         </div>
-        <div className="form-row"><label>Channel<select value={cChannel} onChange={(e)=>{setCChannel(e.target.value);setSelTemplate(null);setComposeBody("");setComposeSubject("");}} aria-label="Channel"><option value="email">Email</option><option value="whatsapp">WhatsApp</option><option value="both">Both (email + WhatsApp)</option></select></label>
+        <div className="form-row">
           <label>Campaign name<input className="campaign-name" value={cName} onChange={(e)=>setCName(e.target.value)} aria-label="Campaign name" /></label>
+          <label>Mode<select value={cChannel} onChange={(e)=>{setCChannel(e.target.value);setSelTemplate(null);setComposeBody("");setComposeSubject("");}} aria-label="Channel"><option value="email">Email</option><option value="whatsapp">WhatsApp</option><option value="both">Both (email + WhatsApp)</option></select></label>
           <label className="switch"><input type="checkbox" checked={useAi} onChange={(e)=>setUseAi(e.target.checked)} /> Personalize with AI</label>
         </div>
         <div className="outreach-chip-row">
@@ -2529,15 +2674,63 @@ export function MarketingCompanies({ onNotice }) {
           <span className="outreach-chip"><b>Will send:</b> {selectedForChannel || selectedRows.length}</span>
           {(() => { const badEmails = selectedRows.filter((r)=>r.email && !validEmail(r.email)).length; const badPhones = selectedRows.filter((r)=>r.phone && !validPhone(r.phone)).length; return (badEmails + badPhones) > 0 ? <span className="outreach-chip" style={{"background":"#fee2e2"}}>Excluded invalid: {badEmails} email / {badPhones} mobile</span> : null; })()}
         </div>
-        <div className="button-row" style={{margin:"8px 0"}}><button className="primary-button" onClick={()=>setShowTplPicker(true)}><FileText size={14}/> {selTemplate ? "Change template" : "Choose template"}</button>
+
+        <section className="template-studio" aria-label="Template library">
+          <div className="ts-head">
+            <div>
+              <b className="sub-label">Choose a template</b>
+              <p className="muted">{personalizationBusy ? "Checking personalization..." : `${studioTemplates.length} template${studioTemplates.length===1?"":"s"} for ${studioChannel === "whatsapp" ? "WhatsApp" : "Email"}`}</p>
+            </div>
+            <button className="secondary-button" onClick={()=>importKalikaLibrary(false)} disabled={cBusy}><FileText size={14}/> {cBusy ? "Importing..." : "Import Kalika library"}</button>
+          </div>
+          <div className="ts-tabs" role="tablist" aria-label="Template channel">
+            <button type="button" role="tab" aria-selected={studioChannel==="email"} className={`ts-tab ${studioChannel==="email"?"active":""}`} onClick={()=>setStudioChannel("email")}>Email <small>HTML design</small></button>
+            <button type="button" role="tab" aria-selected={studioChannel==="whatsapp"} className={`ts-tab ${studioChannel==="whatsapp"?"active":""}`} onClick={()=>setStudioChannel("whatsapp")}>WhatsApp <small>Plain text + emojis</small></button>
+          </div>
+          <div className="search-field"><Search size={16}/><input value={tsQuery} onChange={(e)=>setTsQuery(e.target.value)} placeholder="Search templates by name, subject or content" aria-label="Search templates" /></div>
+          <div className="ts-cats" role="group" aria-label="Template categories">
+            <button type="button" className={`ts-chip ${!tsCategory?"active":""}`} onClick={()=>setTsCategory("")}>All <span>{Object.values(studioCategoryCounts).reduce((n,v)=>n+v,0)}</span></button>
+            {KALIKA_TEMPLATE_CATEGORIES.map((cat)=>(<button type="button" key={cat} className={`ts-chip ${tsCategory===cat?"active":""}`} onClick={()=>setTsCategory(tsCategory===cat?"":cat)} disabled={!studioCategoryCounts[cat]}>{cat} <span>{studioCategoryCounts[cat]||0}</span></button>))}
+          </div>
+          <div className="ts-grid">
+            {studioTemplates.map((tt)=>(
+              <div key={tt.id} className={`ts-card ${selTemplate?.id===tt.id?"selected":""}`} role="button" tabIndex={0} onClick={()=>selectStudioTemplate(tt)} onKeyDown={(e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); selectStudioTemplate(tt); } }}>
+                <div className="ts-card-top"><span className="ts-cat">{tt.category||"General"}</span><span className="ts-ch">{tt.channel==="whatsapp"?"WhatsApp":"Email"}</span></div>
+                <b>{tt.name}</b>
+                <small className="ts-card-preview">{htmlToText(tt.body).slice(0,130)}</small>
+                <div className="ts-actions" onClick={(e)=>e.stopPropagation()}>
+                  <button type="button" className="secondary-button" onClick={()=>setPreviewTemplate(tt)} title="Preview template"><Eye size={13}/> Preview</button>
+                  <button type="button" className="secondary-button" onClick={()=>setStudioEdit({...tt})} title="Edit template"><Edit2 size={13}/> Edit</button>
+                  <button type="button" className="secondary-button" onClick={()=>duplicateTemplate(tt)} title="Duplicate template"><Copy size={13}/> Duplicate</button>
+                  <button type="button" className={selTemplate?.id===tt.id?"primary-button":"secondary-button"} onClick={()=>selectStudioTemplate(tt)}>{selTemplate?.id===tt.id?"Selected":"Select"}</button>
+                </div>
+              </div>
+            ))}
+            {!studioTemplates.length && <div className="empty-state"><FileText size={22}/><p>No templates in this category.</p><small>Clear the search or import the Kalika library.</small></div>}
+          </div>
+        </section>
+
+        <div className="button-row" style={{margin:"8px 0"}}>
+          <button className="secondary-button" onClick={()=>setShowTplPicker(true)}><FileText size={14}/> Advanced picker</button>
           <button className="secondary-button" onClick={()=>imgUploadRef.current&&imgUploadRef.current.click()} disabled={busy}><UploadCloud size={14}/> Image</button>
-          <button className="secondary-button" onClick={()=>{ setAttachVideo(CHANNEL_VIDEOS[0]?.link||""); }}><Video size={14}/> Video</button></div>
+          <button className="secondary-button" onClick={()=>{ setAttachVideo(CHANNEL_VIDEOS[0]?.link||""); }}><Video size={14}/> Video</button>
+        </div>
         <input ref={imgUploadRef} type="file" accept="image/*" hidden onChange={uploadImageTemplate} />
         <div className="outreach-chip-row">
           <span className="outreach-chip">Template: {selTemplate?.name || <b>none</b>}</span>
           <span className="outreach-chip">Image: {attachImage ? "attached" : "none"}</span>
           <span className="outreach-chip">Video: {attachVideo ? "attached" : "none"}</span>
         </div>
+        {selTemplate && selectedRows.length > 0 && (
+          <div className={`personalization-check ${personalization?.recipients_with_missing ? "warn" : "ok"}`} aria-live="polite">
+            <b>{personalizationBusy ? "Checking personalization..." : personalization?.recipients_with_missing ? `${personalization.recipients_with_missing} of ${personalization.total} recipient(s) need attention` : "Personalization ready"}</b>
+            <div className="outreach-chip-row">
+              {(personalization?.missing_fields ? Object.entries(personalization.missing_fields) : []).map(([key,count])=>(<span key={key} className="outreach-chip missing-chip">{MISSING_LABELS[key]||key}: {count}</span>))}
+              {!personalization?.recipients_with_missing && <span className="outreach-chip">Name, company, product and order filled from contact records</span>}
+            </div>
+            <small className="muted">Values are auto-filled per recipient from the contact record and synced Tally/ERP orders. Nothing is typed by hand.</small>
+          </div>
+        )}
         <div className="configure-sub">
           <b className="sub-label">Poster</b>
           <div className="image-strip">
@@ -2552,10 +2745,7 @@ export function MarketingCompanies({ onNotice }) {
         {selTemplate && <div className="composer">
           <b className="sub-label">Message (edit before sending)</b>
           {cChannel !== "whatsapp" && <label className="field"><span>Subject</span><input value={composeSubject} onChange={(e)=>setComposeSubject(e.target.value)} aria-label="Email subject" /></label>}
-          {(cChannel === "whatsapp" || cChannel === "both") && <div className="cat-row">
-            <label className="field"><span>WhatsApp category</span><select value={waCategory} onChange={(e)=>setWaCategory(e.target.value)} aria-label="Category"><option value="">All categories</option>{waCategories.map((cc)=><option key={cc} value={cc}>{cc}</option>)}</select></label>
-            <button className="secondary-button" onClick={importWhatsapp} disabled={cBusy}><FileText size={13}/> {cBusy?"Importing...":"Import WhatsApp templates"}</button>
-          </div>}
+          {(cChannel === "whatsapp" || cChannel === "both") && <small className="muted">WhatsApp formatting: *bold*, _italic_, ~strikethrough~, emojis and Instagram links are preserved.</small>}
           <textarea className="compose-body" rows={6} value={composeBody} onChange={(e)=>setComposeBody(e.target.value)} aria-label="Message body" placeholder="Edit the personalised message. Variables like {{contact_name}}, {{company_name}}, {{product_name}} resolve per recipient." />
           {waBodyHtml && <div className="compat-panel" role="alert">
             <b>WhatsApp cannot send HTML</b>
@@ -2573,11 +2763,14 @@ export function MarketingCompanies({ onNotice }) {
           </div>
           {(() => {
             const pv = selectedRows.length ? selectedRows[Math.min(previewIdx, selectedRows.length - 1)] : null;
-            const pvTo = pv ? (cChannel === "whatsapp" ? (pv.phone || "no mobile") : (pv.email || "no email")) : "";
-            const pvSubj = resolveVars(composeSubject, pv || {});
-            const pvBody = resolveVars(composeBody, pv || {});
-            const unresolved = (pvSubj + pvBody).includes("{{");
-            const channelOk = pv ? (cChannel === "whatsapp" ? validPhone(pv.phone) : cChannel === "both" ? (validEmail(pv.email) || validPhone(pv.phone)) : validEmail(pv.email)) : true;
+            const serverPv = pv ? previewById.get(pv.id) : null;
+            const pvTo = serverPv?.to_address || (pv ? (cChannel === "whatsapp" ? (pv.phone || "no mobile") : (pv.email || "no email")) : "");
+            const pvSubj = serverPv ? serverPv.subject : resolveVars(composeSubject, pv || {});
+            const pvBody = serverPv ? serverPv.body : resolveVars(composeBody, pv || {});
+            const missing = serverPv?.missing || [];
+            const unresolved = (pvSubj + pvBody).includes("{{") || missing.some((key) => key.startsWith("review") || key.startsWith("meeting") || key.startsWith("feedback"));
+            const channelOk = serverPv ? serverPv.channel_ok : pv ? (cChannel === "whatsapp" ? validPhone(pv.phone) : cChannel === "both" ? (validEmail(pv.email) || validPhone(pv.phone)) : validEmail(pv.email)) : true;
+            const auto = serverPv?.auto_fields || {};
             return (<>
               <div className="preview-head">
                 <b className="sub-label">Preview (personalized)</b>
@@ -2588,16 +2781,18 @@ export function MarketingCompanies({ onNotice }) {
                 </div>
               </div>
               {pv && <div className="preview-meta">
-                <span><b>To:</b> {pv.contact_name || pv.company || "(no name)"} &lt;{pvTo}&gt;</span>
-                <span><b>Company:</b> {pv.company || "-"}</span>
+                <span><b>To:</b> {serverPv?.contact_name || pv.contact_name || pv.company || "(no name)"} &lt;{pvTo}&gt;</span>
+                <span><b>Company:</b> {serverPv?.company || pv.company || "-"}</span>
                 <span><b>Email:</b> {pv.email || "-"} &nbsp; <b>Mobile:</b> {pv.phone || "-"}</span>
                 {!channelOk && <span className="status-pill error">No valid {cChannel === "whatsapp" ? "mobile" : "email"} for this channel</span>}
-                {unresolved && <span className="status-pill error">Unresolved placeholder detected</span>}
+                {unresolved && <span className="status-pill error">Placeholder needs a link or value</span>}
                 {waBodyHtml && <span className="status-pill error">HTML is not allowed for WhatsApp</span>}
               </div>}
+              {pv && (auto.product_name || auto.order_number) && <small className="muted">Auto-filled: {[auto.product_name && `Product ${auto.product_name}`, auto.order_number && `Order ${auto.order_number}`].filter(Boolean).join(" | ")}</small>}
+              {cChannel !== "whatsapp" && pvSubj !== composeSubject && <small className="muted">Subject preview: {pvSubj}</small>}
               {(cChannel === "whatsapp" || cChannel === "both") ? (
                 <div className="wa-preview" aria-label="WhatsApp preview"><div className="wa-bubble">
-                  {pvBody.split("\n").map((line, i) => <span key={i}>{line}<br /></span>)}
+                  <div dangerouslySetInnerHTML={{ __html: formatWhatsAppText(pvBody) }} />
                   {attachImage && <img className="wa-media" src={attachImage} alt="attachment" />}
                   {attachVideo && <div className="wa-link">Video: {attachVideo}</div>}
                   {attachCatalog && <div className="wa-link">Catalogue: {attachCatalog}</div>}
@@ -2609,7 +2804,7 @@ export function MarketingCompanies({ onNotice }) {
           })()}
         </div>}
         <details className="marketing-breakdown" open><summary>Preview recipients ({selectedRows.length})</summary>
-          <div className="preview-list">{selectedRows.slice(0,60).map((r)=>(<div className="preview-item" key={r.id}><b>{r.contact_name||r.company}</b><small>{r.email||"No email"}{r.phone?` - ${r.phone}`:""}</small></div>))}{selectedRows.length>60 && <small className="muted">+{selectedRows.length-60} more</small>}</div>
+          <div className="preview-list">{selectedRows.slice(0,60).map((r)=>{ const rp = previewById.get(r.id); const rmissing = rp?.missing || []; return (<div className="preview-item" key={r.id}><b>{rp?.contact_name || r.contact_name||r.company}</b><small>{r.email||"No email"}{r.phone?` - ${r.phone}`:""}</small>{rmissing.length > 0 && <small className="missing-note">Missing: {rmissing.slice(0,4).map((key)=>MISSING_LABELS[key]||key).join(", ")}</small>}{rp && !rp.channel_ok && <small className="missing-note">No valid {cChannel === "whatsapp" ? "mobile" : "email"}</small>}</div>); })}{selectedRows.length>60 && <small className="muted">+{selectedRows.length-60} more</small>}</div>
         </details>
         {selTemplate && <details className="marketing-breakdown"><summary>Preview message</summary><div className="studio-text">{(fillMsg(looksHtml(effectiveBody) ? htmlToText(effectiveBody) : effectiveBody, selectedRows[0]||{})||"").slice(0,500)}</div></details>}
         <div className="send-actions">
@@ -2691,6 +2886,20 @@ export function MarketingCompanies({ onNotice }) {
           ? <div className="wa-preview"><div className="wa-bubble">{String(previewTemplate.body||"").split("\n").map((line, i) => <span key={i}>{line}<br /></span>)}</div></div>
           : <iframe srcDoc={previewTemplate.body} title="Template Preview" sandbox="allow-same-origin" style={{width:"100%",height:"420px",border:"1px solid #ddd",borderRadius:"8px",background:"white"}}/>}
       </div></div></div>)}
+      {studioEdit && (<div className="modal-overlay" onClick={()=>setStudioEdit(null)}><div className="modal-content template-editor-modal" onClick={(e)=>e.stopPropagation()}>
+        <div className="modal-header"><h2>Edit template</h2><button className="icon-button" onClick={()=>setStudioEdit(null)} aria-label="Close"><X size={20}/></button></div>
+        <div className="modal-body">
+          <div className="form-row">
+            <label>Template name<input value={studioEdit.name||""} onChange={(e)=>setStudioEdit({...studioEdit, name:e.target.value})} maxLength={128} /></label>
+            <label>Channel<select value={studioEdit.channel||"email"} onChange={(e)=>setStudioEdit({...studioEdit, channel:e.target.value})}><option value="email">Email</option><option value="whatsapp">WhatsApp</option></select></label>
+            <label>Category<select value={studioEdit.category||""} onChange={(e)=>setStudioEdit({...studioEdit, category:e.target.value})}><option value="">General</option>{[...new Set([...KALIKA_TEMPLATE_CATEGORIES, studioEdit.category].filter(Boolean))].map((cat)=><option key={cat} value={cat}>{cat}</option>)}</select></label>
+          </div>
+          {(studioEdit.channel||"email") === "email" && <label className="field"><span>Subject</span><input value={studioEdit.subject||""} onChange={(e)=>setStudioEdit({...studioEdit, subject:e.target.value})} /></label>}
+          <label className="field"><span>Message body</span><textarea rows={14} value={studioEdit.body||""} onChange={(e)=>setStudioEdit({...studioEdit, body:e.target.value})} /></label>
+          <small className="muted">Placeholders such as {"{{contact_name}}"}, {"{{company_name}}"}, {"{{product_name}}"} and {"{{order_number}}"} are filled automatically per recipient. Missing values are flagged before sending. WhatsApp must remain plain text.</small>
+          <div className="button-row"><button className="primary-button" onClick={saveStudioTemplate} disabled={cBusy}><Save size={14}/> Save template</button><button className="secondary-button" onClick={()=>setStudioEdit(null)}>Cancel</button></div>
+        </div>
+      </div></div>)}
     </div>
   );
 }

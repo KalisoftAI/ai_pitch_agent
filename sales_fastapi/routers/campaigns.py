@@ -32,6 +32,7 @@ from ..models import (
     MessageTemplate,
     User,
 )
+from ..outreach_context import outreach_context
 from ..schemas import (
     CampaignCreate,
     CampaignDetail,
@@ -330,8 +331,13 @@ def create_campaign(
 
     body_src = payload.body_override if payload.body_override is not None else template.body
 
+    order_cache: dict[str, dict[str, str]] = {}
+
     for contact in contacts:
-        render_context = {**SENDER_CONTEXT, **contact_context(contact)}
+        render_context = {
+            **SENDER_CONTEXT,
+            **outreach_context(db, contact, cache=order_cache),
+        }
 
         subject = render_resolved(subject_src, render_context)
 
@@ -937,10 +943,12 @@ def preview_message(
 
     body_src = (payload.body_override or template.body or "").strip()
 
+    order_cache: dict[str, dict[str, str]] = {}
+
     for c in contacts[:50]:
         to_addr = (c.phone if phone_channel else c.email) or ""
 
-        ctx = {**SENDER_CONTEXT, **contact_context(c)}
+        ctx = {**SENDER_CONTEXT, **outreach_context(db, c, cache=order_cache)}
 
         subj = render_resolved(subject_src, ctx)
 
