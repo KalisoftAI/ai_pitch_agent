@@ -10,7 +10,6 @@ approve / edit -> send (email / WhatsApp / WeChat) -> status updates.
 
 from __future__ import annotations
 
-import re
 from datetime import datetime
 from functools import lru_cache
 from types import SimpleNamespace
@@ -20,6 +19,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..config import settings
+from ..contact_validation import valid_email as _valid_email
+from ..contact_validation import valid_phone as _valid_phone
 from ..database import get_db
 from ..governance.audit import log_event
 from ..llm.router import ModelRouter
@@ -33,6 +34,7 @@ from ..models import (
     User,
 )
 from ..outreach_context import outreach_context
+from ..outreach_forms import get_form_links
 from ..schemas import (
     CampaignCreate,
     CampaignDetail,
@@ -47,17 +49,6 @@ from ..templating import contact_context, looks_html, render_resolved
 from ..wechaty import WechatyGateway
 
 router = APIRouter(prefix="/campaigns", tags=["campaigns"])
-
-_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]{2,}$")
-
-
-def _valid_email(value: str | None) -> bool:
-    return bool(_EMAIL_RE.fullmatch((value or "").strip()))
-
-
-def _valid_phone(value: str | None) -> bool:
-    return len(re.sub(r"\D", "", value or "")) >= 8
-
 
 SENDER_CONTEXT = {
     "sender_name": "Kalisoft AI",
@@ -332,11 +323,12 @@ def create_campaign(
     body_src = payload.body_override if payload.body_override is not None else template.body
 
     order_cache: dict[str, dict[str, str]] = {}
+    form_links = get_form_links(db)
 
     for contact in contacts:
         render_context = {
             **SENDER_CONTEXT,
-            **outreach_context(db, contact, cache=order_cache),
+            **outreach_context(db, contact, cache=order_cache, form_links=form_links),
         }
 
         subject = render_resolved(subject_src, render_context)
@@ -944,11 +936,12 @@ def preview_message(
     body_src = (payload.body_override or template.body or "").strip()
 
     order_cache: dict[str, dict[str, str]] = {}
+    form_links = get_form_links(db)
 
     for c in contacts[:50]:
         to_addr = (c.phone if phone_channel else c.email) or ""
 
-        ctx = {**SENDER_CONTEXT, **outreach_context(db, c, cache=order_cache)}
+        ctx = {**SENDER_CONTEXT, **outreach_context(db, c, cache=order_cache, form_links=form_links)}
 
         subj = render_resolved(subject_src, ctx)
 

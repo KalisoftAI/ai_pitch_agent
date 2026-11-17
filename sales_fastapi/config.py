@@ -134,6 +134,10 @@ class Settings(BaseSettings):
         default="mailto:kalikaenterprises@gmail.com?subject=Product%20enquiry",
         alias="OUTREACH_MEETING_URL",
     )
+    OUTREACH_FORM_BASE_URL: str = Field(
+        default="https://kalisoft-sales-19782268668.asia-south1.run.app",
+        alias="OUTREACH_FORM_BASE_URL",
+    )
 
     # --- ERP report sync (ERP-V1/Reports -> Dispatch/Orders) ---
     ERP_REPORT_PREFIX: str = Field(default="ERP-V1/Reports/", alias="ERP_REPORT_PREFIX")

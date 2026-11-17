@@ -13,8 +13,8 @@ from typing import Any
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from .config import settings
 from .models import ErpOrder, TallySale
+from .outreach_forms import get_form_links, with_contact_context
 from .templating import contact_context
 
 
@@ -95,6 +95,7 @@ def outreach_context(
     requirements: str = "",
     category: str = "",
     cache: dict[str, dict[str, str]] | None = None,
+    form_links: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Build a render context with contact, product, order and CTA-link values."""
     base = contact_context(contact)
@@ -128,11 +129,8 @@ def outreach_context(
         or _text(base.get("intent"))
         or "Kalika Enterprises packaging"
     )
-    review_url = _text(settings.OUTREACH_REVIEW_URL)
-    feedback_url = _text(settings.OUTREACH_FEEDBACK_URL)
-    meeting_url = _text(settings.OUTREACH_MEETING_URL)
-
-    return {
+    links = form_links if form_links is not None else get_form_links(db)
+    context = {
         **base,
         "order_number": order.get("order_number", ""),
         "order_no": order.get("order_number", ""),
@@ -142,8 +140,17 @@ def outreach_context(
         "product_name": product,
         "product": product,
         "product_or_solution": product,
-        "review_url": review_url,
-        "review_link": review_url,
-        "feedback_form_url": feedback_url,
-        "meeting_or_enquiry_url": meeting_url,
     }
+    review_url = with_contact_context(links.get("review_url", ""), context)
+    feedback_url = with_contact_context(links.get("feedback_url", ""), context)
+    meeting_url = with_contact_context(links.get("meeting_url", ""), context)
+    context.update(
+        {
+            "review_url": review_url,
+            "review_link": review_url,
+            "feedback_form_url": feedback_url,
+            "feedback_url": feedback_url,
+            "meeting_or_enquiry_url": meeting_url,
+        }
+    )
+    return context

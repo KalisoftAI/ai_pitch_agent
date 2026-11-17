@@ -4,6 +4,7 @@ import {
   Copy, Database, Edit2, ExternalLink, Eye, Film, FileDown, FileText, Link2, Mail, MapPin, MessageCircle, MessageSquarePlus, Mic, Package, PhoneCall, Plus, RefreshCw, Save, Search, Send, ShieldCheck,
   Sparkles, Target, Trash2, TrendingUp, Truck, UploadCloud, Users, Video, X,
 } from "lucide-react";
+import { filterByChannel, normalizeEmail, validEmail, validPhone } from "./validation";
 import { CampaignManager } from "./features/CampaignManager";
 
 const API = "/api";
@@ -1108,6 +1109,14 @@ const CHANNEL_VIDEOS = [
 ];
 
 const KALIKA_TEMPLATE_CATEGORIES = ["Products", "ERP", "Automation", "Sales", "Customer Feedback", "Instagram"];
+const OUTREACH_STEPS = [
+  ["template", "Template"],
+  ["preview", "Preview"],
+  ["contacts", "Contacts"],
+  ["channel", "Channel"],
+  ["review", "Review"],
+  ["insights", "Insights"],
+];
 const MISSING_LABELS = {
   contact_name: "Contact name", name: "Contact name", company: "Company",
   product_name: "Product", product: "Product", product_or_solution: "Product",
@@ -1532,7 +1541,7 @@ function cutoffDay(days) { const d = new Date(); d.setDate(d.getDate() - (Number
 
 export function MarketingCompanies({ onNotice }) {
   const [mTab, setMTab] = useState("dashboard");
-  const [sendStep, setSendStep] = useState("select");
+  const [sendStep, setSendStep] = useState("template");
   const [multiSelect, setMultiSelect] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [retrying, setRetrying] = useState(false);
@@ -1564,6 +1573,7 @@ export function MarketingCompanies({ onNotice }) {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [emailOnly, setEmailOnly] = useState(false);
   const [phoneOnly, setPhoneOnly] = useState(false);
+  const [channelFilter, setChannelFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("");
   const [funnelStageFilter, setFunnelStageFilter] = useState(() => {
     const saved = sessionStorage.getItem("marketing_funnel_filter") || "";
@@ -1603,9 +1613,10 @@ export function MarketingCompanies({ onNotice }) {
   const [activity, setActivity] = useState({});
   const [outreachAn, setOutreachAn] = useState(null);
   const [totalFiltered, setTotalFiltered] = useState(null);
-  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-  const validEmail = (v) => EMAIL_RE.test(String(v || "").trim());
-  const validPhone = (v) => String(v || "").replace(/\D/g, "").length >= 8;
+  const [formLinks, setFormLinks] = useState(null);
+  const [formLinksEdit, setFormLinksEdit] = useState({ feedback_url: "", review_url: "", meeting_url: "" });
+  const [formSubmissions, setFormSubmissions] = useState([]);
+  const [formsBusy, setFormsBusy] = useState(false);
 
   const loadActivity = async () => {
     try {
@@ -1631,6 +1642,7 @@ export function MarketingCompanies({ onNotice }) {
     if (dueFollowupsOnly) params.set("due_follow_up", "true");
     if (requirementsOnly) params.set("requirements_only", "true");
     if (sortBy) params.set("sort", sortBy);
+    if (channelFilter !== "all") params.set("channel", channelFilter);
     return params;
   };
 
@@ -1707,7 +1719,7 @@ export function MarketingCompanies({ onNotice }) {
     if (!rowEdit) return;
     setBusy(true);
     try {
-      const updated = await request(`/marketing-companies/${rowEdit.id}`, { method: "PATCH", body: JSON.stringify({ phone: rowEdit.phone, email: rowEdit.email, contact_name: rowEdit.contact_name, category: rowEdit.category, call_status: rowEdit.call_status, requirements: rowEdit.requirements, follow_up_date: rowEdit.follow_up_date }) });
+      const updated = await request(`/marketing-companies/${rowEdit.id}`, { method: "PATCH", body: JSON.stringify({ phone: rowEdit.phone, email: normalizeEmail(rowEdit.email), contact_name: rowEdit.contact_name, category: rowEdit.category, call_status: rowEdit.call_status, requirements: rowEdit.requirements, follow_up_date: rowEdit.follow_up_date }) });
       setRows((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
       selCache.current.set(updated.id, updated);
       setRowEdit(null); setExpandRow(updated.id);
@@ -1718,6 +1730,30 @@ export function MarketingCompanies({ onNotice }) {
   const loadImageTemplates = () => request("/media/image-templates")
     .then((d) => { const items = Array.isArray(d?.items) ? d.items : []; setImageTemplates(items); setAttachImage((prev) => prev || items[0]?.url || ""); })
     .catch(() => setImageTemplates([]));
+  const loadFormLinks = async () => {
+    try {
+      const links = await request("/outreach-forms/links");
+      setFormLinks(links);
+      setFormLinksEdit({ feedback_url: links.feedback_url || "", review_url: links.review_url || "", meeting_url: links.meeting_url || "" });
+    } catch { setFormLinks(null); }
+  };
+  const loadFormSubmissions = async () => {
+    try { setFormSubmissions(await request("/outreach-forms/submissions?limit=50")); }
+    catch { setFormSubmissions([]); }
+  };
+  const saveFormLinks = async () => {
+    setFormsBusy(true);
+    try {
+      const links = await request("/outreach-forms/links", { method: "PUT", body: JSON.stringify(formLinksEdit) });
+      setFormLinks(links);
+      onNotice({ type: "success", text: "Customer form links saved." });
+      await loadFormSubmissions();
+    } catch (e) { onNotice({ type: "error", text: e.message }); } finally { setFormsBusy(false); }
+  };
+  const openFormLink = (url) => {
+    if (/^https?:\/\//i.test(String(url || ""))) window.open(url, "_blank", "noopener");
+    else onNotice({ type: "error", text: "Enter a valid http(s) form URL first." });
+  };
   const uploadImageTemplate = async (ev) => {
     const file = ev.target.files?.[0];
     if (!file) return;
@@ -1733,7 +1769,16 @@ export function MarketingCompanies({ onNotice }) {
       if (data.url) setAttachImage(data.url);
     } catch (e) { onNotice({ type: "error", text: e.message }); } finally { setBusy(false); if (imgUploadRef.current) imgUploadRef.current.value = ""; }
   };
-  useEffect(() => { load(); loadActivity(); loadSources(); loadImageTemplates(); }, []);
+  useEffect(() => {
+    const initialise = async () => {
+      try {
+        const result = await request("/marketing-companies/normalize-emails", { method: "POST" });
+        if (result.normalized) onNotice({ type: "success", text: `${result.normalized} contact email(s) normalized. Syntax only; no verification status was changed.` });
+      } catch { }
+      await Promise.all([load(), loadActivity(), loadSources(), loadImageTemplates(), loadFormLinks(), loadFormSubmissions()]);
+    };
+    initialise();
+  }, []);
 
 
   const importKalikaLibrary = async (quiet = false) => {
@@ -1943,7 +1988,7 @@ export function MarketingCompanies({ onNotice }) {
   };
   useEffect(() => { loadCampaigns(); loadOutreachAn(); }, []);
   useEffect(() => { loadSegments(); }, []);
-  useEffect(() => { setPage(1); }, [query, categoryFilter, statusFilter, funnelStageFilter, salesProgressFilter, dueFollowupsOnly, requirementsOnly, emailOnly, phoneOnly, missingEmailOnly, missingPhoneOnly, limit, sortBy]);
+  useEffect(() => { setPage(1); }, [query, categoryFilter, statusFilter, funnelStageFilter, salesProgressFilter, dueFollowupsOnly, requirementsOnly, emailOnly, phoneOnly, channelFilter, missingEmailOnly, missingPhoneOnly, limit, sortBy]);
   const pickTemplate = (t) => { setSelTemplate(t); if (t) { setCChannel(t.channel || "email"); setCStrategy(t.strategy || "cold_outreach"); setComposeSubject(t.subject || ""); setComposeBody(t.body || ""); } else { setComposeSubject(""); setComposeBody(""); } };
 
   // Templates tab content (preview/edit/delete) folded in, minus the giant page heading
@@ -2191,11 +2236,12 @@ export function MarketingCompanies({ onNotice }) {
   const progressPct = cDetail && cDetail.total ? Math.round(((cDetail.sent_count + cDetail.failed_count) / cDetail.total) * 100) : 0;
   const openRate = cDetail && cDetail.sent_count ? Math.round(((cDetail.opened_count || 0) / cDetail.sent_count) * 100) : 0;
   const [selectedIds, setSelectedIds] = useState(() => new Set());
-  const allVisibleSelected = rows.length > 0 && rows.every((r) => selectedIds.has(r.id));
+  const visibleRows = channelFilter === "all" ? rows : filterByChannel(rows, channelFilter);
+  const allVisibleSelected = visibleRows.length > 0 && visibleRows.every((r) => selectedIds.has(r.id));
   const toggleSelectAll = (check) => setSelectedIds((prev) => {
     const next = new Set(prev);
-    const wantAll = check === undefined ? !rows.every((r) => next.has(r.id)) : check;
-    rows.forEach((r) => {
+    const wantAll = check === undefined ? !visibleRows.every((r) => next.has(r.id)) : check;
+    visibleRows.forEach((r) => {
       if (wantAll) { next.add(r.id); selCache.current.set(r.id, r); }
       else next.delete(r.id);
     });
@@ -2203,6 +2249,14 @@ export function MarketingCompanies({ onNotice }) {
   });
   const selectPage = () => toggleSelectAll(true);
   const clearSelection = () => { setSelectedIds(new Set()); selCache.current.clear(); };
+  const normalizeEmails = async () => {
+    setBusy(true);
+    try {
+      const result = await request("/marketing-companies/normalize-emails", { method: "POST" });
+      await load();
+      onNotice({ type: "success", text: result.normalized ? `${result.normalized} email(s) normalized. Syntax only; no verification status changed.` : "All contact emails are already normalized." });
+    } catch (e) { onNotice({ type: "error", text: e.message }); } finally { setBusy(false); }
+  };
   const [activeRow, setActiveRow] = useState(null);
   const toggleSelect = (id, row) => setSelectedIds((prev) => {
     const next = new Set(prev);
@@ -2221,12 +2275,17 @@ export function MarketingCompanies({ onNotice }) {
   const selectRowForSend = (row) => fillSendArea(row);
 
   useEffect(() => {
-    if (sendStep !== "configure" || !selTemplate || !selectedRows.length) {
+    if (!["preview", "channel", "review"].includes(sendStep) || !selTemplate) {
       setPersonalization(null);
       return undefined;
     }
-    const channel = cChannel === "both" ? "email" : cChannel;
-    const ids = selectedRows.map((row) => row.id);
+    const channel = ["both", "phone"].includes(cChannel) ? "email" : cChannel;
+    const sample = filterByChannel(rows, channel).slice(0, 1);
+    const ids = selectedRows.length ? selectedRows.map((row) => row.id) : sample.map((row) => row.id);
+    if (!ids.length) {
+      setPersonalization(null);
+      return undefined;
+    }
     const timer = setTimeout(async () => {
       setPersonalizationBusy(true);
       try {
@@ -2248,7 +2307,7 @@ export function MarketingCompanies({ onNotice }) {
       } finally { setPersonalizationBusy(false); }
     }, 350);
     return () => clearTimeout(timer);
-  }, [sendStep, selTemplate?.id, cChannel, selectedIds, composeSubject, composeBody]);
+  }, [sendStep, selTemplate?.id, cChannel, selectedIds, composeSubject, composeBody, rows.length]);
 
 
   // mobile long-press multi-select (movement threshold keeps normal scrolling intact)
@@ -2266,9 +2325,21 @@ export function MarketingCompanies({ onNotice }) {
   };
   const pressEnd = () => { if (pressRef.current.timer) { clearTimeout(pressRef.current.timer); pressRef.current.timer = null; } };
 
-  const continueToConfig = () => {
-    if (!selectedRows.length) return onNotice({ type: "error", text: "Select at least one contact to continue." });
-    setSendStep("configure");
+  const goToStep = (step) => {
+    if ((step === "preview" || step === "contacts" || step === "channel" || step === "review") && !selTemplate) {
+      return onNotice({ type: "error", text: "Choose a template first." });
+    }
+    if ((step === "channel" || step === "review") && !selectedRows.length) {
+      return onNotice({ type: "error", text: "Select at least one contact first." });
+    }
+    setSendStep(step);
+  };
+  const continueToConfig = () => goToStep("channel");
+  const chooseChannel = (channel) => {
+    setCChannel(channel);
+    if (selTemplate && (channel === "whatsapp" || channel === "both") && looksHtml(selTemplate.body || "")) {
+      onNotice({ type: "error", text: "This template contains HTML. Pick a WhatsApp text template or convert it in Preview." });
+    }
   };
   const retryCampaign = async () => {
     if (!cDetail) return; setRetrying(true);
@@ -2394,6 +2465,7 @@ export function MarketingCompanies({ onNotice }) {
     return acc;
   }, {});
   const previewById = new Map(((personalization && personalization.previews) || []).map((item) => [item.contact_id, item]));
+  const previewSourceRows = selectedRows.length ? selectedRows : filterByChannel(rows, cChannel).slice(0, 1);
   const setStudioChannel = (channel) => {
     setCChannel(channel);
     setTsCategory("");
@@ -2442,7 +2514,7 @@ export function MarketingCompanies({ onNotice }) {
     <div className="content outreach-compact">
       <div className="page-heading"><div><div className="section-kicker">OUTREACH / TEMPLATES / MARKETING</div><h2>Outreach &amp; marketing</h2><p className="muted">Channel-first send, curated templates, insights, videos, signals and events.</p></div>
         <div className="button-row"><button className="secondary-button" onClick={() => { load(); loadActivity(); loadCampaigns(); loadOutreachAn(); }}><RefreshCw size={16}/> Refresh</button><button className="secondary-button" onClick={syncFromGCS} disabled={busy}><Database size={16}/>{busy?"Syncing...":"Sync"}</button></div></div>
-      <div className="outreach-tabs" role="tablist">{[["dashboard","Dashboard"],["send","Send & templates"],["insights","Insights & stats"],["library","Videos & ERP"],["signals","Signal desk"],["events","Events"]].map(([id,label])=>(<button key={id} role="tab" aria-selected={mTab===id} className={`secondary-button ${mTab===id?"primary-button":""}`} onClick={()=>setMTab(id)}>{label}</button>))}</div>
+      <div className="outreach-tabs" role="tablist">{[["dashboard","Dashboard"],["send","Send & templates"],["insights","Insights & stats"],["forms","Forms & feedback"],["library","Videos & ERP"],["signals","Signal desk"],["events","Events"]].map(([id,label])=>(<button key={id} role="tab" aria-selected={mTab===id} className={`secondary-button ${mTab===id?"primary-button":""}`} onClick={()=>setMTab(id)}>{label}</button>))}</div>
       {mTab==="insights" && outreachAn && (() => { const oa=outreachAn; const t=oa.totals||{}; const maxDay=Math.max(1,...(oa.daily||[]).map(d=>Math.max(d.email_sent||0,d.whatsapp_sent||0,d.failed||0,1))); const mxC=Math.max(1,...(oa.by_campaign||[]).map(c=>Math.max(c.sent||0,1))); const mxG=Math.max(1,...(oa.by_group||[]).map(g=>Math.max((g.sent||0)+(g.failed||0),1))); const bar=(v,mx,c)=> <span className="mini-bar"><i style={{width:`${Math.max(3,Math.round(((v||0)/(mx||1))*100))}%`,background:c||undefined}} /></span>; return (
       <section className="panel studio-panel"><div className="panel-heading"><div><div className="section-kicker">OUTREACH ANALYTICS (REAL)</div><h3>Progress dashboard</h3></div><div className="button-row"><span className="muted">{oa.note}</span><button className="secondary-button" onClick={loadOutreachAn}><RefreshCw size={14}/> Refresh</button></div></div>
         <div className="marketing-stat-grid">
@@ -2485,8 +2557,33 @@ export function MarketingCompanies({ onNotice }) {
       {mTab==="library" && <MarketingLibrary onNotice={onNotice} orders={mOrders} videos={mVideos.length?mVideos:CHANNEL_VIDEOS} />}
       {mTab==="signals" && <MarketingSignals onNotice={onNotice} />}
       {mTab==="events" && <MarketingEvents onNotice={onNotice} />}
+      {mTab==="forms" && <section className="panel" aria-label="Customer feedback forms">
+        <div className="panel-heading"><div><div className="section-kicker">CUSTOMER FORMS</div><h2>Feedback and product reviews</h2><p className="muted">Edit the public links used in outreach templates and review submissions captured from customers.</p></div><button className="secondary-button" onClick={()=>{ loadFormLinks(); loadFormSubmissions(); }}><RefreshCw size={14}/> Refresh</button></div>
+        <div className="form-link-grid">
+          <label>Feedback form URL<input value={formLinksEdit.feedback_url} onChange={(e)=>setFormLinksEdit({...formLinksEdit, feedback_url:e.target.value})} aria-label="Feedback form URL" /></label>
+          <label>Product review URL<input value={formLinksEdit.review_url} onChange={(e)=>setFormLinksEdit({...formLinksEdit, review_url:e.target.value})} aria-label="Product review URL" /></label>
+          <label>Meeting / enquiry URL<input value={formLinksEdit.meeting_url} onChange={(e)=>setFormLinksEdit({...formLinksEdit, meeting_url:e.target.value})} aria-label="Meeting URL" /></label>
+        </div>
+        <div className="outreach-chip-row"><span className="contact-tag">Source: {formLinks?.source||"loading"}</span><span className="muted">Contact details are appended to http(s) links during personalization.</span></div>
+        <div className="button-row" style={{margin:"10px 0"}}>
+          <button className="primary-button" onClick={saveFormLinks} disabled={formsBusy}>{formsBusy?"Saving...":"Save links"}</button>
+          <button className="secondary-button" onClick={()=>openFormLink(formLinksEdit.feedback_url)}><ExternalLink size={13}/> Open feedback form</button>
+          <button className="secondary-button" onClick={()=>openFormLink(formLinksEdit.review_url)}><ExternalLink size={13}/> Open review form</button>
+        </div>
+        <details open className="marketing-breakdown"><summary>Submissions ({formSubmissions.length})</summary>
+          <div className="form-submission-list">{formSubmissions.map((item)=>(<div className="form-submission" key={item.id}><div className="outreach-chip-row"><span className="contact-tag">{item.category==="product_review"?"Review":"Feedback"}</span><span className="contact-tag">Rating {item.rating}</span><small className="muted">{String(item.created_at||"").slice(0,16).replace("T"," ")}</small></div><p>{item.message||"-"}</p></div>))}{!formSubmissions.length && <p className="muted">No customer form submissions yet.</p>}</div>
+        </details>
+      </section>}
       {mTab==="send" && <div className="outreach-flow">
-      {sendStep === "select" && <section className="panel" aria-label="Select contacts">
+      <nav className="workflow-stepper" aria-label="Outreach workflow">
+        {OUTREACH_STEPS.map(([key, label], index) => {
+          const current = OUTREACH_STEPS.findIndex(([item]) => item === sendStep);
+          return (<button type="button" key={key} className={`workflow-step ${sendStep===key?"active":""} ${index < current?"done":""}`} onClick={() => key === "insights" ? setMTab("insights") : goToStep(key)} aria-current={sendStep===key?"step":undefined}>
+            <span className="workflow-step-num">{index + 1}</span><span>{label}</span>
+          </button>);
+        })}
+      </nav>
+      {sendStep === "contacts" && <section className="panel" aria-label="Select contacts">
         <div className="panel-heading">
           <div><div className="section-kicker">STEP 1: SYNC &amp; SELECT CONTACTS</div><h2>Outreach recipients</h2>
             <p className="muted">Total {fmtNum(totalCompanies)} - Matching {totalFiltered != null ? fmtNum(totalFiltered) : "-"} - Showing {rows.length} - <b>{selectedRows.length} selected</b></p></div>
@@ -2538,6 +2635,13 @@ export function MarketingCompanies({ onNotice }) {
           <button className="link-button" onClick={()=>{setSortBy("updated");}}>Recent</button>
         </div>
 
+        <div className="channel-filter-row" role="group" aria-label="Filter contacts by channel">
+          <button className={`channel-filter-chip ${channelFilter==="all"?"active":""}`} onClick={()=>setChannelFilter("all")} aria-pressed={channelFilter==="all"}>All</button>
+          <button className={`channel-filter-chip ${channelFilter==="email"?"active":""}`} onClick={()=>setChannelFilter("email")} aria-pressed={channelFilter==="email"}><Mail size={13}/> Email</button>
+          <button className={`channel-filter-chip ${channelFilter==="whatsapp"?"active":""}`} onClick={()=>setChannelFilter("whatsapp")} aria-pressed={channelFilter==="whatsapp"}><MessageCircle size={13}/> WhatsApp</button>
+          <button className={`channel-filter-chip ${channelFilter==="phone"?"active":""}`} onClick={()=>setChannelFilter("phone")} aria-pressed={channelFilter==="phone"}><PhoneCall size={13}/> Phone</button>
+        </div>
+
         {/* contact groups (categories) as one-click chips */}
         {!!categories.length && <div className="group-chips" role="group" aria-label="Contact groups">
           <button className={`contact-tag group-chip ${!categoryFilter?"tick-selected":""}`} onClick={()=>setCategoryFilter("")}>All groups</button>
@@ -2545,10 +2649,12 @@ export function MarketingCompanies({ onNotice }) {
         </div>}
 
         <div className="select-toolbar" role="group" aria-label="Selection controls">
-          <button className="secondary-button" onClick={()=>toggleSelectAll(true)} disabled={!rows.length}><Check size={14}/> Select page</button>
+          <span className="selection-count" aria-live="polite"><Check size={14}/> Selected: {selectedRows.length}</span>
+          <button className="secondary-button" onClick={()=>toggleSelectAll(true)} disabled={!rows.length}><Check size={14}/> Select all on page</button>
           <button className="secondary-button" onClick={selectMatching} disabled={!totalFiltered}><Check size={14}/> Select all matching ({totalFiltered != null ? fmtNum(totalFiltered) : 0})</button>
-          <button className="secondary-button" onClick={clearSelection} disabled={!selectedRows.length}>Clear ({selectedRows.length})</button>
+          <button className="secondary-button" onClick={clearSelection} disabled={!selectedRows.length}>Clear selection</button>
           <button className="secondary-button" onClick={()=>{ const removed=[...selectedIds].filter((id)=>dupSet&&dupSet.has(id)); if (removed.length) { setSelectedIds((prev)=>{const n=new Set(prev); removed.forEach((id)=>n.delete(id)); return n;}); removed.forEach((id)=>selCache.current.delete(id)); } onNotice({ type: "success", text: removed.length ? `Removed ${removed.length} duplicate(s) from selection (kept first record).` : "No duplicates in selection - run Check duplicates first." }); }} disabled={!selectedRows.length || !dupSet}>Remove dupes</button>
+          <button className="secondary-button" onClick={normalizeEmails} disabled={busy}><RefreshCw size={13}/> Normalize emails</button>
           <button className="secondary-button" onClick={exportSelectedCsv} disabled={!selectedRows.length}><FileDown size={13}/> Export CSV</button>
           {multiSelect && <span className="contact-tag">Multi-select on</span>}
           <button className="primary-button" onClick={continueToConfig} disabled={!selectedRows.length} style={{marginLeft:"auto"}}>Continue ({selectedRows.length})</button>
@@ -2565,7 +2671,7 @@ export function MarketingCompanies({ onNotice }) {
             <th aria-label="Select all visible"><input type="checkbox" checked={allVisibleSelected} onChange={(e)=>toggleSelectAll(e.target.checked)} /></th>
             <th>Contact</th><th>Company</th><th>Designation</th><th>Email</th><th>Mobile</th><th>Group / Status</th><th>Channels</th><th>Actions</th>
           </tr></thead><tbody>
-            {rows.map((row)=>{ const act=activity[row.id]; const waText=quickWaText(row); const emText=quickEmailText(row); const dups=dupSet; return (
+            {visibleRows.map((row)=>{ const act=activity[row.id]; const waText=quickWaText(row); const emText=quickEmailText(row); const dups=dupSet; return (
               <React.Fragment key={row.id}>
               <tr className={`${selectedIds.has(row.id)?"tick-selected":""} ${expandRow===row.id?"row-open":""}`}>
                 <td><input type="checkbox" checked={selectedIds.has(row.id)} onChange={()=>toggleSelect(row.id,row)} aria-label={`Select ${row.company}`} /></td>
@@ -2575,11 +2681,11 @@ export function MarketingCompanies({ onNotice }) {
                 <td><small>{row.email||"Not Available"}</small></td>
                 <td><small>{row.phone||"Not Available"}</small></td>
                 <td><small>{row.category||"-"} / {row.call_status||"pending"}</small><br/>{act && <span className="activity-badges"><span className="contact-tag">Sent {act.sent}</span><span className="contact-tag">Viewed {act.opened||0}</span></span>}</td>
-                <td><span className="channel-flags"><span className={`ch-flag ${row.email&&validEmail(row.email)?"ok":""}`} title="Email">E</span><span className={`ch-flag ${row.phone&&validPhone(row.phone)?"ok":""}`} title="WhatsApp">W</span></span></td>
+                <td><span className="channel-flags"><span className={`ch-flag ${row.email&&validEmail(row.email)?"ok":""}`} title="Valid email" aria-label="Valid email"><Mail size={11}/></span><span className={`ch-flag ${row.phone&&validPhone(row.phone)?"ok":""}`} title="WhatsApp-ready mobile" aria-label="WhatsApp-ready mobile"><MessageCircle size={11}/></span></span></td>
                 <td><div className="reach-actions">
                   {row.phone && validPhone(row.phone) && waText ? <a className="secondary-button" href={whatsappHref(waText,row.phone)} target="_blank" rel="noreferrer">Msg</a> : row.phone && validPhone(row.phone) ? <button className="secondary-button" onClick={()=>{ setCChannel("whatsapp"); setShowTplPicker(true); }} title="Selected template is HTML - choose/create a WhatsApp text">WA text?</button> : row.phone ? <span className="contact-tag" title="Invalid mobile number">Bad mobile</span> : null} {waText && <button type="button" className="secondary-button" onClick={()=>copyText(waText)} title="Copy personalized WhatsApp message"><Copy size={12}/> Copy</button>}
                   {row.email && validEmail(row.email) ? <a className="secondary-button" href={`mailto:${row.email}?subject=${encodeURIComponent(resolveVars(selTemplate?.subject||"Kalika Enterprises", row))}&body=${encodeURIComponent(looksHtml(emText) ? htmlToText(emText) : emText)}`}>Mail</a> : row.email ? <span className="contact-tag" title="Invalid email address">Bad email</span> : null}
-                  {row.phone && <a className="secondary-button" href={`tel:${row.phone}`}>Call</a>}
+                  {row.phone && validPhone(row.phone) && <a className="secondary-button" href={`tel:${row.phone}`} title="Call mobile"><PhoneCall size={12}/> Call</a>}
                 </div></td>
               </tr>
               {expandRow===row.id && <tr className="row-detail"><td colSpan={9}>
@@ -2605,7 +2711,7 @@ export function MarketingCompanies({ onNotice }) {
                 )}
               </td></tr>}
               </React.Fragment>); })}
-            {!rows.length && <tr><td colSpan={9}><div className="empty-state"><Users size={22}/><p>No contacts. Use "Sync all from GCS".</p></div></td></tr>}
+            {!visibleRows.length && <tr><td colSpan={9}><div className="empty-state"><Users size={22}/><p>No contacts for this channel. Try another filter or sync from GCS.</p></div></td></tr>}
           </tbody></table>
           {/* pagination */}
           <div className="pagination-row">
@@ -2617,20 +2723,20 @@ export function MarketingCompanies({ onNotice }) {
 
         {/* Mobile: cards */}
         <div className="contact-cards" aria-label="Contact list (cards)">
-          {rows.map((row)=>{ const act=activity[row.id]; const waText=quickWaText(row); const emText=quickEmailText(row); return (
+          {visibleRows.map((row)=>{ const act=activity[row.id]; const waText=quickWaText(row); const emText=quickEmailText(row); return (
             <div key={row.id} className={`contact-card ${selectedIds.has(row.id)?"tick-selected":""}`} onTouchStart={(ev)=>pressStart(row,ev)} onTouchMove={pressMove} onTouchEnd={pressEnd} onTouchCancel={pressEnd} onClick={()=>{ if(multiSelect) toggleSelect(row.id,row); }} role="button" tabIndex={0} aria-pressed={selectedIds.has(row.id)} onKeyDown={(e)=>{ if(e.key===" "||e.key==="Enter"){ e.preventDefault(); toggleSelect(row.id,row); } }}>
               <label className="contact-card-check" onClick={(e)=>e.stopPropagation()}>
                 <input type="checkbox" checked={selectedIds.has(row.id)} onChange={()=>toggleSelect(row.id,row)} aria-label={`Select ${row.company}`} />
               </label>
               <div className="contact-card-body">
                 <b>{row.contact_name||"Not Available"} - {row.company}</b>
-                <small>Email: {row.email||"Not Available"} {row.email&&validEmail(row.email)?<span className="ch-flag ok">E</span>:<span className="ch-flag">E</span>} - Mobile: {row.phone||"Not Available"} {row.phone&&validPhone(row.phone)?<span className="ch-flag ok">W</span>:<span className="ch-flag">W</span>}</small>
+                <small>Email: {row.email||"Not Available"} <span className={`ch-flag ${row.email&&validEmail(row.email)?"ok":""}`} title="Valid email"><Mail size={11}/></span> - Mobile: {row.phone||"Not Available"} <span className={`ch-flag ${row.phone&&validPhone(row.phone)?"ok":""}`} title="WhatsApp-ready mobile"><MessageCircle size={11}/></span></small>
                 <small>Designation: {row.designation||row.purchase_contact_role||"-"} - Group: {row.category||"-"} - Status: {row.call_status||"pending"}</small>
                 {act && <div className="activity-badges"><span className="contact-tag">Sent {act.sent}</span><span className="contact-tag">Viewed {act.opened||0}</span></div>}
                 <div className="reach-actions" onClick={(e)=>e.stopPropagation()}>
                   {row.phone && validPhone(row.phone) && waText ? <a className="secondary-button" href={whatsappHref(waText,row.phone)} target="_blank" rel="noreferrer">Msg</a> : row.phone && validPhone(row.phone) ? <button className="secondary-button" onClick={()=>{ setCChannel("whatsapp"); setShowTplPicker(true); }}>WA text?</button> : null} {waText && <button type="button" className="secondary-button" onClick={()=>copyText(waText)}><Copy size={12}/> Copy</button>}
                   {row.email && validEmail(row.email) ? <a className="secondary-button" href={`mailto:${row.email}?subject=${encodeURIComponent(resolveVars(selTemplate?.subject||"Kalika Enterprises", row))}&body=${encodeURIComponent(looksHtml(emText) ? htmlToText(emText) : emText)}`}>Mail</a> : null}
-                  {row.phone && <a className="secondary-button" href={`tel:${row.phone}`}>Call</a>}
+                  {row.phone && validPhone(row.phone) && <a className="secondary-button" href={`tel:${row.phone}`} title="Call mobile"><PhoneCall size={12}/> Call</a>}
                   <button className="secondary-button" onClick={()=>setExpandRow(expandRow===row.id?null:row.id)}>{expandRow===row.id?"Hide":"Details"}</button>
                 </div>
                 {expandRow===row.id && <div className="row-detail-grid" onClick={(e)=>e.stopPropagation()}>
@@ -2646,7 +2752,7 @@ export function MarketingCompanies({ onNotice }) {
                 </div>}
               </div>
             </div>); })}
-          {!rows.length && <div className="empty-state"><Users size={22}/><p>No contacts found.</p></div>}
+          {!visibleRows.length && <div className="empty-state"><Users size={22}/><p>No contacts for this channel.</p></div>}
         </div>
         {selectedRows.length>0 && <div className="sticky-selection-summary desktop-only" aria-label="Selection summary">
           <b>{selectedRows.length} selected</b>
@@ -2657,24 +2763,33 @@ export function MarketingCompanies({ onNotice }) {
         <p className="mobile-hint muted">Tip: long-press a contact to start multi-select; tap the checkbox on any device.</p>
       </section>}
 
-      {sendStep === "configure" && <section className="panel" aria-label="Configure campaign">
+      {["template", "preview", "channel", "review"].includes(sendStep) && <section className="panel" aria-label="Configure campaign">
         <div className="panel-heading">
-          <div><div className="section-kicker">STEP 2: CONFIGURE CAMPAIGN</div><h2>Campaign setup</h2></div>
-          <button className="secondary-button" onClick={()=>setSendStep("select")}><Search size={14}/> Back to contacts</button>
+          <div><div className="section-kicker">STEP {OUTREACH_STEPS.findIndex(([key])=>key===sendStep)+1}: {sendStep.toUpperCase()}</div><h2>{sendStep==="template"?"Choose a template":sendStep==="preview"?"Preview & personalize":sendStep==="channel"?"Choose a channel":"Review & send"}</h2></div>
+          <button className="secondary-button" onClick={()=>goToStep("template")}><Search size={14}/> Back to templates</button>
         </div>
+        {sendStep === "channel" && <>
         <div className="form-row">
           <label>Campaign name<input className="campaign-name" value={cName} onChange={(e)=>setCName(e.target.value)} aria-label="Campaign name" /></label>
-          <label>Mode<select value={cChannel} onChange={(e)=>{setCChannel(e.target.value);setSelTemplate(null);setComposeBody("");setComposeSubject("");}} aria-label="Channel"><option value="email">Email</option><option value="whatsapp">WhatsApp</option><option value="both">Both (email + WhatsApp)</option></select></label>
           <label className="switch"><input type="checkbox" checked={useAi} onChange={(e)=>setUseAi(e.target.checked)} /> Personalize with AI</label>
+        </div>
+        <div className="channel-tiles" role="radiogroup" aria-label="Send channel">
+          {[["email","Email","HTML design",Mail],["whatsapp","WhatsApp","Text + emojis",MessageCircle],["both","Both","Email + WhatsApp",Send]].map(([value,label,detail,Icon])=>(
+            <button type="button" key={value} role="radio" aria-checked={cChannel===value} className={`channel-tile ${cChannel===value?"active":""}`} onClick={()=>chooseChannel(value)}>
+              <Icon size={18}/><b>{label}</b><small>{detail}</small>
+            </button>
+          ))}
         </div>
         <div className="outreach-chip-row">
           <span className="outreach-chip"><b>Recipients:</b> {selectedRows.length}</span>
-          <span className="outreach-chip">{selectedEmail} with email</span>
-          <span className="outreach-chip">{selectedPhone} with phone</span>
+          <span className="outreach-chip"><Mail size={12}/> {selectedEmail} with email</span>
+          <span className="outreach-chip"><MessageCircle size={12}/> {selectedPhone} with phone</span>
           <span className="outreach-chip"><b>Will send:</b> {selectedForChannel || selectedRows.length}</span>
           {(() => { const badEmails = selectedRows.filter((r)=>r.email && !validEmail(r.email)).length; const badPhones = selectedRows.filter((r)=>r.phone && !validPhone(r.phone)).length; return (badEmails + badPhones) > 0 ? <span className="outreach-chip" style={{"background":"#fee2e2"}}>Excluded invalid: {badEmails} email / {badPhones} mobile</span> : null; })()}
         </div>
+        </>}
 
+        {sendStep === "template" && <>
         <section className="template-studio" aria-label="Template library">
           <div className="ts-head">
             <div>
@@ -2709,7 +2824,12 @@ export function MarketingCompanies({ onNotice }) {
             {!studioTemplates.length && <div className="empty-state"><FileText size={22}/><p>No templates in this category.</p><small>Clear the search or import the Kalika library.</small></div>}
           </div>
         </section>
+        <div className="stage-actions">
+          <button className="primary-button" onClick={()=>goToStep("preview")} disabled={!selTemplate}><Eye size={14}/> Continue to preview</button>
+        </div>
+        </>}
 
+        {sendStep === "channel" && <>
         <div className="button-row" style={{margin:"8px 0"}}>
           <button className="secondary-button" onClick={()=>setShowTplPicker(true)}><FileText size={14}/> Advanced picker</button>
           <button className="secondary-button" onClick={()=>imgUploadRef.current&&imgUploadRef.current.click()} disabled={busy}><UploadCloud size={14}/> Image</button>
@@ -2717,11 +2837,12 @@ export function MarketingCompanies({ onNotice }) {
         </div>
         <input ref={imgUploadRef} type="file" accept="image/*" hidden onChange={uploadImageTemplate} />
         <div className="outreach-chip-row">
-          <span className="outreach-chip">Template: {selTemplate?.name || <b>none</b>}</span>
+          <span className="outreach-chip"><FileText size={12}/> Template: {selTemplate?.name || <b>none</b>}</span>
           <span className="outreach-chip">Image: {attachImage ? "attached" : "none"}</span>
           <span className="outreach-chip">Video: {attachVideo ? "attached" : "none"}</span>
         </div>
-        {selTemplate && selectedRows.length > 0 && (
+        </>}
+        {sendStep === "preview" && selTemplate && (
           <div className={`personalization-check ${personalization?.recipients_with_missing ? "warn" : "ok"}`} aria-live="polite">
             <b>{personalizationBusy ? "Checking personalization..." : personalization?.recipients_with_missing ? `${personalization.recipients_with_missing} of ${personalization.total} recipient(s) need attention` : "Personalization ready"}</b>
             <div className="outreach-chip-row">
@@ -2731,6 +2852,7 @@ export function MarketingCompanies({ onNotice }) {
             <small className="muted">Values are auto-filled per recipient from the contact record and synced Tally/ERP orders. Nothing is typed by hand.</small>
           </div>
         )}
+        {sendStep === "channel" && <>
         <div className="configure-sub">
           <b className="sub-label">Poster</b>
           <div className="image-strip">
@@ -2742,7 +2864,12 @@ export function MarketingCompanies({ onNotice }) {
             {[...CHANNEL_VIDEOS, ...(defaultVideos||[]).map((v)=>({ title: v.name||v.title, link: v.url||v.link }))].map((v,i)=>(<button type="button" key={`${v.link}-${i}`} className={`video-chip ${attachVideo===v.link?"tick-selected":""}`} onClick={()=>setAttachVideo(attachVideo===v.link?"":v.link)}><Video size={13}/> <span>{v.title}</span></button>))}
           </div>
         </div>
-        {selTemplate && <div className="composer">
+        <div className="stage-actions">
+          <button className="secondary-button" onClick={()=>goToStep("contacts")}>Back to contacts</button>
+          <button className="primary-button" onClick={()=>goToStep("review")}><Check size={14}/> Continue to review</button>
+        </div>
+        </>}
+        {sendStep === "preview" && selTemplate && <div className="composer">
           <b className="sub-label">Message (edit before sending)</b>
           {cChannel !== "whatsapp" && <label className="field"><span>Subject</span><input value={composeSubject} onChange={(e)=>setComposeSubject(e.target.value)} aria-label="Email subject" /></label>}
           {(cChannel === "whatsapp" || cChannel === "both") && <small className="muted">WhatsApp formatting: *bold*, _italic_, ~strikethrough~, emojis and Instagram links are preserved.</small>}
@@ -2762,7 +2889,7 @@ export function MarketingCompanies({ onNotice }) {
             <input ref={catalogUploadRef} type="file" accept="application/pdf" hidden onChange={uploadCatalog} />
           </div>
           {(() => {
-            const pv = selectedRows.length ? selectedRows[Math.min(previewIdx, selectedRows.length - 1)] : null;
+            const pv = previewSourceRows.length ? previewSourceRows[Math.min(previewIdx, previewSourceRows.length - 1)] : null;
             const serverPv = pv ? previewById.get(pv.id) : null;
             const pvTo = serverPv?.to_address || (pv ? (cChannel === "whatsapp" ? (pv.phone || "no mobile") : (pv.email || "no email")) : "");
             const pvSubj = serverPv ? serverPv.subject : resolveVars(composeSubject, pv || {});
@@ -2775,9 +2902,9 @@ export function MarketingCompanies({ onNotice }) {
               <div className="preview-head">
                 <b className="sub-label">Preview (personalized)</b>
                 <div className="button-row">
-                  <button className="secondary-button" disabled={selectedRows.length <= 1} onClick={() => setPreviewIdx((i) => Math.max(0, i - 1))}>Prev</button>
-                  <span className="contact-tag">{selectedRows.length ? `${Math.min(previewIdx, selectedRows.length - 1) + 1} / ${selectedRows.length}` : "0 / 0"}</span>
-                  <button className="secondary-button" disabled={selectedRows.length <= 1} onClick={() => setPreviewIdx((i) => Math.min(selectedRows.length - 1, i + 1))}>Next</button>
+                  <button className="secondary-button" disabled={previewSourceRows.length <= 1} onClick={() => setPreviewIdx((i) => Math.max(0, i - 1))}>Prev</button>
+                  <span className="contact-tag">{previewSourceRows.length ? `${Math.min(previewIdx, previewSourceRows.length - 1) + 1} / ${previewSourceRows.length}` : "sample only"}</span>
+                  <button className="secondary-button" disabled={previewSourceRows.length <= 1} onClick={() => setPreviewIdx((i) => Math.min(previewSourceRows.length - 1, i + 1))}>Next</button>
                 </div>
               </div>
               {pv && <div className="preview-meta">
@@ -2802,21 +2929,41 @@ export function MarketingCompanies({ onNotice }) {
               )}
             </>);
           })()}
-        </div>}
-        <details className="marketing-breakdown" open><summary>Preview recipients ({selectedRows.length})</summary>
-          <div className="preview-list">{selectedRows.slice(0,60).map((r)=>{ const rp = previewById.get(r.id); const rmissing = rp?.missing || []; return (<div className="preview-item" key={r.id}><b>{rp?.contact_name || r.contact_name||r.company}</b><small>{r.email||"No email"}{r.phone?` - ${r.phone}`:""}</small>{rmissing.length > 0 && <small className="missing-note">Missing: {rmissing.slice(0,4).map((key)=>MISSING_LABELS[key]||key).join(", ")}</small>}{rp && !rp.channel_ok && <small className="missing-note">No valid {cChannel === "whatsapp" ? "mobile" : "email"}</small>}</div>); })}{selectedRows.length>60 && <small className="muted">+{selectedRows.length-60} more</small>}</div>
-        </details>
-        {selTemplate && <details className="marketing-breakdown"><summary>Preview message</summary><div className="studio-text">{(fillMsg(looksHtml(effectiveBody) ? htmlToText(effectiveBody) : effectiveBody, selectedRows[0]||{})||"").slice(0,500)}</div></details>}
-        <div className="send-actions">
-          <button className="primary-button" onClick={sendNow} disabled={cBusy || !selTemplate || waBodyHtml} title={waBodyHtml ? "WhatsApp cannot send HTML - convert the message first" : "Send now"}><Send size={15}/> Send now</button>
-          <button className="secondary-button" onClick={scheduleReview} disabled={cBusy || !selTemplate || waBodyHtml}>Send for review</button>
-          {cChannel==="both" && <small className="muted">Creates an email + a WhatsApp campaign.</small>}
+        <div className="stage-actions">
+          <button className="secondary-button" onClick={()=>goToStep("template")}>Back to templates</button>
+          <button className="primary-button" onClick={()=>goToStep("contacts")}><Users size={14}/> Continue to contacts</button>
         </div>
+        </div>}
+        {sendStep === "preview" && <>
+          <details className="marketing-breakdown" open><summary>Preview recipients ({previewSourceRows.length})</summary>
+            <div className="preview-list">{previewSourceRows.slice(0,8).map((r)=>{ const rp = previewById.get(r.id); const rmissing = rp?.missing || []; return (<div className="preview-item" key={r.id}><b>{rp?.contact_name || r.contact_name||r.company}</b><small>{r.email||"No email"}{r.phone?` - ${r.phone}`:""}</small>{rmissing.length > 0 && <small className="missing-note">Missing: {rmissing.slice(0,4).map((key)=>MISSING_LABELS[key]||key).join(", ")}</small>}{rp && !rp.channel_ok && <small className="missing-note">No valid {cChannel === "whatsapp" ? "mobile" : "email"}</small>}</div>); })}</div>
+          </details>
+          <details className="marketing-breakdown"><summary>Preview message</summary><div className="studio-text">{(fillMsg(looksHtml(effectiveBody) ? htmlToText(effectiveBody) : effectiveBody, previewSourceRows[0]||{})||"").slice(0,500)}</div></details>
+        </>}
+        {sendStep === "review" && <>
+          <div className="review-summary">
+            <span className="outreach-chip"><FileText size={12}/> Template: <b>{selTemplate?.name||"none"}</b></span>
+            <span className="outreach-chip"><Send size={12}/> Channel: <b>{cChannel}</b></span>
+            <span className="outreach-chip"><Users size={12}/> Contacts: <b>{selectedRows.length}</b></span>
+            <span className="outreach-chip"><Check size={12}/> Eligible: <b>{selectedForChannel || selectedRows.length}</b></span>
+            <span className="outreach-chip"><Mail size={12}/> Email-ready: <b>{selectedEmail}</b></span>
+            <span className="outreach-chip"><MessageCircle size={12}/> WhatsApp-ready: <b>{selectedPhone}</b></span>
+          </div>
+          {personalization?.recipients_with_missing ? <div className="personalization-check warn" aria-live="polite"><b>{personalization.recipients_with_missing} recipient(s) have missing values</b><small className="muted">Safe fallbacks will be used. Review the preview before sending.</small></div> : <div className="personalization-check ok" aria-live="polite"><b>Personalization ready</b></div>}
+          {waBodyHtml && <div className="compat-panel" role="alert"><b>WhatsApp cannot send HTML</b><p className="muted">Go back to Preview and convert this message to plain text, or choose a WhatsApp text template.</p></div>}
+          {selectedRows.length>0 && <div className="selected-names" aria-label="Final recipients">{selectedRows.slice(0,40).map((r)=>(<span className="contact-tag" key={r.id}>{r.contact_name||r.company}</span>))}{selectedRows.length>40 && <small className="muted">+{selectedRows.length-40} more</small>}</div>}
+          <div className="send-actions">
+            <button className="secondary-button" onClick={()=>goToStep("channel")}>Back to channel</button>
+            <button className="secondary-button" onClick={scheduleReview} disabled={cBusy || !selTemplate || waBodyHtml || !selectedRows.length}>Send for review</button>
+            <button className="primary-button" onClick={sendNow} disabled={cBusy || !selTemplate || waBodyHtml || !selectedRows.length} title={waBodyHtml ? "WhatsApp cannot send HTML - convert the message first" : "Send now"}><Send size={15}/> Send now</button>
+            {cChannel==="both" && <small className="muted">Creates an email + a WhatsApp campaign.</small>}
+          </div>
+        </>}
       </section>}
 
       {sendStep === "progress" && <section className="panel" aria-label="Campaign progress">
-        <div className="panel-heading"><div><div className="section-kicker">STEP 3: SENDING PROGRESS</div><h2>{cDetail ? cDetail.name : "Campaign"}</h2></div>
-          <div className="button-row"><button className="secondary-button" onClick={()=>setSendStep("select")}>New campaign</button>
+        <div className="panel-heading"><div><div className="section-kicker">SENDING PROGRESS</div><h2>{cDetail ? cDetail.name : "Campaign"}</h2></div>
+          <div className="button-row"><button className="secondary-button" onClick={()=>setSendStep("template")}>New campaign</button>
           {cDetail && <><button className="secondary-button" onClick={approveCampaign} disabled={cBusy||cDetail.status!=="pending_review"}>Approve</button><button className="primary-button" onClick={sendCampaign} disabled={cBusy||cDetail.status!=="approved"}><Send size={14}/> Send approved</button><button className="icon-button" onClick={()=>openCampaign(cDetail.id)} title="Refresh progress"><RefreshCw size={15}/></button></>}</div></div>
         {cDetail ? (<>
           <div aria-live="polite" className="visually-hidden">Sending {cDetail.sent_count} of {cDetail.total}, {cDetail.failed_count} failed, {cDetail.opened_count||0} viewed.</div>
@@ -2834,7 +2981,7 @@ export function MarketingCompanies({ onNotice }) {
       </section>}
 
       {/* sticky mobile action bar */}
-      {sendStep === "select" && selectedRows.length>0 && (
+      {sendStep === "contacts" && selectedRows.length>0 && (
         <div className="mobile-actionbar" role="region" aria-label="Selected contacts">
           <span><b>{selectedRows.length}</b> selected - {selectedEmail} email, {selectedPhone} phone</span>
           <div className="button-row">

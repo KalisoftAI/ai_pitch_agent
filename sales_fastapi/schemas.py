@@ -314,6 +314,59 @@ class TemplatePreviewIn(BaseModel):
     limit: int = Field(default=50, ge=1, le=200)
 
 
+class OutreachFormLinksIn(BaseModel):
+    feedback_url: Optional[str] = Field(default=None, max_length=500)
+    review_url: Optional[str] = Field(default=None, max_length=500)
+    meeting_url: Optional[str] = Field(default=None, max_length=500)
+
+    @field_validator("feedback_url", "review_url", "meeting_url")
+    @classmethod
+    def _clean_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        if not cleaned:
+            return None
+        if not cleaned.lower().startswith(("http://", "https://", "mailto:")):
+            raise ValueError("Link must start with http://, https:// or mailto:")
+        return cleaned
+
+
+class OutreachFormLinksOut(BaseModel):
+    feedback_url: str
+    review_url: str
+    meeting_url: str
+    source: str = "default"
+
+
+class CustomerFeedbackIn(BaseModel):
+    name: str = Field(default="", max_length=120)
+    email: str = Field(default="", max_length=320)
+    phone: str = Field(default="", max_length=60)
+    company: str = Field(default="", max_length=255)
+    order_number: str = Field(default="", max_length=120)
+    product_name: str = Field(default="", max_length=255)
+    rating: int = Field(default=5, ge=1, le=5)
+    message: str = Field(..., min_length=1, max_length=2000)
+
+
+class ProductReviewIn(BaseModel):
+    name: str = Field(default="", max_length=120)
+    email: str = Field(default="", max_length=320)
+    phone: str = Field(default="", max_length=60)
+    company: str = Field(default="", max_length=255)
+    product_name: str = Field(default="", max_length=255)
+    rating: int = Field(default=5, ge=1, le=5)
+    title: str = Field(default="", max_length=160)
+    message: str = Field(..., min_length=1, max_length=2000)
+
+
+class CustomerFormOut(BaseModel):
+    id: int
+    category: str
+    created_at: datetime
+
+
 class TemplateOut(TemplateBase):
     model_config = ConfigDict(from_attributes=True)
 

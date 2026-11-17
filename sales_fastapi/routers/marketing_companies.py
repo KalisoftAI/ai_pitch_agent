@@ -28,9 +28,10 @@ from fastapi import (
     UploadFile,
 )
 from pydantic import BaseModel, Field
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
+from ..contact_validation import normalize_email, valid_email, valid_phone
 from ..database import get_db
 from ..governance.audit import log_event
 from ..models import Campaign, CampaignMessage, IntegrationSetting, MarketingCompany, User
@@ -287,7 +288,7 @@ def _upsert_rows(
                 company_key=company_key,
                 contact_name=_clip(row.get("contact_name"), 255),
                 phone=_clip(row.get("phone"), 255),
-                email=_clip(row.get("email"), 320),
+                email=normalize_email(_clip(row.get("email"), 320))[:320],
                 category=_clip(row.get("category"), 255),
                 call_status=_clip(row.get("call_status"), 255),
                 requirements=row.get("requirements") or "",
@@ -312,6 +313,8 @@ def _upsert_rows(
             "requirements",
         ):
             new_value = _clip(row.get(field), limits[field])
+            if field == "email":
+                new_value = normalize_email(new_value)[: limits[field]]
             if (
                 new_value
                 and (refresh_source_values or not getattr(target, field))
@@ -359,6 +362,7 @@ def _apply_filters(
     missing_email: bool = False,
     missing_phone: bool = False,
     ids: str | None = None,
+    channel: str | None = None,
 ):
     """Shared filter builder so list/count/ids stay perfectly in sync."""
     if q:
@@ -393,12 +397,39 @@ def _apply_filters(
         query = query.filter(MarketingCompany.email == "")
     if missing_phone:
         query = query.filter(MarketingCompany.phone == "")
+    if channel == "email":
+        query = query.filter(
+            MarketingCompany.email != "",
+            MarketingCompany.email.like("%@%"),
+            MarketingCompany.email.like("%.%"),
+            ~MarketingCompany.email.contains(" "),
+            ~MarketingCompany.email.contains("\n"),
+        )
+    elif channel in {"whatsapp", "phone"}:
+        query = query.filter(MarketingCompany.phone != "", func.length(MarketingCompany.phone) >= 8)
+    elif channel == "both":
+        query = query.filter(
+            or_(
+                func.length(MarketingCompany.phone) >= 8,
+                MarketingCompany.email.like("%@%"),
+            )
+        )
     if ids:
         wanted = {int(part) for part in ids.split(",") if part.strip().isdigit()}
         if not wanted:
             return query.filter(MarketingCompany.id == -1)
         query = query.filter(MarketingCompany.id.in_(wanted))
     return query
+
+
+def _channel_match(row: MarketingCompany, channel: str | None) -> bool:
+    if channel == "email":
+        return valid_email(row.email)
+    if channel in {"whatsapp", "phone"}:
+        return valid_phone(row.phone)
+    if channel == "both":
+        return valid_email(row.email) or valid_phone(row.phone)
+    return True
 
 
 def _order_for(sort: str):
@@ -429,6 +460,7 @@ def list_marketing_companies(
     missing_email: bool = False,
     missing_phone: bool = False,
     ids: str | None = Query(default=None, description="Comma-separated company ids"),
+    channel: str | None = Query(default=None, description="email, whatsapp, phone or both"),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -446,7 +478,11 @@ def list_marketing_companies(
         missing_email=missing_email,
         missing_phone=missing_phone,
         ids=ids,
+        channel=channel,
     )
+    if channel:
+        rows = [row for row in query.order_by(_order_for(sort)).all() if _channel_match(row, channel)]
+        return rows[offset : offset + limit]
     return query.order_by(_order_for(sort)).offset(offset).limit(limit).all()
 
 
@@ -463,12 +499,13 @@ def count_marketing_companies(
     has_email: bool = False,
     missing_email: bool = False,
     missing_phone: bool = False,
+    channel: str | None = Query(default=None, description="email, whatsapp, phone or both"),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Filter-aware total (the cached /stats endpoint is global, not filtered)."""
     query = _apply_filters(
-        db.query(MarketingCompany.id).filter(MarketingCompany.user_id == user.id),
+        db.query(MarketingCompany).filter(MarketingCompany.user_id == user.id),
         q=q,
         category=category,
         call_status=call_status,
@@ -480,8 +517,10 @@ def count_marketing_companies(
         has_email=has_email,
         missing_email=missing_email,
         missing_phone=missing_phone,
+        channel=channel,
     )
-    return {"total": query.count()}
+    total = sum(_channel_match(row, channel) for row in query.all()) if channel else query.count()
+    return {"total": total}
 
 
 @router.get("/ids")
@@ -499,12 +538,13 @@ def marketing_company_ids(
     missing_phone: bool = False,
     sort: str = Query(default="company"),
     max_ids: int = Query(default=5000, ge=1, le=20000),
+    channel: str | None = Query(default=None, description="email, whatsapp, phone or both"),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Ids for every contact matching the current filters (select-all support)."""
     query = _apply_filters(
-        db.query(MarketingCompany.id).filter(MarketingCompany.user_id == user.id),
+        db.query(MarketingCompany).filter(MarketingCompany.user_id == user.id),
         q=q,
         category=category,
         call_status=call_status,
@@ -516,9 +556,12 @@ def marketing_company_ids(
         has_email=has_email,
         missing_email=missing_email,
         missing_phone=missing_phone,
+        channel=channel,
     )
-    rows = query.order_by(_order_for(sort)).limit(max_ids + 1).all()
-    ids = [row[0] for row in rows[:max_ids]]
+    rows = query.order_by(_order_for(sort)).all()
+    if channel:
+        rows = [row for row in rows if _channel_match(row, channel)]
+    ids = [row.id for row in rows[:max_ids]]
     return {"ids": ids, "truncated": len(rows) > max_ids}
 
 
@@ -673,6 +716,32 @@ def _compute_activity(db: Session, user: User) -> list:
     return list(activity.values())
 
 
+@router.post("/normalize-emails")
+def normalize_contact_emails(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    rows = (
+        db.query(MarketingCompany)
+        .filter(MarketingCompany.user_id == user.id, MarketingCompany.email != "")
+        .all()
+    )
+    normalized = 0
+    for row in rows:
+        cleaned = normalize_email(row.email)[:320]
+        if cleaned != row.email:
+            row.email = cleaned
+            normalized += 1
+    if normalized:
+        db.commit()
+    return {
+        "scanned": len(rows),
+        "normalized": normalized,
+        "verification_changed": 0,
+        "message": "Syntax normalization only; no email verification state was changed.",
+    }
+
+
 @router.patch("/{company_id}", response_model=MarketingCompanyOut)
 def update_marketing_company(
     company_id: int,
@@ -702,6 +771,8 @@ def update_marketing_company(
                 raise HTTPException(
                     status_code=422, detail="Follow-up date must be a valid date"
                 ) from exc
+        if field == "email":
+            value = normalize_email(value)
         setattr(company, field, value or "")
     log_event(
         db,
@@ -740,7 +811,7 @@ def create_marketing_company(
         company_key=company_key,
         contact_name=payload.contact_name.strip(),
         phone=payload.phone.strip(),
-        email=payload.email.strip(),
+        email=normalize_email(payload.email),
         category=payload.category.strip(),
         call_status=payload.call_status.strip(),
         requirements=payload.requirements.strip(),
@@ -1015,7 +1086,7 @@ def duplicate_contacts(user: User = Depends(get_current_user), db: Session = Dep
     by_phone: dict[str, list[int]] = {}
     by_company: dict[str, list[int]] = {}
     for r in rows:
-        email = (r.email or "").strip().lower()
+        email = normalize_email(r.email)
         if email:
             by_email.setdefault(email, []).append(r.id)
         digits = re.sub(r"\D", "", r.phone or "")

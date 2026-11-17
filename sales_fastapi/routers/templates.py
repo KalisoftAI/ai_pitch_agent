@@ -9,11 +9,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from ..contact_validation import valid_email, valid_phone
 from ..database import get_db
 from ..governance.audit import log_event
 from ..kalika_templates import kalika_library_meta, kalika_template_items
 from ..models import Contact, MarketingCompany, MessageTemplate, User
 from ..outreach_context import outreach_context
+from ..outreach_forms import get_form_links
 from ..outreach_templates import (
     CHANNELS,
     DEFAULT_TEMPLATES,
@@ -202,10 +204,9 @@ def import_kalika_templates(
 
 
 def _channel_ok(address: str, channel: str) -> bool:
-    value = str(address or "").strip()
-    if channel in {"whatsapp", "wechat"}:
-        return len(re.sub(r"\D", "", value)) >= 8
-    return bool(re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]{2,}$", value))
+    if channel in {"whatsapp", "wechat", "phone"}:
+        return valid_phone(address)
+    return valid_email(address)
 
 
 @router.post("/personalize-preview")
@@ -255,6 +256,7 @@ def personalize_preview(
         payload.body_override if payload.body_override is not None else template.body
     ) or ""
     order_cache: dict[str, dict[str, str]] = {}
+    form_links = get_form_links(db)
     previews: list[dict[str, Any]] = []
     missing_fields: dict[str, int] = {}
     recipients_with_missing = 0
@@ -272,6 +274,7 @@ def personalize_preview(
             requirements=requirements,
             category=category,
             cache=order_cache,
+            form_links=form_links,
         )
         subject, subject_missing = render_resolved_report(subject_src, ctx)
         body, body_missing = render_resolved_report(body_src, ctx)
