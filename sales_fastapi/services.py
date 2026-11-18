@@ -653,6 +653,26 @@ class MailSender:
         raise RuntimeError(last_error or "SMTP send failed")
 
 
+def check_smtp_connection(
+    host: str, port: int, user: str = "", password: str = "", timeout: int = 15
+) -> tuple[bool, str]:
+    """Verify SMTP/STARTTLS/login without delivering a message."""
+    try:
+        with smtplib.SMTP(host, port, timeout=timeout) as server:
+            server.ehlo()
+            if server.has_extn("STARTTLS"):
+                server.starttls()
+                server.ehlo()
+            if user:
+                server.login(user, password)
+        return True, "connected"
+    except Exception as exc:  # noqa: BLE001 - report the provider error to the caller
+        detail = f"{type(exc).__name__}: {exc}"[:300]
+        if password:
+            detail = detail.replace(password, "***")
+        return False, detail
+
+
 # ==========================================================================
 # LinkedIn
 # ==========================================================================

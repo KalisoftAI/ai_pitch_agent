@@ -4,6 +4,10 @@ from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+def _clean_env_value(value: str) -> str:
+    return "".join((value or "").split())
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -94,6 +98,12 @@ class Settings(BaseSettings):
     IMAP_USER: str = Field(default="", alias="IMAP_USER")
     GMAIL_ADDRESS: str = Field(default="", alias="GMAIL_ADDRESS")
     GMAIL_APP_PASSWORD: str = Field(default="", alias="GMAIL_APP_PASSWORD")
+    GMAIL_ADDRESS_KALISOFTAI: str = Field(default="", alias="GMAIL_ADDRESS_KALISOFTAI")
+    GMAIL_APP_PASSWORD_KALISOFTAI: str = Field(default="", alias="GMAIL_APP_PASSWORD_KALISOFTAI")
+    GMAIL_ADDRESS_KALIKA: str = Field(default="", alias="GMAIL_ADDRESS_KALIKA")
+    GMAIL_APP_PASSWORD_KALIKA: str = Field(default="", alias="GMAIL_APP_PASSWORD_KALIKA")
+    GMAIL_ADDRESS_KALIKA2: str = Field(default="", alias="GMAIL_ADDRESS_KALIKA2")
+    GMAIL_APP_PASSWORD_KALIKA2: str = Field(default="", alias="GMAIL_APP_PASSWORD_KALIKA2")
 
     # --- AI ---
     GEMMA_MODEL: str = Field(default="gemma-4-27b-it", alias="GEMMA_MODEL")
@@ -138,6 +148,7 @@ class Settings(BaseSettings):
         default="https://kalisoft-sales-19782268668.asia-south1.run.app",
         alias="OUTREACH_FORM_BASE_URL",
     )
+    TRACKING_BASE_URL: str = Field(default="", alias="TRACKING_BASE_URL")
 
     # --- ERP report sync (ERP-V1/Reports -> Dispatch/Orders) ---
     ERP_REPORT_PREFIX: str = Field(default="ERP-V1/Reports/", alias="ERP_REPORT_PREFIX")
@@ -273,20 +284,117 @@ class Settings(BaseSettings):
             if email.strip()
         ]
 
+    def gmail_organization(self, email: str, domain: str = "") -> str:
+        normalized_email = _clean_env_value(email).lower()
+        normalized_domain = _clean_env_value(domain).lower()
+        kalika_addresses = {
+            _clean_env_value(address).lower()
+            for address in (
+                self.GMAIL_ADDRESS_KALIKA,
+                self.GMAIL_ADDRESS_KALIKA2,
+                self.GMAIL_ADDRESS,
+            )
+        }
+        kalika_addresses.discard("")
+        if (
+            normalized_email in kalika_addresses
+            or normalized_domain == "kalika.local"
+            or normalized_email.endswith("@kalika.local")
+        ):
+            return "kalika"
+        return "kalisoftai"
+
+    def _with_smtp_override(self, address: str, password: str) -> tuple[str, str]:
+        explicit_address = _clean_env_value(self.SMTP_USER)
+        if explicit_address and explicit_address.lower() == address.lower():
+            explicit_password = _clean_env_value(self.SMTP_PASSWORD)
+            if explicit_password:
+                password = explicit_password
+        return address, password
+
+    def gmail_credentials(self, organization: str) -> tuple[str, str]:
+        legacy_address = _clean_env_value(self.GMAIL_ADDRESS)
+        legacy_password = _clean_env_value(self.GMAIL_APP_PASSWORD)
+        if organization == "kalika":
+            address = _clean_env_value(self.GMAIL_ADDRESS_KALIKA) or legacy_address
+            password = _clean_env_value(self.GMAIL_APP_PASSWORD_KALIKA) or legacy_password
+        elif organization == "kalisoftai":
+            address = _clean_env_value(self.GMAIL_ADDRESS_KALISOFTAI) or legacy_address
+            password = _clean_env_value(self.GMAIL_APP_PASSWORD_KALISOFTAI) or legacy_password
+        else:
+            raise ValueError(f"Unknown Gmail organization: {organization}")
+        return self._with_smtp_override(address, password)
+
+    def gmail_credentials_for_key(self, organization: str, sender_key: str) -> tuple[str, str]:
+        if not sender_key or sender_key == "default":
+            return self.gmail_credentials(organization)
+        if organization == "kalika":
+            if sender_key == "kalika":
+                return self.gmail_credentials("kalika")
+            if sender_key == "kalika2":
+                return self._with_smtp_override(
+                    _clean_env_value(self.GMAIL_ADDRESS_KALIKA2),
+                    _clean_env_value(self.GMAIL_APP_PASSWORD_KALIKA2),
+                )
+        if organization == "kalisoftai" and sender_key == "kalisoftai":
+            return self.gmail_credentials("kalisoftai")
+        raise ValueError(f"Unknown sender key: {sender_key}")
+
+    def gmail_senders(self, email: str, domain: str = "") -> list[dict[str, str | bool]]:
+        organization = self.gmail_organization(email, domain)
+        if organization == "kalika":
+            profiles = (
+                ("kalika", "Kalika sales", lambda: self.gmail_credentials("kalika")),
+                (
+                    "kalika2",
+                    "Kalika primary",
+                    lambda: self.gmail_credentials_for_key("kalika", "kalika2"),
+                ),
+            )
+        else:
+            profiles = (
+                ("kalisoftai", "KalisoftAI", lambda: self.gmail_credentials("kalisoftai")),
+            )
+
+        senders: list[dict[str, str | bool]] = []
+        seen: set[str] = set()
+        for key, label, loader in profiles:
+            try:
+                address, password = loader()
+            except ValueError:
+                continue
+            normalized = address.strip().lower()
+            if not address or not password or not normalized or normalized in seen:
+                continue
+            seen.add(normalized)
+            senders.append(
+                {
+                    "key": key,
+                    "email_address": address,
+                    "label": label,
+                    "is_default": not senders,
+                }
+            )
+        return senders
+
     @model_validator(mode="after")
     def validate_security_settings(self):
+        default_address = _clean_env_value(self.GMAIL_ADDRESS_KALISOFTAI or self.GMAIL_ADDRESS)
+        default_password = _clean_env_value(
+            self.GMAIL_APP_PASSWORD_KALISOFTAI or self.GMAIL_APP_PASSWORD
+        )
         if "@" in self.SMTP_HOST:
             self.SMTP_HOST = "smtp.gmail.com"
-        if not self.SMTP_HOST and self.GMAIL_ADDRESS:
+        if not self.SMTP_HOST and default_address:
             self.SMTP_HOST = "smtp.gmail.com"
         if not self.SMTP_USER:
-            self.SMTP_USER = self.GMAIL_ADDRESS
+            self.SMTP_USER = default_address
         if not self.SMTP_PASSWORD:
-            self.SMTP_PASSWORD = self.GMAIL_APP_PASSWORD
-        if not self.IMAP_HOST and self.GMAIL_ADDRESS:
+            self.SMTP_PASSWORD = default_password
+        if not self.IMAP_HOST and default_address:
             self.IMAP_HOST = "imap.gmail.com"
         if not self.IMAP_USER:
-            self.IMAP_USER = self.GMAIL_ADDRESS
+            self.IMAP_USER = default_address
         if len(self.SECRET_KEY) < 32 or self.SECRET_KEY == "change-this-secret":
             raise ValueError("SECRET_KEY must be at least 32 characters and non-default")
         if self.ACCESS_TOKEN_EXPIRE_MINUTES < 5 or self.ACCESS_TOKEN_EXPIRE_MINUTES > 1440:

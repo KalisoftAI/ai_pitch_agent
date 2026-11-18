@@ -51,8 +51,13 @@ class RequestGuardrailsMiddleware(BaseHTTPMiddleware):
                 return JSONResponse(
                     status_code=429, content={"detail": "Too many sign-in attempts"}
                 )
-            if request.url.path.startswith("/api/") and self._limited(
-                f"api:{client}", settings.API_RATE_LIMIT, 60
+            is_open_pixel = request.url.path.startswith(
+                "/api/campaigns/track/open/"
+            ) or (request.url.path.startswith("/api/campaigns/") and "/open/" in request.url.path)
+            if (
+                request.url.path.startswith("/api/")
+                and not is_open_pixel
+                and self._limited(f"api:{client}", settings.API_RATE_LIMIT, 60)
             ):
                 return JSONResponse(status_code=429, content={"detail": "Too many requests"})
 

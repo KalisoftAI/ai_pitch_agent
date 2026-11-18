@@ -10,11 +10,16 @@ approve / edit -> send (email / WhatsApp / WeChat) -> status updates.
 
 from __future__ import annotations
 
+import hashlib
+import hmac
+import html
+import re
 from datetime import datetime
 from functools import lru_cache
 from types import SimpleNamespace
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import Response
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -43,8 +48,8 @@ from ..schemas import (
     CampaignOut,
     CampaignSendResult,
 )
-from ..security import get_current_user
-from ..services import MailSender
+from ..security import decrypt_secret, encrypt_secret, get_current_user
+from ..services import MailSender, check_smtp_connection
 from ..templating import contact_context, looks_html, render_resolved
 from ..wechaty import WechatyGateway
 
@@ -63,6 +68,74 @@ SENDER_CONTEXT = {
 def _llm_router() -> ModelRouter:
 
     return ModelRouter()
+
+
+_PIXEL = bytes.fromhex(
+    "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489"
+    "0000000a49444154789c63000100000500010d0a2db40000000049454e44ae426082"
+)
+
+
+def _tracking_token(campaign_id: int, message_id: int) -> str:
+    payload = f"{campaign_id}.{message_id}"
+    signature = hmac.new(
+        settings.SECRET_KEY.encode(), payload.encode(), hashlib.sha256
+    ).hexdigest()[:32]
+    return f"{payload}.{signature}"
+
+
+def _parse_tracking_token(token: str) -> tuple[int, int] | None:
+    parts = token.split(".")
+    if len(parts) != 3:
+        return None
+    try:
+        campaign_id, message_id = int(parts[0]), int(parts[1])
+    except ValueError:
+        return None
+    expected = _tracking_token(campaign_id, message_id).rsplit(".", 1)[1]
+    if not hmac.compare_digest(parts[2], expected):
+        return None
+    return campaign_id, message_id
+
+
+def _tracking_base_url(request: Request) -> str:
+    configured = (settings.TRACKING_BASE_URL or "").strip().rstrip("/")
+    return configured or str(request.base_url).rstrip("/")
+
+
+def _email_body_with_pixel(body: str, track_url: str) -> str:
+    pixel = f'<img src="{track_url}" width="1" height="1" style="display:none;" alt="" />'
+    if looks_html(body):
+        if re.search(r"</body\s*>", body, re.IGNORECASE):
+            return re.sub(
+                r"(</body\s*>)", lambda match: pixel + match.group(1), body, count=1, flags=re.I
+            )
+        return body + pixel
+    escaped = html.escape(body).replace("\r\n", "\n").replace("\n", "<br>")
+    return f"<html><body>{escaped}{pixel}</body></html>"
+
+
+def _mark_message_opened(db: Session, campaign_id: int, message_id: int) -> None:
+    message = (
+        db.query(CampaignMessage)
+        .filter(CampaignMessage.id == message_id, CampaignMessage.campaign_id == campaign_id)
+        .first()
+    )
+    if message is not None and message.status in {"sent", "opened"} and message.opened_at is None:
+        message.status = "opened"
+        message.opened_at = datetime.utcnow()
+        db.commit()
+
+
+def _pixel_response() -> Response:
+    return Response(
+        content=_PIXEL,
+        media_type="image/png",
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+        },
+    )
 
 
 def _ai_personalise(template: MessageTemplate, contact: Contact, channel: str) -> tuple[str, str]:
@@ -117,6 +190,24 @@ def create_campaign(
 
     if template is None:
         raise HTTPException(status_code=404, detail="Template not found")
+
+    if payload.connection_id is not None:
+        selected = (
+            db.query(EmailConnection)
+            .filter(
+                EmailConnection.id == payload.connection_id, EmailConnection.user_id == user.id
+            )
+            .first()
+        )
+        if selected is None:
+            raise HTTPException(status_code=404, detail="Email connection not found")
+
+    if payload.channel == "email" and payload.sender_key:
+        sender_org = settings.gmail_organization(user.email, user.domain)
+        try:
+            settings.gmail_credentials_for_key(sender_org, payload.sender_key)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     phone_channel = payload.channel in {"whatsapp", "wechat"}
 
@@ -409,11 +500,32 @@ def create_campaign(
 
         db.commit()
 
-        send_campaign(campaign.id, request, user, db)
+        send_campaign(
+            campaign.id,
+            request,
+            user=user,
+            db=db,
+            connection_id=payload.connection_id,
+            sender_key=payload.sender_key,
+        )
 
         db.refresh(campaign)
 
     return _detail(db, campaign)
+
+
+def _opened_counts(db: Session, campaign_ids: list[int]) -> dict[int, int]:
+    if not campaign_ids:
+        return {}
+    rows = (
+        db.query(CampaignMessage.campaign_id, func.count(CampaignMessage.id))
+        .filter(
+            CampaignMessage.campaign_id.in_(campaign_ids), CampaignMessage.status == "opened"
+        )
+        .group_by(CampaignMessage.campaign_id)
+        .all()
+    )
+    return {int(campaign_id): int(count) for campaign_id, count in rows}
 
 
 def _detail(db: Session, campaign: Campaign) -> CampaignDetail:
@@ -426,7 +538,7 @@ def _detail(db: Session, campaign: Campaign) -> CampaignDetail:
         .all()
     )
 
-    opened = sum(1 for m in messages if m.status == "opened")
+    opened = _opened_counts(db, [campaign.id]).get(campaign.id, 0)
 
     data = CampaignOut.model_validate(campaign).model_dump()
 
@@ -442,12 +554,20 @@ def _detail(db: Session, campaign: Campaign) -> CampaignDetail:
 @router.get("", response_model=list[CampaignOut])
 def list_campaigns(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
 
-    return (
+    campaigns = (
         db.query(Campaign)
         .filter(Campaign.user_id == user.id)
         .order_by(Campaign.created_at.desc())
         .all()
     )
+    counts = _opened_counts(db, [campaign.id for campaign in campaigns])
+    return [
+        {
+            **CampaignOut.model_validate(campaign).model_dump(),
+            "opened_count": counts.get(campaign.id, 0),
+        }
+        for campaign in campaigns
+    ]
 
 
 @router.get("/analytics")
@@ -587,9 +707,18 @@ def campaign_analytics(
         "daily": [{"day": day, **value} for day, value in sorted(by_day.items())],
         "note": (
             f"Real campaign/message records for the last {days} days. "
-            "Sent = provider accepted; Opened = tracking-pixel hits; Pending = awaiting review/send."
+            "Sent = provider accepted; Opened = tracking-pixel hits; Pending = awaiting review/send. "
+            "Opens are approximate: mail clients may block or prefetch images."
         ),
     }
+
+
+@router.api_route("/track/open/{token}", methods=["GET", "HEAD"])
+def track_open(token: str, request: Request, db: Session = Depends(get_db)):
+    parsed = _parse_tracking_token(token)
+    if parsed is not None and request.method == "GET":
+        _mark_message_opened(db, parsed[0], parsed[1])
+    return _pixel_response()
 
 
 @router.get("/{campaign_id}", response_model=CampaignDetail)
@@ -681,10 +810,83 @@ def approve_campaign(
     return _detail(db, campaign)
 
 
+def _resolve_email_connection(
+    db: Session, user: User, connection_id: int | None, sender_key: str | None = None
+) -> SimpleNamespace:
+    query = db.query(EmailConnection).filter(EmailConnection.user_id == user.id)
+    if connection_id is not None:
+        conn = query.filter(EmailConnection.id == connection_id).first()
+    else:
+        conn = query.order_by(
+            EmailConnection.is_connected.desc(), EmailConnection.id.asc()
+        ).first()
+    if conn is None:
+        raise HTTPException(status_code=400, detail="No email connection configured for this user")
+
+    organization = settings.gmail_organization(user.email, user.domain)
+    try:
+        env_address, env_password = settings.gmail_credentials_for_key(organization, sender_key)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    candidates: list[tuple[str, int, str, str]] = []
+
+    if env_address and env_password:
+        candidates.append(
+            (
+                (settings.SMTP_HOST or "smtp.gmail.com").strip(),
+                int(settings.SMTP_PORT or (conn.smtp_port if conn else 0) or 587),
+                env_address,
+                env_password,
+            )
+        )
+
+    candidates.append(
+        (
+            conn.smtp_host,
+            conn.smtp_port,
+            conn.email_address,
+            decrypt_secret(conn.secret_encrypted),
+        )
+    )
+
+    seen: set[tuple[str, int, str, str]] = set()
+    last_detail = "no usable SMTP credentials"
+    for host, port, address, password in candidates:
+        key = (host, port, address, password)
+        if key in seen:
+            continue
+        seen.add(key)
+        smtp_ok, detail = check_smtp_connection(host, port, address, password)
+        if smtp_ok:
+            if conn is not None:
+                conn.smtp_host = host
+                conn.smtp_port = port
+                conn.email_address = address
+                conn.secret_encrypted = encrypt_secret(password)
+                conn.is_connected = True
+                conn.last_checked_at = datetime.utcnow()
+                db.commit()
+            return SimpleNamespace(
+                smtp_host=host, smtp_port=port, email_address=address, password=password
+            )
+        last_detail = detail
+
+    selected_address = conn.email_address if conn is not None else (env_address or "unknown")
+    raise HTTPException(
+        status_code=502,
+        detail=(
+            f"SMTP connection failed for {selected_address}: {last_detail}. "
+            "Update the Gmail App Password and retry."
+        ),
+    )
+
+
 @router.post("/{campaign_id}/send", response_model=CampaignSendResult)
 def send_campaign(
     campaign_id: int,
     request: Request,
+    connection_id: int | None = Query(default=None),
+    sender_key: str | None = Query(default=None, max_length=32),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -704,12 +906,9 @@ def send_campaign(
 
     sent = failed = skipped = 0
 
-    email_connection = (
-        db.query(EmailConnection)
-        .filter(EmailConnection.user_id == user.id)
-        .order_by(EmailConnection.is_connected.desc(), EmailConnection.id.asc())
-        .first()
-    )
+    email_connection = None
+    if campaign.channel == "email":
+        email_connection = _resolve_email_connection(db, user, connection_id, sender_key)
 
     gateway = WechatyGateway()
 
@@ -718,35 +917,22 @@ def send_campaign(
             if campaign.channel == "email":
                 if email_connection is None:
                     raise RuntimeError("no email connection configured")
-
-                from ..security import decrypt_secret
-
-                base_url = str(request.base_url).rstrip("/")
-
-                track_url = f"{base_url}/api/campaigns/{campaign.id}/open/{message.id}"
-
-                body_html = message.rendered_body or ""
-
-                pixel = (
-                    f'<img src="{track_url}" width="1" height="1" style="display:none;" alt="" />'
+                track_url = (
+                    f"{_tracking_base_url(request)}/api/campaigns/track/open/"
+                    f"{_tracking_token(campaign.id, message.id)}"
                 )
-
-                if "<html" in body_html.lower() or "<body" in body_html.lower():
-                    body_html = (
-                        body_html.replace("</body>", pixel + "</body>")
-                        if "</body>" in body_html.lower()
-                        else body_html + pixel
-                    )
+                body_html = _email_body_with_pixel(message.rendered_body or "", track_url)
 
                 MailSender(
                     email_connection.smtp_host,
                     email_connection.smtp_port,
                     email_connection.email_address,
-                    decrypt_secret(email_connection.secret_encrypted),
+                    email_connection.password,
                 ).send(
                     message.to_address,
                     message.rendered_subject or campaign.name,
                     body_html,
+                    html=True,
                 )
 
                 message.status = "sent"
@@ -838,6 +1024,8 @@ def send_campaign(
 def retry_failed(
     campaign_id: int,
     request: Request,
+    connection_id: int | None = Query(default=None),
+    sender_key: str | None = Query(default=None, max_length=32),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -863,7 +1051,14 @@ def retry_failed(
 
     db.commit()
 
-    return send_campaign(campaign_id, request, user, db)
+    return send_campaign(
+        campaign_id,
+        request,
+        user=user,
+        db=db,
+        connection_id=connection_id,
+        sender_key=sender_key,
+    )
 
 
 @router.post("/preview")
@@ -965,29 +1160,13 @@ def preview_message(
     return {"channel": payload.channel, "count": len(previews), "previews": previews}
 
 
-@router.get("/{campaign_id}/open/{message_id}")
-def mark_opened(campaign_id: int, message_id: int, db: Session = Depends(get_db)):
-
-    from fastapi.responses import Response
-
-    message = (
-        db.query(CampaignMessage)
-        .filter(CampaignMessage.id == message_id, CampaignMessage.campaign_id == campaign_id)
-        .first()
-    )
-
-    if message is not None and message.status in {"sent", "opened"}:
-        message.status = "opened"
-
-        message.opened_at = datetime.utcnow()
-
-        db.commit()
-
-    pixel = bytes.fromhex(
-        "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000a49444154789c63000100000500010d0a2db40000000049454e44ae426082"
-    )
-
-    return Response(content=pixel, media_type="image/png")
+@router.api_route("/{campaign_id}/open/{message_id}", methods=["GET", "HEAD"])
+def mark_opened(
+    campaign_id: int, message_id: int, request: Request, db: Session = Depends(get_db)
+):
+    if request.method == "GET":
+        _mark_message_opened(db, campaign_id, message_id)
+    return _pixel_response()
 
 
 @router.delete("/{campaign_id}", status_code=204)

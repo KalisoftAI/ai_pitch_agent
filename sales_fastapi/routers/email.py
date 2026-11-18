@@ -26,10 +26,16 @@ from ..schemas import (
     EmailMessageContextOut,
     EmailSyncIn,
     EmailTestSendIn,
+    SenderOptionOut,
     SendMailIn,
 )
-from ..security import decrypt_secret, encrypt_secret, get_current_user
-from ..services import EmailExtractor, MailSender, compact_text
+from ..security import decrypt_secret, encrypt_secret, get_current_user, require_admin
+from ..services import (
+    EmailExtractor,
+    MailSender,
+    check_smtp_connection,
+    compact_text,
+)
 from ..templating import contact_context, render_resolved
 
 router = APIRouter(prefix="/email", tags=["email"])
@@ -81,6 +87,13 @@ def _fetch_filters(payload: EmailFetchIn) -> dict:
         "until": payload.until.isoformat() if payload.until else None,
         "unread_only": payload.unread_only,
     }
+
+
+@router.get("/senders", response_model=list[SenderOptionOut])
+def list_senders(
+    user: User = Depends(get_current_user),
+):
+    return settings.gmail_senders(user.email, user.domain)
 
 
 @router.get("/connections", response_model=list[EmailConnectionOut])
@@ -138,14 +151,12 @@ def test_connection(
     finally:
         extractor.disconnect()
 
-    sender = MailSender(conn.smtp_host, conn.smtp_port, conn.email_address, password)
-    try:
-        sender.send(conn.email_address, "Kalisoft connection test", "SMTP OK")
-        result["smtp"] = "connected"
-    except Exception as exc:  # noqa: BLE001
-        result["smtp"] = f"failed: {exc}"
+    smtp_ok, smtp_detail = check_smtp_connection(
+        conn.smtp_host, conn.smtp_port, conn.email_address, password
+    )
+    result["smtp"] = "connected" if smtp_ok else f"failed: {smtp_detail}"
 
-    conn.is_connected = result["imap"] == "connected" and result["smtp"] == "connected"
+    conn.is_connected = result["imap"] == "connected" and smtp_ok
     conn.last_checked_at = datetime.utcnow()
     db.commit()
     return {"connection_id": conn.id, "is_connected": conn.is_connected, **result}
@@ -239,41 +250,155 @@ def send_mail(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/default-connection", response_model=EmailConnectionOut, status_code=201)
-def ensure_default_connection(
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Create/refresh the workspace mailbox directly from .env credentials.
+_ORGANIZATION_LABELS = {"kalisoftai": "KalisoftAI", "kalika": "Kalika Enterprises"}
 
-    Uses IMAP_HOST/PORT/USER + SMTP_HOST/PORT + SMTP_PASSWORD (or Gmail app
-    password) already loaded from .env. No Secret Manager. The password is
-    encrypted at rest and never returned by any API.
-    """
-    address = (settings.IMAP_USER or settings.SMTP_USER or settings.GMAIL_ADDRESS).strip()
-    password = (settings.SMTP_PASSWORD or settings.GMAIL_APP_PASSWORD).strip()
+
+def _default_connection_credentials(user: User) -> tuple[str, str, str, str, int, int]:
+    organization = settings.gmail_organization(user.email, user.domain)
+    address, password = settings.gmail_credentials(organization)
     if not address or not password:
-        raise HTTPException(
-            status_code=400, detail="IMAP/SMTP credentials are not configured in .env"
-        )
-    imap_host = (settings.IMAP_HOST or "imap.gmail.com").strip()
-    smtp_host = (settings.SMTP_HOST or "smtp.gmail.com").strip()
+        label = _ORGANIZATION_LABELS.get(organization, organization)
+        raise ValueError(f"{label} Gmail credentials are not configured")
+    return (
+        address,
+        password,
+        (settings.IMAP_HOST or "imap.gmail.com").strip(),
+        (settings.SMTP_HOST or "smtp.gmail.com").strip(),
+        int(settings.IMAP_PORT or 993),
+        int(settings.SMTP_PORT or 587),
+    )
+
+
+def _ensure_default_connection_for_user(
+    db: Session, user: User, credentials: tuple[str, str, str, str, int, int] | None = None
+) -> tuple[EmailConnection, bool]:
+    address, password, imap_host, smtp_host, imap_port, smtp_port = (
+        credentials or _default_connection_credentials(user)
+    )
     conn = (
         db.query(EmailConnection)
         .filter(EmailConnection.user_id == user.id, EmailConnection.email_address == address)
         .first()
     )
+    created = conn is None
     if conn is None:
         conn = EmailConnection(user_id=user.id, email_address=address)
         db.add(conn)
     conn.imap_host = imap_host
-    conn.imap_port = int(settings.IMAP_PORT or 993)
+    conn.imap_port = imap_port
     conn.smtp_host = smtp_host
-    conn.smtp_port = int(settings.SMTP_PORT or 587)
+    conn.smtp_port = smtp_port
     conn.secret_encrypted = encrypt_secret(password)
     db.commit()
     db.refresh(conn)
+    return conn, created
+
+
+@router.post("/default-connection", response_model=EmailConnectionOut, status_code=201)
+def ensure_default_connection(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Create/refresh the workspace mailbox for this user's organization.
+
+    Uses the organization-specific Gmail account loaded from .env locally or
+    Cloud Run env/Secret Manager in production. The password is encrypted at
+    rest and never returned by any API.
+    """
+    try:
+        conn, _ = _ensure_default_connection_for_user(db, user)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return conn
+
+
+@router.post("/default-connection/all")
+def ensure_default_connection_all(
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Provision and SMTP-check the correct mailbox for every active user."""
+    results = []
+    users = db.query(User).filter(User.is_active.is_(True)).order_by(User.id).all()
+    for user in users:
+        organization = settings.gmail_organization(user.email, user.domain)
+        try:
+            credentials = _default_connection_credentials(user)
+        except ValueError as exc:
+            results.append(
+                {
+                    "user_id": user.id,
+                    "user_email": user.email,
+                    "organization": organization,
+                    "connection_id": None,
+                    "email_address": "",
+                    "created": False,
+                    "smtp_ok": False,
+                    "smtp_detail": str(exc),
+                }
+            )
+            continue
+        conn, created = _ensure_default_connection_for_user(db, user, credentials)
+        smtp_ok, detail = check_smtp_connection(
+            conn.smtp_host, conn.smtp_port, conn.email_address, decrypt_secret(conn.secret_encrypted)
+        )
+        results.append(
+            {
+                "user_id": user.id,
+                "user_email": user.email,
+                "organization": organization,
+                "connection_id": conn.id,
+                "email_address": conn.email_address,
+                "created": created,
+                "smtp_ok": smtp_ok,
+                "smtp_detail": "connected" if smtp_ok else detail,
+            }
+        )
+    return {"count": len(results), "results": results}
+
+
+@router.get("/smtp-status/all")
+def smtp_status_all(
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Report SMTP reachability for every user's connections without sending mail."""
+    results = []
+    users = db.query(User).order_by(User.id).all()
+    for user in users:
+        connections = (
+            db.query(EmailConnection).filter(EmailConnection.user_id == user.id).order_by(
+                EmailConnection.id.asc()
+            ).all()
+        )
+        checked = []
+        for conn in connections:
+            smtp_ok, detail = check_smtp_connection(
+                conn.smtp_host,
+                conn.smtp_port,
+                conn.email_address,
+                decrypt_secret(conn.secret_encrypted),
+            )
+            checked.append(
+                {
+                    "connection_id": conn.id,
+                    "email_address": conn.email_address,
+                    "smtp_host": conn.smtp_host,
+                    "smtp_port": conn.smtp_port,
+                    "smtp_ok": smtp_ok,
+                    "smtp_detail": "connected" if smtp_ok else detail,
+                    "stored_is_connected": bool(conn.is_connected),
+                }
+            )
+        results.append(
+            {
+                "user_id": user.id,
+                "user_email": user.email,
+                "organization": settings.gmail_organization(user.email, user.domain),
+                "connections": checked,
+            }
+        )
+    return {"count": len(results), "results": results}
 
 
 @router.post("/connections/{connection_id}/sync")

@@ -221,6 +221,31 @@ def test_password_login_accepts_unique_name_alias(client, auth_headers):
     assert me.json()["role"] == "admin"
 
 
+def test_password_login_accepts_role_suffixed_name_alias(client, auth_headers):
+    created = client.post(
+        "/api/users",
+        headers=auth_headers,
+        json={
+            "email": "kalika.admin@kalisoftai.com",
+            "name": "Kalika",
+            "password": "secret123",
+            "role": "admin",
+        },
+    )
+    assert created.status_code == 201, created.text
+    resp = client.post(
+        "/api/auth/password",
+        json={"username": "Kalika Admin", "password": "secret123"},
+    )
+    assert resp.status_code == 200, resp.text
+    me = client.get(
+        "/api/auth/me",
+        headers={"Authorization": f"Bearer {resp.json()['access_token']}"},
+    )
+    assert me.json()["email"] == "kalika.admin@kalisoftai.com"
+    assert me.json()["role"] == "admin"
+
+
 def test_password_login_rejects_ambiguous_name_alias(client, auth_headers):
     for email_address in ("dupe.one@kalisoftai.com", "dupe.two@kalisoftai.com"):
         created = client.post(

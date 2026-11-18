@@ -1539,9 +1539,42 @@ function OutreachDashboard({ initialData = null, goSend }) {
 
 function cutoffDay(days) { const d = new Date(); d.setDate(d.getDate() - (Number(days) - 1)); return d.toISOString().slice(0, 10); }
 
+function mapSavedContact(contact) {
+  return {
+    ...contact,
+    id: contact.id,
+    company: contact.company || "",
+    contact_name: contact.name || contact.purchase_contact_name || "",
+    email: normalizeEmail(contact.email || contact.purchase_contact_email || ""),
+    phone: contact.phone || contact.purchase_contact_phone || "",
+    category: contact.intent || "",
+    call_status: contact.source || "saved",
+    requirements: contact.context || contact.notes || "",
+    designation: contact.purchase_contact_role || "",
+    source_file: contact.source || "",
+    updated_at: contact.updated_at,
+  };
+}
+
+function readOutreachHandoff() {
+  const openSend = sessionStorage.getItem("outreach_open_send") === "1";
+  sessionStorage.removeItem("outreach_open_send");
+  const source = sessionStorage.getItem("outreach_contact_source") === "contacts" ? "contacts" : "marketing_companies";
+  sessionStorage.removeItem("outreach_contact_source");
+  let ids = [];
+  try {
+    const raw = JSON.parse(sessionStorage.getItem("outreach_contact_ids") || "[]");
+    if (Array.isArray(raw)) ids = raw.map(Number).filter(Boolean);
+  } catch { }
+  sessionStorage.removeItem("outreach_contact_ids");
+  return { openSend, source, ids };
+}
+
 export function MarketingCompanies({ onNotice }) {
-  const [mTab, setMTab] = useState("dashboard");
-  const [sendStep, setSendStep] = useState("template");
+  const handoff = React.useMemo(readOutreachHandoff, []);
+  const [mTab, setMTab] = useState(handoff.openSend ? "send" : "dashboard");
+  const [contactSource, setContactSource] = useState(handoff.source);
+  const [sendStep, setSendStep] = useState(handoff.openSend ? "contacts" : "template");
   const [multiSelect, setMultiSelect] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [retrying, setRetrying] = useState(false);
@@ -1569,6 +1602,7 @@ export function MarketingCompanies({ onNotice }) {
   const [mVideos, setMVideos] = useState([]);
   const [rows, setRows] = useState([]);
   const [stats, setStats] = useState(null);
+  const [savedTotal, setSavedTotal] = useState(null);
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [emailOnly, setEmailOnly] = useState(false);
@@ -1646,7 +1680,61 @@ export function MarketingCompanies({ onNotice }) {
     return params;
   };
 
+  const savedContactParams = () => {
+    const params = new URLSearchParams();
+    if (categoryFilter) params.set("intent", categoryFilter);
+    if (statusFilter) params.set("source", statusFilter);
+    return params;
+  };
+
+  const filterSavedRows = (list) => {
+    let found = Array.isArray(list) ? list.map(mapSavedContact) : [];
+    const needle = query.trim().toLowerCase();
+    if (needle) found = found.filter((r) => [r.company, r.contact_name, r.email, r.phone, r.category, r.requirements, r.source_file].some((v) => String(v || "").toLowerCase().includes(needle)));
+    if (emailOnly && !phoneOnly) found = found.filter((r) => validEmail(r.email));
+    if (phoneOnly && !emailOnly) found = found.filter((r) => validPhone(r.phone));
+    if (missingEmailOnly) found = found.filter((r) => !r.email);
+    if (missingPhoneOnly) found = found.filter((r) => !r.phone);
+    if (requirementsOnly) found = found.filter((r) => !!r.requirements);
+    if (channelFilter !== "all") found = filterByChannel(found, channelFilter);
+    if (sortBy === "contact") found.sort((a, b) => String(a.contact_name || a.company).localeCompare(String(b.contact_name || b.company)));
+    else if (sortBy === "category") found.sort((a, b) => String(a.category).localeCompare(String(b.category)));
+    else if (sortBy === "updated") found.sort((a, b) => String(b.updated_at || "").localeCompare(String(a.updated_at || "")));
+    else found.sort((a, b) => String(a.company).localeCompare(String(b.company)));
+    return found;
+  };
+
+  const loadSavedContacts = async () => {
+    try {
+      const params = savedContactParams();
+      const [all, nextStats] = await Promise.all([
+        request(`/contacts${params.toString() ? `?${params.toString()}` : ""}`),
+        request("/contacts/stats"),
+      ]);
+      const mapped = Array.isArray(all) ? all.map(mapSavedContact) : [];
+      const filtered = filterSavedRows(mapped);
+      const offset = Math.max(0, (page - 1) * limit);
+      const pageRows = filtered.slice(offset, offset + limit);
+      setRows(pageRows);
+      setStats({
+        total: nextStats?.total ?? mapped.length,
+        by_domain: nextStats?.by_domain || {},
+        by_category: nextStats?.by_intent || {},
+        by_call_status: nextStats?.by_source || {},
+        with_email: mapped.filter((r) => validEmail(r.email)).length,
+        with_phone: mapped.filter((r) => validPhone(r.phone)).length,
+        with_requirements: mapped.filter((r) => !!r.requirements).length,
+        follow_up_due: 0,
+      });
+      setTotalFiltered(filtered.length);
+      filtered.forEach((r) => { if (selectedIds.has(r.id)) selCache.current.set(r.id, r); });
+    } catch (error) {
+      onNotice({ type: "error", text: error.message });
+    }
+  };
+
   const load = async () => {
+    if (contactSource === "contacts") return loadSavedContacts();
     const params = filterParams();
     const countQuery = params.toString();
     params.set("offset", String(Math.max(0, (page - 1) * limit)));
@@ -1666,17 +1754,26 @@ export function MarketingCompanies({ onNotice }) {
     }
   };
 
+  const addRowsToSelection = (fetched) => {
+    fetched.forEach((r) => selCache.current.set(r.id, r));
+    setSelectedIds((prev) => { const n = new Set(prev); fetched.forEach((r) => n.add(r.id)); return n; });
+    return fetched.length;
+  };
+
   const addIdsToSelection = async (ids) => {
     if (!ids.length) return 0;
+    if (contactSource === "contacts") {
+      const wanted = new Set(ids);
+      const all = await request("/contacts");
+      return addRowsToSelection((Array.isArray(all) ? all : []).filter((r) => wanted.has(r.id)).map(mapSavedContact));
+    }
     const fetched = [];
     for (let i = 0; i < ids.length; i += 250) {
       const chunk = ids.slice(i, i + 250);
       const rows = await request(`/marketing-companies?ids=${chunk.join(",")}&limit=${Math.min(250, chunk.length)}`);
       fetched.push(...rows);
     }
-    fetched.forEach((r) => selCache.current.set(r.id, r));
-    setSelectedIds((prev) => { const n = new Set(prev); fetched.forEach((r) => n.add(r.id)); return n; });
-    return fetched.length;
+    return addRowsToSelection(fetched);
   };
 
   const loadSegments = () => request("/marketing-companies/segments").then((d) => setSegments(Array.isArray(d?.segments) ? d.segments : [])).catch(() => setSegments([]));
@@ -1692,6 +1789,15 @@ export function MarketingCompanies({ onNotice }) {
   const deleteSegment = async (name) => { try { const d = await request(`/marketing-companies/segments/${encodeURIComponent(name)}`, { method: "DELETE" }); setSegments(d.segments || []); } catch (e) { onNotice({ type: "error", text: e.message }); } };
   const selectGroup = async (cat) => {
     try {
+      if (contactSource === "contacts") {
+        const params = savedContactParams();
+        params.delete("intent");
+        params.set("intent", cat);
+        const found = await request(`/contacts${params.toString() ? `?${params.toString()}` : ""}`);
+        const count = addRowsToSelection(filterSavedRows(found));
+        onNotice({ type: "success", text: `Selected ${count} saved contact(s) in group "${cat}".` });
+        return;
+      }
       const params = filterParams();
       params.delete("category");
       params.set("category", cat);
@@ -1702,6 +1808,12 @@ export function MarketingCompanies({ onNotice }) {
   };
   const selectMatching = async () => {
     try {
+      if (contactSource === "contacts") {
+        const found = await request(`/contacts${savedContactParams().toString() ? `?${savedContactParams().toString()}` : ""}`);
+        const count = addRowsToSelection(filterSavedRows(found));
+        onNotice({ type: "success", text: `Selected ${count} matching saved contact(s).` });
+        return;
+      }
       const result = await request(`/marketing-companies/ids?${filterParams().toString()}`);
       const count = await addIdsToSelection(result.ids || []);
       onNotice({ type: "success", text: `Selected ${count} matching contact(s)${result.truncated ? " (capped at 5000)" : ""}.` });
@@ -1719,7 +1831,12 @@ export function MarketingCompanies({ onNotice }) {
     if (!rowEdit) return;
     setBusy(true);
     try {
-      const updated = await request(`/marketing-companies/${rowEdit.id}`, { method: "PATCH", body: JSON.stringify({ phone: rowEdit.phone, email: normalizeEmail(rowEdit.email), contact_name: rowEdit.contact_name, category: rowEdit.category, call_status: rowEdit.call_status, requirements: rowEdit.requirements, follow_up_date: rowEdit.follow_up_date }) });
+      const isSaved = contactSource === "contacts";
+      const body = isSaved
+        ? JSON.stringify({ name: rowEdit.contact_name, phone: rowEdit.phone, intent: rowEdit.category, context: rowEdit.requirements })
+        : JSON.stringify({ phone: rowEdit.phone, email: normalizeEmail(rowEdit.email), contact_name: rowEdit.contact_name, category: rowEdit.category, call_status: rowEdit.call_status, requirements: rowEdit.requirements, follow_up_date: rowEdit.follow_up_date });
+      const saved = await request(`${isSaved ? "/contacts" : "/marketing-companies"}/${rowEdit.id}`, { method: "PATCH", body });
+      const updated = isSaved ? mapSavedContact(saved) : saved;
       setRows((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
       selCache.current.set(updated.id, updated);
       setRowEdit(null); setExpandRow(updated.id);
@@ -1775,7 +1892,7 @@ export function MarketingCompanies({ onNotice }) {
         const result = await request("/marketing-companies/normalize-emails", { method: "POST" });
         if (result.normalized) onNotice({ type: "success", text: `${result.normalized} contact email(s) normalized. Syntax only; no verification status was changed.` });
       } catch { }
-      await Promise.all([load(), loadActivity(), loadSources(), loadImageTemplates(), loadFormLinks(), loadFormSubmissions()]);
+      await Promise.all([load(), loadActivity(), loadSources(), loadImageTemplates(), loadFormLinks(), loadFormSubmissions(), request("/contacts/stats").then((d) => setSavedTotal(d?.total ?? 0)).catch(() => setSavedTotal(0))]);
     };
     initialise();
   }, []);
@@ -1809,7 +1926,7 @@ export function MarketingCompanies({ onNotice }) {
   useEffect(() => {
     const id = setTimeout(() => load(), 250);
     return () => clearTimeout(id);
-  }, [debounced, categoryFilter, statusFilter, funnelStageFilter, salesProgressFilter, dueFollowupsOnly, requirementsOnly, emailOnly, phoneOnly, missingEmailOnly, missingPhoneOnly, limit, sortBy, page]);
+  }, [debounced, categoryFilter, statusFilter, funnelStageFilter, salesProgressFilter, dueFollowupsOnly, requirementsOnly, emailOnly, phoneOnly, missingEmailOnly, missingPhoneOnly, limit, sortBy, page, contactSource, channelFilter]);
 
   useEffect(() => { if (mTab === "insights") loadOutreachAn(); }, [mTab]);
 
@@ -1978,7 +2095,24 @@ export function MarketingCompanies({ onNotice }) {
   const [cLimit, setCLimit] = useState(50);
   const [cDetail, setCDetail] = useState(null);
   const [cBusy, setCBusy] = useState(false);
+  const [senderOptions, setSenderOptions] = useState([]);
+  const [senderKey, setSenderKey] = useState("");
   const loadOutreachAn = async () => { try { setOutreachAn(await request("/campaigns/analytics")); } catch {} };
+  const loadSenders = async () => {
+    try {
+      const options = await request("/email/senders");
+      const list = Array.isArray(options) ? options : [];
+      setSenderOptions(list);
+      setSenderKey((current) =>
+        list.some((option) => option.key === current)
+          ? current
+          : (list.find((option) => option.is_default)?.key || ""),
+      );
+    } catch {
+      setSenderOptions([]);
+      setSenderKey("");
+    }
+  };
   const loadCampaigns = async () => {
     try {
       const [camps, m] = await Promise.all([request("/campaigns"), request("/templates/meta")]);
@@ -1986,9 +2120,9 @@ export function MarketingCompanies({ onNotice }) {
       setTplMeta(m || { channels: [], strategies: [], funnel_stages: [] });
     } catch { setCampaigns([]); }
   };
-  useEffect(() => { loadCampaigns(); loadOutreachAn(); }, []);
+  useEffect(() => { loadCampaigns(); loadOutreachAn(); loadSenders(); }, []);
   useEffect(() => { loadSegments(); }, []);
-  useEffect(() => { setPage(1); }, [query, categoryFilter, statusFilter, funnelStageFilter, salesProgressFilter, dueFollowupsOnly, requirementsOnly, emailOnly, phoneOnly, channelFilter, missingEmailOnly, missingPhoneOnly, limit, sortBy]);
+  useEffect(() => { setPage(1); }, [query, categoryFilter, statusFilter, funnelStageFilter, salesProgressFilter, dueFollowupsOnly, requirementsOnly, emailOnly, phoneOnly, channelFilter, missingEmailOnly, missingPhoneOnly, limit, sortBy, contactSource]);
   const pickTemplate = (t) => { setSelTemplate(t); if (t) { setCChannel(t.channel || "email"); setCStrategy(t.strategy || "cold_outreach"); setComposeSubject(t.subject || ""); setComposeBody(t.body || ""); } else { setComposeSubject(""); setComposeBody(""); } };
 
   // Templates tab content (preview/edit/delete) folded in, minus the giant page heading
@@ -2193,10 +2327,12 @@ export function MarketingCompanies({ onNotice }) {
         body: JSON.stringify({
           name: cName, channel: cChannel, strategy: cStrategy,
           template_id: selTemplate.id, use_ai: useAi, auto_send: !!autoSend, image_url: attachImage || "", video_url: attachVideo || "", catalog_url: attachCatalog || "", subject_override: composeSubject || null, body_override: composeBody || null,
+          ...(cChannel === "email" && senderKey ? { sender_key: senderKey } : {}),
           filter: {
             limit: targetCount || Number(cLimit) || 50,
-            contact_type: "marketing_companies",
-            q: query, category: categoryFilter, call_status: statusFilter, funnel_stage: funnelStageFilter,
+            contact_type: contactSource,
+            q: query,
+            ...(contactSource === "contacts" ? { intent: categoryFilter, source: statusFilter } : { category: categoryFilter, call_status: statusFilter, funnel_stage: funnelStageFilter }),
             contact_ids: (targetRows || []).map((r) => r.id),
           },
         }),
@@ -2223,19 +2359,20 @@ export function MarketingCompanies({ onNotice }) {
     try { setCDetail(await request(`/campaigns/${cDetail.id}/approve`, { method: "POST" })); onNotice({ type: "success", text: "Approved  -  ready to send." }); }
     catch (e) { onNotice({ type: "error", text: e.message }); } finally { setCBusy(false); }
   };
+  const senderQuery = senderKey ? `?sender_key=${encodeURIComponent(senderKey)}` : "";
   const sendCampaign = async () => {
     if (!cDetail || cDetail.status !== "approved") return;
     if (!window.confirm(`Send ${cDetail.total} approved messages in ${cDetail.name}?`)) return;
     setCBusy(true);
     try {
-      const result = await request(`/campaigns/${cDetail.id}/send`, { method: "POST" });
+      const result = await request(`/campaigns/${cDetail.id}/send${senderQuery}`, { method: "POST" });
       onNotice({ type: "success", text: `Sent ${result.sent}, failed ${result.failed}, queued ${result.skipped}.` });
       setCDetail(await request(`/campaigns/${cDetail.id}`)); loadCampaigns();
     } catch (e) { onNotice({ type: "error", text: e.message }); } finally { setCBusy(false); }
   };
   const progressPct = cDetail && cDetail.total ? Math.round(((cDetail.sent_count + cDetail.failed_count) / cDetail.total) * 100) : 0;
   const openRate = cDetail && cDetail.sent_count ? Math.round(((cDetail.opened_count || 0) / cDetail.sent_count) * 100) : 0;
-  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [selectedIds, setSelectedIds] = useState(() => new Set(handoff.ids));
   const visibleRows = channelFilter === "all" ? rows : filterByChannel(rows, channelFilter);
   const allVisibleSelected = visibleRows.length > 0 && visibleRows.every((r) => selectedIds.has(r.id));
   const toggleSelectAll = (check) => setSelectedIds((prev) => {
@@ -2249,6 +2386,27 @@ export function MarketingCompanies({ onNotice }) {
   });
   const selectPage = () => toggleSelectAll(true);
   const clearSelection = () => { setSelectedIds(new Set()); selCache.current.clear(); };
+  const switchContactSource = (source) => {
+    if (source === contactSource) return;
+    clearSelection();
+    setContactSource(source);
+    setPage(1);
+    setTotalFiltered(null);
+    setRowEdit(null);
+    setExpandRow(null);
+    setCategoryFilter("");
+    setStatusFilter("");
+    setQuery("");
+    setEmailOnly(false);
+    setPhoneOnly(false);
+    setMissingEmailOnly(false);
+    setMissingPhoneOnly(false);
+    setRequirementsOnly(false);
+    setChannelFilter("all");
+    setFunnelStageFilter("");
+    setSalesProgressFilter("");
+    setDueFollowupsOnly(false);
+  };
   const normalizeEmails = async () => {
     setBusy(true);
     try {
@@ -2294,7 +2452,7 @@ export function MarketingCompanies({ onNotice }) {
           body: JSON.stringify({
             template_id: selTemplate.id,
             channel,
-            contact_type: "marketing_companies",
+            contact_type: contactSource,
             contact_ids: ids,
             subject_override: composeSubject || "",
             body_override: composeBody || "",
@@ -2307,7 +2465,7 @@ export function MarketingCompanies({ onNotice }) {
       } finally { setPersonalizationBusy(false); }
     }, 350);
     return () => clearTimeout(timer);
-  }, [sendStep, selTemplate?.id, cChannel, selectedIds, composeSubject, composeBody, rows.length]);
+  }, [sendStep, selTemplate?.id, cChannel, selectedIds, composeSubject, composeBody, rows.length, contactSource]);
 
 
   // mobile long-press multi-select (movement threshold keeps normal scrolling intact)
@@ -2344,7 +2502,7 @@ export function MarketingCompanies({ onNotice }) {
   const retryCampaign = async () => {
     if (!cDetail) return; setRetrying(true);
     try {
-      const result = await request(`/campaigns/${cDetail.id}/retry`, { method: "POST" });
+      const result = await request(`/campaigns/${cDetail.id}/retry${senderQuery}`, { method: "POST" });
       onNotice({ type: "success", text: `Retried: ${result.sent} sent, ${result.failed} failed.` });
       setCDetail(await request(`/campaigns/${cDetail.id}`)); loadCampaigns();
     } catch (e) { onNotice({ type: "error", text: e.message }); } finally { setRetrying(false); }
@@ -2499,7 +2657,7 @@ export function MarketingCompanies({ onNotice }) {
     setCBusy(true);
     try {
       const details = [];
-      for (const [channel, list] of byCh) details.push(await request("/campaigns", { method: "POST", body: JSON.stringify({ name: `${cName} (${channel})`, channel, strategy: cStrategy, template_id: selTemplate.id, use_ai: useAi, auto_send: !!autoSend, image_url: attachImage || "", video_url: attachVideo || "", catalog_url: attachCatalog || "", subject_override: composeSubject || null, body_override: composeBody || null, filter: { limit: list.length, contact_type: "marketing_companies", contact_ids: list.map((r)=>r.id), q: query, category: categoryFilter, call_status: statusFilter, funnel_stage: funnelStageFilter } }) }));
+      for (const [channel, list] of byCh) details.push(await request("/campaigns", { method: "POST", body: JSON.stringify({ name: `${cName} (${channel})`, channel, strategy: cStrategy, template_id: selTemplate.id, use_ai: useAi, auto_send: !!autoSend, image_url: attachImage || "", video_url: attachVideo || "", catalog_url: attachCatalog || "", subject_override: composeSubject || null, body_override: composeBody || null, ...(channel === "email" && senderKey ? { sender_key: senderKey } : {}), filter: { limit: list.length, contact_type: contactSource, contact_ids: list.map((r)=>r.id), q: query, ...(contactSource === "contacts" ? { intent: categoryFilter, source: statusFilter } : { category: categoryFilter, call_status: statusFilter, funnel_stage: funnelStageFilter }) } }) }));
       if (details[0]) setCDetail(details[0]);
       const summary = details.map((d, i) => `${d.total} ${byCh[i][0]}`).join(" + ");
       onNotice({ type: "success", text: autoSend ? `Sending ${summary}: ${details.reduce((n, d) => n + (d.sent_count || 0), 0)} accepted so far.` : `Queued ${summary} for review.` });
@@ -2509,11 +2667,23 @@ export function MarketingCompanies({ onNotice }) {
 
   const dupSet = dupInfo ? dupIds() : null;
   const pageCount = totalFiltered != null ? Math.max(1, Math.ceil(totalFiltered / limit)) : null;
+  const senderPicker = (
+    <label className="sender-picker" style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "var(--muted)" }}>
+      Sending from
+      {senderOptions.length ? (
+        <select value={senderKey} onChange={(event) => setSenderKey(event.target.value)} aria-label="Sending email account">
+          {senderOptions.map((option) => (
+            <option key={option.key} value={option.key}>{option.label} - {option.email_address}</option>
+          ))}
+        </select>
+      ) : <small className="muted">No configured email sender</small>}
+    </label>
+  );
 
   return (
     <div className="content outreach-compact">
       <div className="page-heading"><div><div className="section-kicker">OUTREACH / TEMPLATES / MARKETING</div><h2>Outreach &amp; marketing</h2><p className="muted">Channel-first send, curated templates, insights, videos, signals and events.</p></div>
-        <div className="button-row"><button className="secondary-button" onClick={() => { load(); loadActivity(); loadCampaigns(); loadOutreachAn(); }}><RefreshCw size={16}/> Refresh</button><button className="secondary-button" onClick={syncFromGCS} disabled={busy}><Database size={16}/>{busy?"Syncing...":"Sync"}</button></div></div>
+        <div className="button-row">            <button className="secondary-button" onClick={() => { load(); loadActivity(); loadCampaigns(); loadOutreachAn(); }}><RefreshCw size={16}/> Refresh</button>{contactSource === "marketing_companies" && <button className="secondary-button" onClick={syncFromGCS} disabled={busy}><Database size={16}/>{busy?"Syncing...":"Sync"}</button>}</div></div>
       <div className="outreach-tabs" role="tablist">{[["dashboard","Dashboard"],["send","Send & templates"],["insights","Insights & stats"],["forms","Forms & feedback"],["library","Videos & ERP"],["signals","Signal desk"],["events","Events"]].map(([id,label])=>(<button key={id} role="tab" aria-selected={mTab===id} className={`secondary-button ${mTab===id?"primary-button":""}`} onClick={()=>setMTab(id)}>{label}</button>))}</div>
       {mTab==="insights" && outreachAn && (() => { const oa=outreachAn; const t=oa.totals||{}; const maxDay=Math.max(1,...(oa.daily||[]).map(d=>Math.max(d.email_sent||0,d.whatsapp_sent||0,d.failed||0,1))); const mxC=Math.max(1,...(oa.by_campaign||[]).map(c=>Math.max(c.sent||0,1))); const mxG=Math.max(1,...(oa.by_group||[]).map(g=>Math.max((g.sent||0)+(g.failed||0),1))); const bar=(v,mx,c)=> <span className="mini-bar"><i style={{width:`${Math.max(3,Math.round(((v||0)/(mx||1))*100))}%`,background:c||undefined}} /></span>; return (
       <section className="panel studio-panel"><div className="panel-heading"><div><div className="section-kicker">OUTREACH ANALYTICS (REAL)</div><h3>Progress dashboard</h3></div><div className="button-row"><span className="muted">{oa.note}</span><button className="secondary-button" onClick={loadOutreachAn}><RefreshCw size={14}/> Refresh</button></div></div>
@@ -2588,30 +2758,36 @@ export function MarketingCompanies({ onNotice }) {
           <div><div className="section-kicker">STEP 1: SYNC &amp; SELECT CONTACTS</div><h2>Outreach recipients</h2>
             <p className="muted">Total {fmtNum(totalCompanies)} - Matching {totalFiltered != null ? fmtNum(totalFiltered) : "-"} - Showing {rows.length} - <b>{selectedRows.length} selected</b></p></div>
           <div className="button-row">
-            <button className="secondary-button" onClick={syncAllSources} disabled={busy}><Database size={15}/> {busy?"Syncing...":"Sync all from GCS"}</button>
+            {contactSource === "marketing_companies" && <button className="secondary-button" onClick={syncAllSources} disabled={busy}><Database size={15}/> {busy?"Syncing...":"Sync all from GCS"}</button>}
             <button className="secondary-button" onClick={() => { load(); loadSources(); }}><RefreshCw size={15}/> Refresh</button>
           </div>
         </div>
-        <div className="source-tiles" aria-label="Contact source files">
+        <div className="channel-filter-row" role="group" aria-label="Contact source">
+          <button className={`channel-filter-chip ${contactSource==="contacts"?"active":""}`} onClick={()=>switchContactSource("contacts")} aria-pressed={contactSource==="contacts"}><Users size={13}/> Saved contacts ({fmtNum(savedTotal)})</button>
+          <button className={`channel-filter-chip ${contactSource==="marketing_companies"?"active":""}`} onClick={()=>switchContactSource("marketing_companies")} aria-pressed={contactSource==="marketing_companies"}><Database size={13}/> Marketing contacts</button>
+        </div>
+        {contactSource === "contacts" ? <p className="muted" style={{margin:"8px 0"}}>These are the records from the Contacts tab. Templates, personalization and mail sending use this same source.</p> : <div className="source-tiles" aria-label="Contact source files">
           {sources.map((f)=>(<div className={`source-tile ${f.processed?"done":""}`} key={f.file} title={f.path||f.file}>
             <b>{f.short}</b><small>{f.size_mb?`${f.size_mb} MB - `:""}{f.updated||"local sync"}</small>
             <span className="contact-tag">{f.processed?`${f.rows_in_db} rows in DB`:"not synced"}</span>
             {f.in_gcs && <button className="secondary-button" disabled={busy} onClick={()=>syncOne(f.path)}><Database size={12}/> Sync</button>}
           </div>))}
           {!sources.length && <small className="muted">No files in sales-contacts/ yet.</small>}
-        </div>
+        </div>}
 
         <div className="search-field" style={{marginTop:10}}><Search size={16}/><input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="Search company, person, email or phone" aria-label="Search contacts" /></div>
         <button className="link-button filters-toggle" onClick={()=>setFiltersOpen((v)=>!v)} aria-expanded={filtersOpen} aria-controls="outreach-filters">{filtersOpen?"Hide filters":"Show filters"}</button>
         {filtersOpen && <div id="outreach-filters" className="filter-row">
           <label>Category<select value={categoryFilter} onChange={(e)=>setCategoryFilter(e.target.value)} aria-label="Filter by category"><option value="">All categories</option>{categories.map((i)=><option key={i} value={i}>{i}</option>)}</select></label>
           <label>Status<select value={statusFilter} onChange={(e)=>setStatusFilter(e.target.value)} aria-label="Filter by status"><option value="">All statuses</option>{statuses.map((i)=><option key={i} value={i}>{i}</option>)}</select></label>
+          {contactSource === "marketing_companies" && <>
           <label>Funnel stage<select value={funnelStageFilter} onChange={(e)=>setFunnelStageFilter(e.target.value)} aria-label="Funnel stage"><option value="">All stages</option><option value="awareness">Awareness</option><option value="interest">Interest</option><option value="decision">Decision</option><option value="action">Action / purchase</option></select></label>
           <label>Progress<select value={salesProgressFilter} onChange={(e)=>setSalesProgressFilter(e.target.value)} aria-label="Sales progress"><option value="">Any progress</option>{["new","contacted","interested","quoted","negotiating","won","lost"].map((p)=><option key={p} value={p}>{p}</option>)}</select></label>
+          </>}
           <label>Show<select value={limit} onChange={(e)=>setLimit(Number(e.target.value))} aria-label="Rows shown">{[25,50,100,250].map((n)=><option key={n} value={n}>{n}</option>)}</select></label>
           <label className="switch"><input type="checkbox" checked={emailOnly} onChange={(e)=>{setEmailOnly(e.target.checked); if (e.target.checked) setPhoneOnly(false);}} /> Only with email</label>
           <label className="switch"><input type="checkbox" checked={phoneOnly} onChange={(e)=>{setPhoneOnly(e.target.checked); if (e.target.checked) setEmailOnly(false);}} /> Only with mobile (WhatsApp)</label>
-          <label className="switch"><input type="checkbox" checked={dueFollowupsOnly} onChange={(e)=>setDueFollowupsOnly(e.target.checked)} /> Follow-up due</label>
+          {contactSource === "marketing_companies" && <label className="switch"><input type="checkbox" checked={dueFollowupsOnly} onChange={(e)=>setDueFollowupsOnly(e.target.checked)} /> Follow-up due</label>}
           <label className="switch"><input type="checkbox" checked={requirementsOnly} onChange={(e)=>setRequirementsOnly(e.target.checked)} /> Has requirements</label>
           <label className="switch"><input type="checkbox" checked={missingEmailOnly} onChange={(e)=>setMissingEmailOnly(e.target.checked)} /> Missing email (needs detail)</label>
           <label className="switch"><input type="checkbox" checked={missingPhoneOnly} onChange={(e)=>setMissingPhoneOnly(e.target.checked)} /> Missing mobile (needs detail)</label>
@@ -2619,6 +2795,7 @@ export function MarketingCompanies({ onNotice }) {
 
         {/* saved segments (real, persisted server-side) */}
         <div className="segment-bar">
+          {contactSource === "marketing_companies" && <>
           <select value="" onChange={(e)=>{const s=segments.find((x)=>x.name===e.target.value); if (s) applySegment(s);}} aria-label="Saved segment" disabled={!segments.length}>
             <option value="">{segments.length ? "Apply saved segment" : "No saved segments"}</option>
             {segments.map((s)=>(<option key={s.name} value={s.name}>{s.name}</option>))}
@@ -2627,6 +2804,7 @@ export function MarketingCompanies({ onNotice }) {
           {segments.length>0 && <button className="icon-button" title="Delete last segment" onClick={()=>deleteSegment(segments[segments.length-1].name)}><Trash2 size={13}/></button>}
           <button className="secondary-button" onClick={checkDuplicates} disabled={dupBusy}><Copy size={13}/> {dupBusy?"Checking...":"Check duplicates"}</button>
           {dupInfo && <span className="contact-tag">{dupInfo.total_duplicate_rows} duplicate rows found</span>}
+          </>}
           <span className="spacer" />
           <button className={`link-button ${sortBy==="company"?"":""}`} onClick={()=>{setSortBy("company");}} aria-pressed={sortBy==="company"}>Sort: Company</button>
           <button className="link-button" onClick={()=>{setSortBy("contact");}}>Contact</button>
@@ -2653,8 +2831,10 @@ export function MarketingCompanies({ onNotice }) {
           <button className="secondary-button" onClick={()=>toggleSelectAll(true)} disabled={!rows.length}><Check size={14}/> Select all on page</button>
           <button className="secondary-button" onClick={selectMatching} disabled={!totalFiltered}><Check size={14}/> Select all matching ({totalFiltered != null ? fmtNum(totalFiltered) : 0})</button>
           <button className="secondary-button" onClick={clearSelection} disabled={!selectedRows.length}>Clear selection</button>
+          {contactSource === "marketing_companies" && <>
           <button className="secondary-button" onClick={()=>{ const removed=[...selectedIds].filter((id)=>dupSet&&dupSet.has(id)); if (removed.length) { setSelectedIds((prev)=>{const n=new Set(prev); removed.forEach((id)=>n.delete(id)); return n;}); removed.forEach((id)=>selCache.current.delete(id)); } onNotice({ type: "success", text: removed.length ? `Removed ${removed.length} duplicate(s) from selection (kept first record).` : "No duplicates in selection - run Check duplicates first." }); }} disabled={!selectedRows.length || !dupSet}>Remove dupes</button>
           <button className="secondary-button" onClick={normalizeEmails} disabled={busy}><RefreshCw size={13}/> Normalize emails</button>
+          </>}
           <button className="secondary-button" onClick={exportSelectedCsv} disabled={!selectedRows.length}><FileDown size={13}/> Export CSV</button>
           {multiSelect && <span className="contact-tag">Multi-select on</span>}
           <button className="primary-button" onClick={continueToConfig} disabled={!selectedRows.length} style={{marginLeft:"auto"}}>Continue ({selectedRows.length})</button>
@@ -2671,7 +2851,7 @@ export function MarketingCompanies({ onNotice }) {
             <th aria-label="Select all visible"><input type="checkbox" checked={allVisibleSelected} onChange={(e)=>toggleSelectAll(e.target.checked)} /></th>
             <th>Contact</th><th>Company</th><th>Designation</th><th>Email</th><th>Mobile</th><th>Group / Status</th><th>Channels</th><th>Actions</th>
           </tr></thead><tbody>
-            {visibleRows.map((row)=>{ const act=activity[row.id]; const waText=quickWaText(row); const emText=quickEmailText(row); const dups=dupSet; return (
+            {visibleRows.map((row)=>{ const act=contactSource==="marketing_companies"?activity[row.id]:null; const waText=quickWaText(row); const emText=quickEmailText(row); const dups=contactSource==="marketing_companies"?dupSet:null; return (
               <React.Fragment key={row.id}>
               <tr className={`${selectedIds.has(row.id)?"tick-selected":""} ${expandRow===row.id?"row-open":""}`}>
                 <td><input type="checkbox" checked={selectedIds.has(row.id)} onChange={()=>toggleSelect(row.id,row)} aria-label={`Select ${row.company}`} /></td>
@@ -2692,11 +2872,13 @@ export function MarketingCompanies({ onNotice }) {
                 {rowEdit?.id===row.id ? (
                   <div className="row-edit-grid">
                     <label>Contact name<input value={rowEdit.contact_name} onChange={(e)=>setRowEdit({...rowEdit, contact_name:e.target.value})} /></label>
-                    <label>Email<input value={rowEdit.email} onChange={(e)=>setRowEdit({...rowEdit, email:e.target.value})} /></label>
+                    {contactSource === "marketing_companies" ? <label>Email<input value={rowEdit.email} onChange={(e)=>setRowEdit({...rowEdit, email:e.target.value})} /></label> : <label>Email<input value={rowEdit.email} disabled title="Edit the email address in the Contacts tab" /></label>}
                     <label>Mobile<input value={rowEdit.phone} onChange={(e)=>setRowEdit({...rowEdit, phone:e.target.value})} /></label>
                     <label>Group/Category<input value={rowEdit.category} onChange={(e)=>setRowEdit({...rowEdit, category:e.target.value})} /></label>
+                    {contactSource === "marketing_companies" && <>
                     <label>Call status<input value={rowEdit.call_status} onChange={(e)=>setRowEdit({...rowEdit, call_status:e.target.value})} /></label>
                     <label>Follow-up (YYYY-MM-DD)<input value={rowEdit.follow_up_date} onChange={(e)=>setRowEdit({...rowEdit, follow_up_date:e.target.value})} /></label>
+                    </>}
                     <label className="wide">Requirements<textarea rows={2} value={rowEdit.requirements} onChange={(e)=>setRowEdit({...rowEdit, requirements:e.target.value})} /></label>
                     <div className="button-row"><button className="primary-button" onClick={saveRowEdit} disabled={busy}>{busy?"Saving...":"Save details"}</button><button className="secondary-button" onClick={()=>setRowEdit(null)}>Cancel</button></div>
                   </div>
@@ -2723,7 +2905,7 @@ export function MarketingCompanies({ onNotice }) {
 
         {/* Mobile: cards */}
         <div className="contact-cards" aria-label="Contact list (cards)">
-          {visibleRows.map((row)=>{ const act=activity[row.id]; const waText=quickWaText(row); const emText=quickEmailText(row); return (
+          {visibleRows.map((row)=>{ const act=contactSource==="marketing_companies"?activity[row.id]:null; const waText=quickWaText(row); const emText=quickEmailText(row); return (
             <div key={row.id} className={`contact-card ${selectedIds.has(row.id)?"tick-selected":""}`} onTouchStart={(ev)=>pressStart(row,ev)} onTouchMove={pressMove} onTouchEnd={pressEnd} onTouchCancel={pressEnd} onClick={()=>{ if(multiSelect) toggleSelect(row.id,row); }} role="button" tabIndex={0} aria-pressed={selectedIds.has(row.id)} onKeyDown={(e)=>{ if(e.key===" "||e.key==="Enter"){ e.preventDefault(); toggleSelect(row.id,row); } }}>
               <label className="contact-card-check" onClick={(e)=>e.stopPropagation()}>
                 <input type="checkbox" checked={selectedIds.has(row.id)} onChange={()=>toggleSelect(row.id,row)} aria-label={`Select ${row.company}`} />
@@ -2745,8 +2927,9 @@ export function MarketingCompanies({ onNotice }) {
                   <button className="secondary-button" onClick={()=>setRowEdit({ id:row.id, contact_name:row.contact_name||"", email:row.email||"", phone:row.phone||"", category:row.category||"", call_status:row.call_status||"", requirements:row.requirements||"", follow_up_date:row.follow_up_date||"" })}><Edit2 size={13}/> Edit</button>
                 </div>}
                 {rowEdit?.id===row.id && <div className="row-edit-grid" onClick={(e)=>e.stopPropagation()}>
-                  <label>Email<input value={rowEdit.email} onChange={(e)=>setRowEdit({...rowEdit, email:e.target.value})} /></label>
+                  <label>Email<input value={rowEdit.email} disabled={contactSource==="contacts"} title={contactSource==="contacts"?"Edit the email address in the Contacts tab":undefined} onChange={(e)=>setRowEdit({...rowEdit, email:e.target.value})} /></label>
                   <label>Mobile<input value={rowEdit.phone} onChange={(e)=>setRowEdit({...rowEdit, phone:e.target.value})} /></label>
+                  {contactSource === "contacts" && <label>Group<input value={rowEdit.category} onChange={(e)=>setRowEdit({...rowEdit, category:e.target.value})} /></label>}
                   <label className="wide">Requirements<textarea rows={2} value={rowEdit.requirements} onChange={(e)=>setRowEdit({...rowEdit, requirements:e.target.value})} /></label>
                   <div className="button-row"><button className="primary-button" onClick={saveRowEdit} disabled={busy}>Save</button><button className="secondary-button" onClick={()=>setRowEdit(null)}>Cancel</button></div>
                 </div>}
@@ -2773,6 +2956,7 @@ export function MarketingCompanies({ onNotice }) {
           <label>Campaign name<input className="campaign-name" value={cName} onChange={(e)=>setCName(e.target.value)} aria-label="Campaign name" /></label>
           <label className="switch"><input type="checkbox" checked={useAi} onChange={(e)=>setUseAi(e.target.checked)} /> Personalize with AI</label>
         </div>
+        {(cChannel === "email" || cChannel === "both") && <div className="form-row">{senderPicker}</div>}
         <div className="channel-tiles" role="radiogroup" aria-label="Send channel">
           {[["email","Email","HTML design",Mail],["whatsapp","WhatsApp","Text + emojis",MessageCircle],["both","Both","Email + WhatsApp",Send]].map(([value,label,detail,Icon])=>(
             <button type="button" key={value} role="radio" aria-checked={cChannel===value} className={`channel-tile ${cChannel===value?"active":""}`} onClick={()=>chooseChannel(value)}>
@@ -2962,7 +3146,8 @@ export function MarketingCompanies({ onNotice }) {
       </section>}
 
       {sendStep === "progress" && <section className="panel" aria-label="Campaign progress">
-        <div className="panel-heading"><div><div className="section-kicker">SENDING PROGRESS</div><h2>{cDetail ? cDetail.name : "Campaign"}</h2></div>
+        <div className="panel-heading"><div><div className="section-kicker">SENDING PROGRESS</div><h2>{cDetail ? cDetail.name : "Campaign"}</h2>
+          {cDetail?.channel === "email" && <div className="form-row" style={{ marginTop: 8 }}>{senderPicker}</div>}</div>
           <div className="button-row"><button className="secondary-button" onClick={()=>setSendStep("template")}>New campaign</button>
           {cDetail && <><button className="secondary-button" onClick={approveCampaign} disabled={cBusy||cDetail.status!=="pending_review"}>Approve</button><button className="primary-button" onClick={sendCampaign} disabled={cBusy||cDetail.status!=="approved"}><Send size={14}/> Send approved</button><button className="icon-button" onClick={()=>openCampaign(cDetail.id)} title="Refresh progress"><RefreshCw size={15}/></button></>}</div></div>
         {cDetail ? (<>

@@ -1,4 +1,19 @@
 steps:
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        for value in "${_GMAIL_ADDRESS_KALISOFTAI}" "${_GMAIL_ADDRESS_KALIKA}" "${_GMAIL_ADDRESS_KALIKA2}"; do
+          if [[ -z "$value" || "$value" != *@* ]]; then
+            echo "Gmail address substitutions must be valid email addresses"; exit 1
+          fi
+        done
+        for secret in GMAIL_APP_PASSWORD_KALISOFTAI GMAIL_APP_PASSWORD_KALIKA GMAIL_APP_PASSWORD_KALIKA2; do
+          gcloud secrets versions access latest --secret "$secret" --project "$PROJECT_ID" >/dev/null
+        done
+
   - name: "gcr.io/cloud-builders/docker"
     args:
       - build
@@ -24,8 +39,8 @@ steps:
       - "--platform=managed"
       - "--allow-unauthenticated"
       - "--add-cloudsql-instances=${_CLOUD_SQL_INSTANCE}"
-      - "--set-secrets=SECRET_KEY=SALES_SECRET_KEY:latest,DATABASE_URL=SALES_DATABASE_URL:latest"
-      - "--set-env-vars=ENV=production,GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GCS_BUCKET_CONTACTS=kalisoftai-datahub,GCS_PATH_CONTACTS=all-sales-contacts-data,CLOUD_SQL_CONNECTION_NAME=${_CLOUD_SQL_INSTANCE},CORS_ORIGINS=${_CORS_ORIGINS},AUTH_DEV_MODE=false"
+      - "--set-secrets=SECRET_KEY=SALES_SECRET_KEY:latest,DATABASE_URL=SALES_DATABASE_URL:latest,GMAIL_APP_PASSWORD_KALISOFTAI=GMAIL_APP_PASSWORD_KALISOFTAI:latest,GMAIL_APP_PASSWORD_KALIKA=GMAIL_APP_PASSWORD_KALIKA:latest,GMAIL_APP_PASSWORD_KALIKA2=GMAIL_APP_PASSWORD_KALIKA2:latest"
+      - "--set-env-vars=ENV=production,GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GCS_BUCKET_CONTACTS=kalisoftai-datahub,GCS_PATH_CONTACTS=all-sales-contacts-data,CLOUD_SQL_CONNECTION_NAME=${_CLOUD_SQL_INSTANCE},CORS_ORIGINS=${_CORS_ORIGINS},ALLOWED_HOSTS=${_ALLOWED_HOSTS},TRACKING_BASE_URL=${_TRACKING_BASE_URL},AUTH_DEV_MODE=false,GMAIL_ADDRESS_KALISOFTAI=${_GMAIL_ADDRESS_KALISOFTAI},GMAIL_ADDRESS_KALIKA=${_GMAIL_ADDRESS_KALIKA},GMAIL_ADDRESS_KALIKA2=${_GMAIL_ADDRESS_KALIKA2}"
       - "--no-cpu-throttling"
       - "--min-instances=0"
       - "--max-instances=5"
@@ -40,6 +55,11 @@ substitutions:
   _REGION: "asia-south1"
   _CLOUD_SQL_INSTANCE: "PROJECT:REGION:INSTANCE"
   _CORS_ORIGINS: "https://kalisoft-sales-HASH.a.run.app"
+  _ALLOWED_HOSTS: "kalisoft-sales-HASH.a.run.app"
+  _TRACKING_BASE_URL: "https://kalisoft-sales-19782268668.asia-south1.run.app"
+  _GMAIL_ADDRESS_KALISOFTAI: ""
+  _GMAIL_ADDRESS_KALIKA: ""
+  _GMAIL_ADDRESS_KALIKA2: ""
 
 options:
   logging: CLOUD_LOGGING_ONLY

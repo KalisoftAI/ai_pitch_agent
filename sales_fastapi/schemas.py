@@ -112,6 +112,13 @@ class EmailConnectionOut(BaseModel):
     is_connected: bool
 
 
+class SenderOptionOut(BaseModel):
+    key: str
+    email_address: str
+    label: str
+    is_default: bool
+
+
 class SendMailIn(BaseModel):
     to: str = Field(..., min_length=3, max_length=320)
     subject: str = Field(..., min_length=1, max_length=998)
@@ -401,6 +408,8 @@ class CampaignCreate(BaseModel):
     catalog_url: str = Field(default="", max_length=1024)
     subject_override: Optional[str] = Field(default=None, max_length=255)
     body_override: Optional[str] = Field(default=None, max_length=20_000)
+    connection_id: Optional[int] = Field(default=None, gt=0)
+    sender_key: Optional[str] = Field(default=None, max_length=32)
     filter: CampaignFilter = Field(default_factory=CampaignFilter)
 
 

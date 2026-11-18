@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -117,7 +117,9 @@ def password_login(
     db: Session = Depends(get_db),
 ) -> TokenOut:
     """Kalika username+password sign-in (works alongside Google sign-in)."""
-    username = payload.username.strip().lower()
+    username = " ".join(payload.username.strip().lower().split())
+    compact_username = username.replace(" ", "")
+    local_part = username.split(" ", 1)[0] if "@" not in username else ""
     email_address = username if "@" in username else f"{username}@kalika.local"
 
     user = db.query(User).filter(User.email == email_address).first()
@@ -126,14 +128,25 @@ def password_login(
         # "Kalika-user1" -> kalikaenterprises@gmail.com). Only use this
         # fallback when no local e-mail account matches, and require the
         # alias to resolve to exactly one account.
-        matches = db.query(User).filter(func.lower(User.name) == username).limit(2).all()
+        matches = (
+            db.query(User)
+            .filter(
+                or_(
+                    func.lower(User.name) == username,
+                    func.replace(func.lower(User.name), " ", "") == compact_username,
+                    func.lower(User.name) == local_part,
+                )
+            )
+            .limit(2)
+            .all()
+        )
         if len(matches) == 1:
             user = matches[0]
             email_address = user.email
     if user is None and "@" not in username:
         # Accept the local part of an email as a username (for example
         # "kalikaenterprises" -> kalikaenterprises@gmail.com) when unique.
-        matches = db.query(User).filter(User.email.ilike(f"{username}@%")).limit(2).all()
+        matches = db.query(User).filter(User.email.ilike(f"{local_part}@%")).limit(2).all()
         if len(matches) == 1:
             user = matches[0]
             email_address = user.email

@@ -32,14 +32,24 @@ jobs:
       allowed_hosts: ${{ steps.map.outputs.allowed_hosts }}
       frontend_url: ${{ steps.map.outputs.frontend_url }}
       graph_chat_enabled: ${{ steps.map.outputs.graph_chat_enabled }}
+      gmail_kalisoftai: ${{ steps.map.outputs.gmail_kalisoftai }}
+      gmail_kalika: ${{ steps.map.outputs.gmail_kalika }}
     steps:
       - id: map
         run: |
           if [ -z "${{ vars.GCP_PROJECT_ID }}" ] || [ -z "${{ vars.GCP_REGION }}" ] || \
              [ -z "${{ vars.ARTIFACT_REPOSITORY }}" ] || [ -z "${{ vars.CLOUD_SQL_INSTANCE }}" ] || \
              [ -z "${{ vars.GCS_BUCKET }}" ] || [ -z "${{ vars.GCS_PATH }}" ] || \
-             [ -z "${{ secrets.GOOGLE_CLIENT_ID }}" ] || [ -z "${{ vars.GOOGLE_ALLOWED_DOMAINS }}" ]; then
+             [ -z "${{ secrets.GOOGLE_CLIENT_ID }}" ] || [ -z "${{ vars.GOOGLE_ALLOWED_DOMAINS }}" ] || \
+              [ -z "${{ vars.GMAIL_ADDRESS_KALISOFTAI }}" ] || [ -z "${{ vars.GMAIL_ADDRESS_KALIKA }}" ] || \
+              [ -z "${{ vars.GMAIL_ADDRESS_KALIKA2 }}" ]; then
             echo "Required GitHub Actions deployment variables are missing"; exit 1
+          fi
+          GMAIL_KALISOFTAI="${{ vars.GMAIL_ADDRESS_KALISOFTAI }}"
+          GMAIL_KALIKA="${{ vars.GMAIL_ADDRESS_KALIKA }}"
+          GMAIL_KALIKA2="${{ vars.GMAIL_ADDRESS_KALIKA2 }}"
+          if [[ "$GMAIL_KALISOFTAI" != *@* || "$GMAIL_KALIKA" != *@* || "$GMAIL_KALIKA2" != *@* ]]; then
+            echo "GMAIL_ADDRESS_KALISOFTAI, GMAIL_ADDRESS_KALIKA and GMAIL_ADDRESS_KALIKA2 must be email addresses"; exit 1
           fi
           case "${GITHUB_REF_NAME}" in
             main)
@@ -86,6 +96,9 @@ jobs:
             echo "deploy_env=$DEPLOY_ENV";
             echo "max_instances=$MAX"; echo "frontend_url=$FE";
             echo "graph_chat_enabled=$GRAPH_CHAT";
+            echo "gmail_kalisoftai=$GMAIL_KALISOFTAI";
+            echo "gmail_kalika=$GMAIL_KALIKA";
+            echo "gmail_kalika2=$GMAIL_KALIKA2";
             echo "allowed_hosts=$HOSTS"; echo "cors=$CORS";
           } >> "$GITHUB_OUTPUT"
 
@@ -124,6 +137,12 @@ jobs:
           # The deployer SA can bind secrets (versions.access) but cannot list or
           # describe them, so probe with `versions access` (value discarded).
           SECRETS="SECRET_KEY=SALES_SECRET_KEY:latest,DATABASE_URL=SALES_DATABASE_URL:latest"
+          for SECRET_NAME in GMAIL_APP_PASSWORD_KALISOFTAI GMAIL_APP_PASSWORD_KALIKA GMAIL_APP_PASSWORD_KALIKA2; do
+            if ! gcloud secrets versions access latest --secret "$SECRET_NAME" --project "$P" >/dev/null 2>&1; then
+              echo "Required Gmail secret is not accessible/configured: $SECRET_NAME"; exit 1
+            fi
+          done
+          SECRETS="$SECRETS,GMAIL_APP_PASSWORD_KALISOFTAI=GMAIL_APP_PASSWORD_KALISOFTAI:latest,GMAIL_APP_PASSWORD_KALIKA=GMAIL_APP_PASSWORD_KALIKA:latest,GMAIL_APP_PASSWORD_KALIKA2=GMAIL_APP_PASSWORD_KALIKA2:latest"
           add_optional_secret() {  # $1 = env var name, $2 = Secret Manager secret name
             if gcloud secrets versions access latest --secret "$2" --project "$P" >/dev/null 2>&1; then
               SECRETS="${SECRETS:+$SECRETS,}$1=$2:latest"
@@ -133,7 +152,6 @@ jobs:
           }
           add_optional_secret GEMINI_API_KEY GEMINI_API_KEY
           add_optional_secret GOOGLE_CLIENT_SECRET GOOGLE_CLIENT_SECRET
-          add_optional_secret SMTP_PASSWORD SMTP_PASSWORD
 
           # TrustedHost must accept the service's own Cloud Run host. Hash-based
           # URLs are not predictable, so read the existing URL and append its host.
@@ -142,6 +160,8 @@ jobs:
           EXISTING_HOST=$(printf '%s' "$EXISTING_URL" | sed -E 's#^https?://##; s#/$##')
           if [ -n "$EXISTING_HOST" ]; then HOSTS="$HOSTS,$EXISTING_HOST"; fi
 
+          ENV_VARS="^|^ENV=${{ needs.resolve.outputs.app_env }}|DEPLOY_ENV=${{ needs.resolve.outputs.deploy_env }}|GOOGLE_CLOUD_PROJECT=$P|GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}|GOOGLE_ALLOWED_DOMAINS=${{ vars.GOOGLE_ALLOWED_DOMAINS }}|ALLOWED_HOSTS=$HOSTS|CORS_ORIGINS=${{ needs.resolve.outputs.cors }}|GCS_BUCKET_CONTACTS=${{ vars.GCS_BUCKET }}|GCS_PATH_CONTACTS=${{ vars.GCS_PATH }}|KNOWLEDGE_GRAPH_GCS_PREFIX=sales-app/knowledge_graph/|KNOWLEDGE_GRAPH_REFRESH_DAYS=7|KNOWLEDGE_GRAPH_CHAT_ENABLED=${{ needs.resolve.outputs.graph_chat_enabled }}|CLOUD_SQL_CONNECTION_NAME=${{ vars.CLOUD_SQL_INSTANCE }}|RATE_LIMIT_ENABLED=true|AUTH_DEV_MODE=false|GEMMA_MODEL=${{ vars.GEMMA_MODEL || 'gemma-4-27b-it' }}|LLM_GEMMA_MODEL=${{ vars.LLM_GEMMA_MODEL || 'gemma-4-27b-it' }}|FRONTEND_URL=${{ needs.resolve.outputs.frontend_url }}|GMAIL_ADDRESS_KALISOFTAI=${{ needs.resolve.outputs.gmail_kalisoftai }}|GMAIL_ADDRESS_KALIKA=${{ needs.resolve.outputs.gmail_kalika }}|GMAIL_ADDRESS_KALIKA2=${{ needs.resolve.outputs.gmail_kalika2 }}"
+
           gcloud run deploy "$SVC" \
             --image "${IMAGE_BASE}:${GITHUB_SHA}" \
             --project "$P" \
@@ -149,7 +169,7 @@ jobs:
             --platform managed \
             --allow-unauthenticated \
             --add-cloudsql-instances "${{ vars.CLOUD_SQL_INSTANCE }}" \
-            --set-env-vars "^@^ENV=${{ needs.resolve.outputs.app_env }}@DEPLOY_ENV=${{ needs.resolve.outputs.deploy_env }}@GOOGLE_CLOUD_PROJECT=$P@GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}@GOOGLE_ALLOWED_DOMAINS=${{ vars.GOOGLE_ALLOWED_DOMAINS }}@ALLOWED_HOSTS=$HOSTS@CORS_ORIGINS=${{ needs.resolve.outputs.cors }}@GCS_BUCKET_CONTACTS=${{ vars.GCS_BUCKET }}@GCS_PATH_CONTACTS=${{ vars.GCS_PATH }}@KNOWLEDGE_GRAPH_GCS_PREFIX=sales-app/knowledge_graph/@KNOWLEDGE_GRAPH_REFRESH_DAYS=7@KNOWLEDGE_GRAPH_CHAT_ENABLED=${{ needs.resolve.outputs.graph_chat_enabled }}@CLOUD_SQL_CONNECTION_NAME=${{ vars.CLOUD_SQL_INSTANCE }}@RATE_LIMIT_ENABLED=true@AUTH_DEV_MODE=false@GEMMA_MODEL=${{ vars.GEMMA_MODEL || 'gemma-4-27b-it' }}@LLM_GEMMA_MODEL=${{ vars.LLM_GEMMA_MODEL || 'gemma-4-27b-it' }}@FRONTEND_URL=${{ needs.resolve.outputs.frontend_url }}" \
+            --set-env-vars "$ENV_VARS" \
             --update-secrets "$SECRETS" \
             --min-instances=0 \
             --max-instances="${{ needs.resolve.outputs.max_instances }}" \
@@ -160,13 +180,15 @@ jobs:
             --cpu-throttling
 
           # First deploy of a brand-new service: its URL did not exist before the
-          # deploy, so add the actual host and wait for the new revision.
+          # deploy, so add the actual host and pin the public open-tracking origin.
           ACTUAL_URL=$(gcloud run services describe "$SVC" --project "$P" --region "$R" --format='value(status.url)')
           ACTUAL_HOST=$(printf '%s' "$ACTUAL_URL" | sed -E 's#^https?://##; s#/$##')
+          ENV_UPDATES="^@^TRACKING_BASE_URL=$ACTUAL_URL"
           case ",$HOSTS," in
             *",$ACTUAL_HOST,"*) ;;
-            *) gcloud run services update "$SVC" --project "$P" --region "$R" --update-env-vars "ALLOWED_HOSTS=$HOSTS,$ACTUAL_HOST" ;;
+            *) ENV_UPDATES="$ENV_UPDATES@ALLOWED_HOSTS=$HOSTS,$ACTUAL_HOST" ;;
           esac
+          gcloud run services update "$SVC" --project "$P" --region "$R" --update-env-vars "$ENV_UPDATES"
 
       - name: Smoke test
         run: |
