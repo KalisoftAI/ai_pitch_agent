@@ -1,0 +1,17 @@
+{
+  "name": "ai-film-studio-motion-renderer",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Canvas motion-graphics renderer built on the Lemo-Opuscar capture pipeline.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "setup": "node -e \"console.log('renderer ready')\""
+  },
+  "dependencies": {
+    "playwright-core": "^1.63.0",
+    "three": "^0.170.0"
+  }
+}

@@ -25,7 +25,7 @@ node_modules/
 
 # Django build/runtime artifacts
 staticfiles/
-media/
+/media/
 db.sqlite3
 *.log
 logs/

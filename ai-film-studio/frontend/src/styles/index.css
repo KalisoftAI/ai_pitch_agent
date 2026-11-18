@@ -1,0 +1,104 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 224 47% 5%;
+    --foreground: 210 40% 98%;
+    --card: 224 36% 8%;
+    --card-foreground: 210 40% 98%;
+    --surface: 223 30% 11%;
+    --border: 220 24% 18%;
+    --input: 220 24% 16%;
+    --ring: 258 90% 66%;
+    --primary: 258 90% 66%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 222 20% 15%;
+    --muted-foreground: 218 14% 66%;
+    --accent: 190 92% 55%;
+    --accent-foreground: 224 47% 5%;
+    --success: 152 68% 46%;
+    --warning: 38 95% 56%;
+    --danger: 0 80% 63%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    background-image:
+      radial-gradient(1000px 520px at 12% -8%, hsl(258 90% 66% / 0.16), transparent 60%),
+      radial-gradient(900px 480px at 100% 0%, hsl(190 92% 55% / 0.08), transparent 55%),
+      radial-gradient(700px 600px at 50% 120%, hsl(258 90% 66% / 0.08), transparent 60%);
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.35);
+    color: white;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 999px;
+    border: 2px solid hsl(var(--background));
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(220 20% 28%);
+  }
+}
+
+@layer components {
+  .glass {
+    @apply border border-white/10 bg-white/[0.04] backdrop-blur-xl;
+  }
+
+  .panel {
+    @apply rounded-2xl border border-border/80 bg-card/80 shadow-panel backdrop-blur-sm;
+  }
+
+  .panel-hover {
+    @apply transition duration-300 hover:border-primary/40 hover:bg-card hover:shadow-glow;
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-white via-white to-primary/80 bg-clip-text text-transparent;
+  }
+
+  .grid-bg {
+    background-image:
+      linear-gradient(to right, hsl(var(--border) / 0.35) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border) / 0.35) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black, transparent 75%);
+  }
+
+  .focus-ring {
+    @apply outline-none ring-offset-2 ring-offset-background focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
