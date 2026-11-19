@@ -380,6 +380,7 @@ class CampaignMessage(Base):
     provider_id: Mapped[str] = mapped_column(String(128), default="")
     sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     opened_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    clicked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
@@ -669,6 +670,9 @@ class MarketingCompany(Base):
     source_sheet: Mapped[str] = mapped_column(String(255), default="")
     source_file: Mapped[str] = mapped_column(String(255), index=True, default="")
     source_row: Mapped[int] = mapped_column(Integer, default=0)
+    marketing_approved: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    source_reference: Mapped[str] = mapped_column(String(512), default="")
+    segment: Mapped[str] = mapped_column(String(64), default="", index=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -697,4 +701,106 @@ class TaskApproval(Base):
     status: Mapped[str] = mapped_column(String(16), index=True, default="pending")
     decided_by: Mapped[str] = mapped_column(String(255), default="")
     decided_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class OutreachSmartTemplate(Base):
+    """Approved WhatsApp template with personalised, rate-aware body content."""
+
+    __tablename__ = "outreach_smart_templates"
+    __table_args__ = (
+        UniqueConstraint("user_id", "name", name="uq_outreach_smart_template_user_name"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    name: Mapped[str] = mapped_column(String(128), index=True)
+    category: Mapped[str] = mapped_column(String(64), default="", index=True)
+    body: Mapped[str] = mapped_column(Text, default="")
+    variables: Mapped[list] = mapped_column(JSON, default=list)
+    status: Mapped[str] = mapped_column(String(16), index=True, default="draft")
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    created_by: Mapped[str] = mapped_column(String(255), default="")
+    approved_by: Mapped[str] = mapped_column(String(255), default="")
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class OutreachWhatsAppCampaign(Base):
+    """A WhatsApp outreach run that is reviewed before any message is sent."""
+
+    __tablename__ = "outreach_whatsapp_campaigns"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    name: Mapped[str] = mapped_column(String(160), index=True)
+    template_id: Mapped[int] = mapped_column(Integer, index=True)
+    segment: Mapped[str] = mapped_column(String(64), default="", index=True)
+    rate_ids: Mapped[list] = mapped_column(JSON, default=list)
+    status: Mapped[str] = mapped_column(String(24), index=True, default="pending_review")
+    total: Mapped[int] = mapped_column(Integer, default=0)
+    sent_count: Mapped[int] = mapped_column(Integer, default=0)
+    delivered_count: Mapped[int] = mapped_column(Integer, default=0)
+    read_count: Mapped[int] = mapped_column(Integer, default=0)
+    failed_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_by: Mapped[str] = mapped_column(String(255), default="")
+    approved_by: Mapped[str] = mapped_column(String(255), default="")
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class OutreachWhatsAppMessage(Base):
+    """One personalised WhatsApp message with delivery/read engagement state."""
+
+    __tablename__ = "outreach_whatsapp_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    campaign_id: Mapped[int] = mapped_column(Integer, ForeignKey("outreach_whatsapp_campaigns.id"), index=True)
+    contact_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    contact_type: Mapped[str] = mapped_column(String(32), default="marketing_companies")
+    phone: Mapped[str] = mapped_column(String(64), index=True)
+    name: Mapped[str] = mapped_column(String(255), default="")
+    company: Mapped[str] = mapped_column(String(255), default="")
+    rendered_body: Mapped[str] = mapped_column(Text, default="")
+    links: Mapped[dict] = mapped_column(JSON, default=dict)
+    status: Mapped[str] = mapped_column(String(24), index=True, default="pending_review")
+    provider_id: Mapped[str] = mapped_column(String(128), default="", index=True)
+    track_token: Mapped[str] = mapped_column(String(64), default="", index=True)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    failed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    error: Mapped[str] = mapped_column(String(512), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class OutreachEngagementEvent(Base):
+    """Provider or landing-page engagement event for an outreach message."""
+
+    __tablename__ = "outreach_engagement_events"
+    __table_args__ = (
+        UniqueConstraint("provider_event_id", name="uq_outreach_engagement_provider_event"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    message_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("outreach_whatsapp_messages.id"), index=True
+    )
+    event_type: Mapped[str] = mapped_column(String(32), index=True)
+    provider_event_id: Mapped[str | None] = mapped_column(
+        String(128), default=None, nullable=True, index=True
+    )
+    target_url: Mapped[str] = mapped_column(String(1024), default="")
+    duration_ms: Mapped[int] = mapped_column(Integer, default=0)
+    meta: Mapped[dict] = mapped_column(JSON, default=dict)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

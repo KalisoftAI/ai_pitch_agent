@@ -118,6 +118,9 @@ def _ensure_columns() -> None:
             ("next_action", "TEXT DEFAULT ''"),
             ("follow_up_date", "VARCHAR(10) DEFAULT ''"),
             ("source_file", "VARCHAR(255) DEFAULT ''"),
+            ("marketing_approved", "BOOLEAN DEFAULT FALSE"),
+            ("source_reference", "VARCHAR(512) DEFAULT ''"),
+            ("segment", "VARCHAR(64) DEFAULT ''"),
         ):
             if column not in cols:
                 with engine.begin() as conn:
@@ -142,6 +145,7 @@ def _ensure_columns() -> None:
             ("image_url", "VARCHAR(1024) DEFAULT ''"),
             ("sent_at", "TIMESTAMP"),
             ("opened_at", "TIMESTAMP"),
+            ("clicked_at", "TIMESTAMP"),
         ):
             if column not in cols:
                 with engine.begin() as conn:

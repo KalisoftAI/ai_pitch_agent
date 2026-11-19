@@ -1,6 +1,7 @@
 import re
 
 from sales_fastapi.config import settings
+from sales_fastapi.pipeline_templates import CATALOGUE_LINK
 
 
 class FakeMailSender:
@@ -61,7 +62,9 @@ def _template(client, headers, body):
     return response.json()["id"]
 
 
-def _setup_campaign(client, headers, monkeypatch, body, connection_id=None, sender_key=None):
+def _setup_campaign(
+    client, headers, monkeypatch, body, connection_id=None, sender_key=None, catalog_url=None
+):
     FakeMailSender.calls = []
     FakeMailSender.credentials = []
     monkeypatch.setattr("sales_fastapi.routers.campaigns.MailSender", FakeMailSender)
@@ -88,6 +91,8 @@ def _setup_campaign(client, headers, monkeypatch, body, connection_id=None, send
         payload["connection_id"] = connection_id
     if sender_key is not None:
         payload["sender_key"] = sender_key
+    if catalog_url is not None:
+        payload["catalog_url"] = catalog_url
     response = client.post("/api/campaigns", json=payload, headers=headers)
     assert response.status_code == 201, response.text
     return response.json()
@@ -474,3 +479,71 @@ def test_campaign_uses_org_env_address_over_different_stored_connection(
     }
     connections = client.get("/api/email/connections", headers=headers).json()
     assert any(row["email_address"] == "sales.kalika@example.test" for row in connections)
+
+
+def test_public_catalog_proxy_serves_allowlisted_pdfs(client, monkeypatch):
+    class FakeGCSStorage:
+        def __init__(self, bucket_name=None):
+            self.available = True
+            self._client = self
+
+        def bucket(self, name):
+            return self
+
+        def blob(self, path):
+            return self
+
+        def download_as_bytes(self):
+            return b"%PDF-1.4 fake catalogue"
+
+    monkeypatch.setattr(
+        "sales_fastapi.routers.public_links.GCSStorage", FakeGCSStorage
+    )
+
+    response = client.get("/api/public/catalog/catalog")
+    assert response.status_code == 200, response.text
+    assert response.content == b"%PDF-1.4 fake catalogue"
+    assert response.headers["content-type"].startswith("application/pdf")
+    assert "kalika-catalogue.pdf" in response.headers["content-disposition"]
+    assert client.get("/api/public/catalog/profile").status_code == 200
+    assert client.get("/api/public/catalog/unknown").status_code == 404
+
+
+def test_email_catalogue_link_tracks_clicks_and_rates(client, auth_headers, monkeypatch):
+    connection_id = _connection(client, auth_headers)
+    campaign = _setup_campaign(
+        client,
+        auth_headers,
+        monkeypatch,
+        "<html><body>Hello {{company}}</body></html>",
+        connection_id,
+        catalog_url=CATALOGUE_LINK,
+    )
+
+    body = FakeMailSender.calls[0]["body"]
+    match = re.search(
+        r"https://mail\.example\.test/api/campaigns/track/catalog/([A-Za-z0-9.]+)",
+        body,
+    )
+    assert match is not None
+    token = match.group(1)
+
+    head = client.head(f"/api/campaigns/track/catalog/{token}", follow_redirects=False)
+    assert head.status_code == 302
+    detail = client.get(f"/api/campaigns/{campaign['id']}", headers=auth_headers).json()
+    assert detail["clicked_count"] == 0
+
+    clicked = client.get(
+        f"/api/campaigns/track/catalog/{token}", follow_redirects=False
+    )
+    assert clicked.status_code == 302
+    assert clicked.headers["location"].endswith("/api/public/catalog/catalog")
+
+    detail = client.get(f"/api/campaigns/{campaign['id']}", headers=auth_headers).json()
+    assert detail["clicked_count"] == 1
+    assert detail["messages"][0]["clicked_at"] is not None
+    assert detail["messages"][0]["provider_id"] == "fake@kalika.local"
+
+    analytics = client.get("/api/campaigns/analytics", headers=auth_headers).json()
+    assert analytics["totals"]["clicked"] == 1
+    assert analytics["rates"]["click_rate"] == 100.0

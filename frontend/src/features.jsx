@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { filterByChannel, normalizeEmail, validEmail, validPhone } from "./validation";
 import { CampaignManager } from "./features/CampaignManager";
+import { OutreachWhatsApp } from "./features/OutreachWhatsApp";
 
 const API = "/api";
 const readToken = () => sessionStorage.getItem("sales_token") || "";
@@ -2372,6 +2373,7 @@ export function MarketingCompanies({ onNotice }) {
   };
   const progressPct = cDetail && cDetail.total ? Math.round(((cDetail.sent_count + cDetail.failed_count) / cDetail.total) * 100) : 0;
   const openRate = cDetail && cDetail.sent_count ? Math.round(((cDetail.opened_count || 0) / cDetail.sent_count) * 100) : 0;
+  const clickRate = cDetail && cDetail.sent_count ? Math.round(((cDetail.clicked_count || 0) / cDetail.sent_count) * 100) : 0;
   const [selectedIds, setSelectedIds] = useState(() => new Set(handoff.ids));
   const visibleRows = channelFilter === "all" ? rows : filterByChannel(rows, channelFilter);
   const allVisibleSelected = visibleRows.length > 0 && visibleRows.every((r) => selectedIds.has(r.id));
@@ -2684,7 +2686,7 @@ export function MarketingCompanies({ onNotice }) {
     <div className="content outreach-compact">
       <div className="page-heading"><div><div className="section-kicker">OUTREACH / TEMPLATES / MARKETING</div><h2>Outreach &amp; marketing</h2><p className="muted">Channel-first send, curated templates, insights, videos, signals and events.</p></div>
         <div className="button-row">            <button className="secondary-button" onClick={() => { load(); loadActivity(); loadCampaigns(); loadOutreachAn(); }}><RefreshCw size={16}/> Refresh</button>{contactSource === "marketing_companies" && <button className="secondary-button" onClick={syncFromGCS} disabled={busy}><Database size={16}/>{busy?"Syncing...":"Sync"}</button>}</div></div>
-      <div className="outreach-tabs" role="tablist">{[["dashboard","Dashboard"],["send","Send & templates"],["insights","Insights & stats"],["forms","Forms & feedback"],["library","Videos & ERP"],["signals","Signal desk"],["events","Events"]].map(([id,label])=>(<button key={id} role="tab" aria-selected={mTab===id} className={`secondary-button ${mTab===id?"primary-button":""}`} onClick={()=>setMTab(id)}>{label}</button>))}</div>
+      <div className="outreach-tabs" role="tablist">{[["dashboard","Dashboard"],["send","Send & templates"],["whatsapp","WhatsApp automation"],["insights","Insights & stats"],["forms","Forms & feedback"],["library","Videos & ERP"],["signals","Signal desk"],["events","Events"]].map(([id,label])=>(<button key={id} role="tab" aria-selected={mTab===id} className={`secondary-button ${mTab===id?"primary-button":""}`} onClick={()=>setMTab(id)}>{label}</button>))}</div>
       {mTab==="insights" && outreachAn && (() => { const oa=outreachAn; const t=oa.totals||{}; const maxDay=Math.max(1,...(oa.daily||[]).map(d=>Math.max(d.email_sent||0,d.whatsapp_sent||0,d.failed||0,1))); const mxC=Math.max(1,...(oa.by_campaign||[]).map(c=>Math.max(c.sent||0,1))); const mxG=Math.max(1,...(oa.by_group||[]).map(g=>Math.max((g.sent||0)+(g.failed||0),1))); const bar=(v,mx,c)=> <span className="mini-bar"><i style={{width:`${Math.max(3,Math.round(((v||0)/(mx||1))*100))}%`,background:c||undefined}} /></span>; return (
       <section className="panel studio-panel"><div className="panel-heading"><div><div className="section-kicker">OUTREACH ANALYTICS (REAL)</div><h3>Progress dashboard</h3></div><div className="button-row"><span className="muted">{oa.note}</span><button className="secondary-button" onClick={loadOutreachAn}><RefreshCw size={14}/> Refresh</button></div></div>
         <div className="marketing-stat-grid">
@@ -2709,6 +2711,7 @@ export function MarketingCompanies({ onNotice }) {
         ))}</div><div /></div>}
       </section>); })()}
       {mTab==="dashboard" && <OutreachDashboard goSend={() => setMTab("send")} />}
+      {mTab==="whatsapp" && <OutreachWhatsApp onNotice={onNotice} />}
       {mTab==="insights" && <><section className="panel studio-panel"><div className="panel-heading"><div><div className="section-kicker">MARKETING HIGH-LEVEL</div><h3>Exact details for sending</h3></div><span className="muted">{fmtNum(totalCompanies)} companies - {fmtNum(sumWith("with_email"))} with email - {fmtNum(sumWith("with_phone"))} with phone</span></div>
         <div className="marketing-stat-grid">{stats ? [["Companies",stats.total,null],["Name + email",sumWith("with_email"),totalCompanies?Math.round(sumWith("with_email")/totalCompanies*100):0],["Phone",sumWith("with_phone"),totalCompanies?Math.round(sumWith("with_phone")/totalCompanies*100):0],["Templates",templates.length,null],["Follow-ups due",sumWith("follow_up_due"),null],["With requirements",sumWith("with_requirements"),totalCompanies?Math.round(sumWith("with_requirements")/totalCompanies*100):0]].map(([label,value,pct])=>(<div className="marketing-stat" key={label}><small>{label}</small><b>{fmtNum(value)}</b>{pct != null && <span>{pct}%</span>}</div>)) : <div className="marketing-stat"><small>Templates</small><b>{templates.length}</b></div>}</div>
         <div className="mini-charts"><div><b>Top domains</b>{topDomains.length?topDomains.map(([label,count])=>(<div key={label} className="mini-chart-row"><span>{label}</span>{bar(count,maxDomain)}<strong>{fmtNum(count)}</strong></div>)):<small className="muted">No domains.</small>}</div><div><b>Call status</b>{Object.entries(statusBuckets).map(([label,count])=>(<div key={label} className="mini-chart-row"><span>{label}</span>{bar(count,Math.max(1,...Object.values(statusBuckets)))}<strong>{fmtNum(count)}</strong></div>))}</div></div>
@@ -3069,6 +3072,7 @@ export function MarketingCompanies({ onNotice }) {
           </div>}
           <div className="catalog-row">
             <button className="secondary-button" onClick={()=>catalogUploadRef.current&&catalogUploadRef.current.click()} disabled={busy}><UploadCloud size={13}/> Catalogue (PDF)</button>
+            <button className="secondary-button" onClick={()=>setAttachCatalog(`${window.location.origin}/api/public/catalog/catalog`)}><FileText size={13}/> Public catalogue link</button>
             <input className="field-inline" value={attachCatalog} onChange={(e)=>setAttachCatalog(e.target.value)} placeholder="or paste a catalogue/PDF link" aria-label="Catalogue link" />
             <input ref={catalogUploadRef} type="file" accept="application/pdf" hidden onChange={uploadCatalog} />
           </div>
@@ -3152,12 +3156,14 @@ export function MarketingCompanies({ onNotice }) {
           {cDetail && <><button className="secondary-button" onClick={approveCampaign} disabled={cBusy||cDetail.status!=="pending_review"}>Approve</button><button className="primary-button" onClick={sendCampaign} disabled={cBusy||cDetail.status!=="approved"}><Send size={14}/> Send approved</button><button className="icon-button" onClick={()=>openCampaign(cDetail.id)} title="Refresh progress"><RefreshCw size={15}/></button></>}</div></div>
         {cDetail ? (<>
           <div aria-live="polite" className="visually-hidden">Sending {cDetail.sent_count} of {cDetail.total}, {cDetail.failed_count} failed, {cDetail.opened_count||0} viewed.</div>
-          <div className="marketing-stat-grid">{[["Total",cDetail.total],["Sent",cDetail.sent_count],["Pending",Math.max(0,cDetail.total-cDetail.sent_count-cDetail.failed_count)],["Viewed",cDetail.opened_count||0],["Failed",cDetail.failed_count]].map(([l,v])=><div className="marketing-stat" key={l}><small>{l}</small><b>{fmtNum(v)}</b></div>)}</div>
+          <div className="marketing-stat-grid">{[["Total",cDetail.total],["Sent",cDetail.sent_count],["Pending",Math.max(0,cDetail.total-cDetail.sent_count-cDetail.failed_count)],["Viewed",cDetail.opened_count||0],["Clicked",cDetail.clicked_count||0],["Failed",cDetail.failed_count]].map(([l,v])=><div className="marketing-stat" key={l}><small>{l}</small><b>{fmtNum(v)}</b></div>)}</div>
           <div className="mini-chart-row" style={{margin:"8px 0"}}><span>Progress</span><span className="mini-bar"><i style={{width:`${progressPct}%`}}/></span><strong>{progressPct}%</strong></div>
+          <div className="mini-chart-row" style={{margin:"4px 0"}}><span>Open rate</span><span className="mini-bar"><i style={{width:`${openRate}%`,background:"#22c55e"}}/></span><strong>{openRate}%</strong></div>
+          <div className="mini-chart-row" style={{margin:"4px 0"}}><span>Catalogue click rate</span><span className="mini-bar"><i style={{width:`${clickRate}%`,background:"#2b56a3"}}/></span><strong>{clickRate}%</strong></div>
           {cDetail.status==="pending_review" && <p className="muted">Messages generated for review. Approve then send, or go back and use "Send now".</p>}
           {cDetail.failed_count>0 && <div className="button-row" style={{margin:"6px 0"}}><button className="secondary-button" onClick={retryCampaign} disabled={retrying}><RefreshCw size={14}/> {retrying?"Retrying...":`Retry ${cDetail.failed_count} failed`}</button></div>}
-          <div className="table-wrap"><table><thead><tr><th>Contact</th><th>Status</th><th>Sent</th><th>Viewed</th><th>Error</th></tr></thead><tbody>
-            {(cDetail.messages||[]).slice(0,80).map((m)=>(<tr key={m.id}><td><b>{m.contact_name||m.contact_id}</b></td><td><span className={`contact-tag status-${m.status}`}>{m.status}</span></td><td><small>{m.sent_at?String(m.sent_at).slice(5,16).replace("T"," "):"-"}</small></td><td><small>{m.opened_at?String(m.opened_at).slice(5,16).replace("T"," "):(m.status==="opened"?"yes":"-")}</small></td><td><small className="muted">{m.error||"-"}</small></td></tr>))}
+          <div className="table-wrap"><table><thead><tr><th>Contact</th><th>Status</th><th>Sent</th><th>Viewed</th><th>Clicked</th><th>Error</th></tr></thead><tbody>
+            {(cDetail.messages||[]).slice(0,80).map((m)=>(<tr key={m.id}><td><b>{m.contact_name||m.contact_id}</b></td><td><span className={`contact-tag status-${m.status}`}>{m.status}</span></td><td><small>{m.sent_at?String(m.sent_at).slice(5,16).replace("T"," "):"-"}</small></td><td><small>{m.opened_at?String(m.opened_at).slice(5,16).replace("T"," "):(m.status==="opened"?"yes":"-")}</small></td><td><small>{m.clicked_at?String(m.clicked_at).slice(5,16).replace("T"," "):"-"}</small></td><td><small className="muted">{m.error||"-"}</small></td></tr>))}
           </tbody></table></div>
           <small className="muted">Opened/viewed tracked via email open pixel where supported; delivery "received" is not verifiable for all channels. Progress auto-refreshes every 12s.</small>
         </>) : <p className="muted">No campaign yet. Go back, select contacts, configure and send.</p>}

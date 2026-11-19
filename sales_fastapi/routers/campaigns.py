@@ -19,7 +19,7 @@ from functools import lru_cache
 from types import SimpleNamespace
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import Response
+from fastapi.responses import RedirectResponse, Response
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -458,19 +458,27 @@ def create_campaign(
             else:
                 final_body = (final_body or "") + catalog_block
 
-        db.add(
-            CampaignMessage(
-                campaign_id=campaign.id,
-                user_id=user.id,
-                contact_id=contact.id,
-                contact_name=(getattr(contact, "name", "") or ""),
-                to_address=contact.phone if phone_channel else contact.email,
-                rendered_subject=subject,
-                rendered_body=final_body,
-                image_url=image_url,
-                status="pending_review",
-            )
+        message = CampaignMessage(
+            campaign_id=campaign.id,
+            user_id=user.id,
+            contact_id=contact.id,
+            contact_name=(getattr(contact, "name", "") or ""),
+            to_address=contact.phone if phone_channel else contact.email,
+            rendered_subject=subject,
+            rendered_body=final_body,
+            image_url=image_url,
+            status="pending_review",
         )
+        db.add(message)
+        db.flush()
+        if catalog_url and payload.channel == "email":
+            tracked_catalog = (
+                f"{_tracking_base_url(request)}/api/campaigns/track/catalog/"
+                f"{_tracking_token(campaign.id, message.id)}"
+            )
+            message.rendered_body = (message.rendered_body or "").replace(
+                catalog_url, tracked_catalog
+            )
 
     campaign.ai_model = model_used if payload.use_ai else "template"
 
@@ -528,6 +536,21 @@ def _opened_counts(db: Session, campaign_ids: list[int]) -> dict[int, int]:
     return {int(campaign_id): int(count) for campaign_id, count in rows}
 
 
+def _clicked_counts(db: Session, campaign_ids: list[int]) -> dict[int, int]:
+    if not campaign_ids:
+        return {}
+    rows = (
+        db.query(CampaignMessage.campaign_id, func.count(CampaignMessage.id))
+        .filter(
+            CampaignMessage.campaign_id.in_(campaign_ids),
+            CampaignMessage.clicked_at.isnot(None),
+        )
+        .group_by(CampaignMessage.campaign_id)
+        .all()
+    )
+    return {int(campaign_id): int(count) for campaign_id, count in rows}
+
+
 def _detail(db: Session, campaign: Campaign) -> CampaignDetail:
 
     messages = (
@@ -539,14 +562,17 @@ def _detail(db: Session, campaign: Campaign) -> CampaignDetail:
     )
 
     opened = _opened_counts(db, [campaign.id]).get(campaign.id, 0)
+    clicked = _clicked_counts(db, [campaign.id]).get(campaign.id, 0)
 
     data = CampaignOut.model_validate(campaign).model_dump()
 
     data.pop("opened_count", None)
+    data.pop("clicked_count", None)
 
     return CampaignDetail(
         **data,
         opened_count=opened,
+        clicked_count=clicked,
         messages=[CampaignMessageOut.model_validate(message) for message in messages],
     )
 
@@ -560,11 +586,14 @@ def list_campaigns(user: User = Depends(get_current_user), db: Session = Depends
         .order_by(Campaign.created_at.desc())
         .all()
     )
-    counts = _opened_counts(db, [campaign.id for campaign in campaigns])
+    ids = [campaign.id for campaign in campaigns]
+    counts = _opened_counts(db, ids)
+    clicks = _clicked_counts(db, ids)
     return [
         {
             **CampaignOut.model_validate(campaign).model_dump(),
             "opened_count": counts.get(campaign.id, 0),
+            "clicked_count": clicks.get(campaign.id, 0),
         }
         for campaign in campaigns
     ]
@@ -610,6 +639,18 @@ def campaign_analytics(
             .all()
         ):
             pending_map[cid] = int(count)
+    clicked_map: dict[int, int] = {}
+    if campaign_ids:
+        for cid, count in (
+            db.query(CampaignMessage.campaign_id, func.count(CampaignMessage.id))
+            .filter(
+                CampaignMessage.campaign_id.in_(campaign_ids),
+                CampaignMessage.clicked_at.isnot(None),
+            )
+            .group_by(CampaignMessage.campaign_id)
+            .all()
+        ):
+            clicked_map[cid] = int(count)
 
     by_day: dict[str, dict[str, int]] = defaultdict(
         lambda: {
@@ -618,11 +659,12 @@ def campaign_analytics(
             "sent": 0,
             "failed": 0,
             "opened": 0,
+            "clicked": 0,
             "pending": 0,
         }
     )
     by_channel: dict[str, dict[str, int]] = defaultdict(
-        lambda: {"sent": 0, "failed": 0, "opened": 0, "pending": 0, "campaigns": 0}
+        lambda: {"sent": 0, "failed": 0, "opened": 0, "clicked": 0, "pending": 0, "campaigns": 0}
     )
     totals = {
         "email_sent": 0,
@@ -630,6 +672,7 @@ def campaign_analytics(
         "sent": 0,
         "failed": 0,
         "opened": 0,
+        "clicked": 0,
         "pending": 0,
         "campaigns": len(campaigns),
     }
@@ -640,18 +683,21 @@ def campaign_analytics(
         sent = int(campaign.sent_count or 0)
         failed = int(campaign.failed_count or 0)
         opened = opened_map.get(campaign.id, 0)
+        clicked = clicked_map.get(campaign.id, 0)
         pending = pending_map.get(campaign.id, 0)
         key = "email_sent" if channel == "email" else "whatsapp_sent"
         for bucket in (by_day[day], by_channel[channel]):
             bucket["sent"] += sent
             bucket["failed"] += failed
             bucket["opened"] += opened
+            bucket["clicked"] += clicked
             bucket["pending"] += pending
         by_day[day][key] += sent
         by_channel[channel]["campaigns"] += 1
         totals["sent"] += sent
         totals["failed"] += failed
         totals["opened"] += opened
+        totals["clicked"] += clicked
         totals["pending"] += pending
         totals[key] += sent
         by_campaign.append(
@@ -664,6 +710,7 @@ def campaign_analytics(
                 "sent": sent,
                 "failed": failed,
                 "opened": opened,
+                "clicked": clicked,
                 "pending": pending,
                 "day": day,
             }
@@ -692,10 +739,18 @@ def campaign_analytics(
     except Exception:  # noqa: BLE001 - analytics must never break the dashboard
         by_group = defaultdict(lambda: {"sent": 0, "failed": 0, "opened": 0})
 
+    sent_total = totals["sent"] or 0
     return {
         "days": days,
         "generated_at": datetime.utcnow().isoformat(),
         "totals": totals,
+        "rates": {
+            "delivery_rate": round(((sent_total - totals["failed"]) / sent_total) * 100, 1)
+            if sent_total
+            else 0.0,
+            "open_rate": round((totals["opened"] / sent_total) * 100, 1) if sent_total else 0.0,
+            "click_rate": round((totals["clicked"] / sent_total) * 100, 1) if sent_total else 0.0,
+        },
         "by_channel": [{"channel": key, **value} for key, value in sorted(by_channel.items())],
         "by_campaign": by_campaign[:25],
         "by_group": [
@@ -707,7 +762,7 @@ def campaign_analytics(
         "daily": [{"day": day, **value} for day, value in sorted(by_day.items())],
         "note": (
             f"Real campaign/message records for the last {days} days. "
-            "Sent = provider accepted; Opened = tracking-pixel hits; Pending = awaiting review/send. "
+            "Sent = provider accepted; Opened = tracking-pixel hits; Clicked = catalogue link hits; Pending = awaiting review/send. "
             "Opens are approximate: mail clients may block or prefetch images."
         ),
     }
@@ -719,6 +774,26 @@ def track_open(token: str, request: Request, db: Session = Depends(get_db)):
     if parsed is not None and request.method == "GET":
         _mark_message_opened(db, parsed[0], parsed[1])
     return _pixel_response()
+
+
+@router.api_route("/track/catalog/{token}", methods=["GET", "HEAD"])
+def track_catalog(token: str, request: Request, db: Session = Depends(get_db)):
+    parsed = _parse_tracking_token(token)
+    if parsed is not None and request.method == "GET":
+        message = (
+            db.query(CampaignMessage)
+            .filter(
+                CampaignMessage.id == parsed[1],
+                CampaignMessage.campaign_id == parsed[0],
+            )
+            .first()
+        )
+        if message is not None and message.clicked_at is None:
+            message.clicked_at = datetime.utcnow()
+            db.commit()
+    return RedirectResponse(
+        f"{_tracking_base_url(request)}/api/public/catalog/catalog", status_code=302
+    )
 
 
 @router.get("/{campaign_id}", response_model=CampaignDetail)
@@ -923,7 +998,7 @@ def send_campaign(
                 )
                 body_html = _email_body_with_pixel(message.rendered_body or "", track_url)
 
-                MailSender(
+                result = MailSender(
                     email_connection.smtp_host,
                     email_connection.smtp_port,
                     email_connection.email_address,
@@ -934,6 +1009,8 @@ def send_campaign(
                     body_html,
                     html=True,
                 )
+                if isinstance(result, dict):
+                    message.provider_id = str(result.get("message_id") or "")[:128]
 
                 message.status = "sent"
 

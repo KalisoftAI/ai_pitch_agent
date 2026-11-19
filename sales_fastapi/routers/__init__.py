@@ -20,6 +20,8 @@ from .marketing_companies import router as marketing_companies_router
 from .media import router as media_router
 from .ops import router as ops_router
 from .outreach_forms import router as outreach_forms_router
+from .outreach_whatsapp import router as outreach_whatsapp_router
+from .public_links import router as public_links_router
 from .sales import router as sales_router
 from .scheduler import router as scheduler_router
 from .social import router as social_router
@@ -51,6 +53,8 @@ __all__ = [
     "journey_router",
     "ops_router",
     "outreach_forms_router",
+    "outreach_whatsapp_router",
+    "public_links_router",
     "governance_router",
     "instore_router",
     "knowledge_graph_router",

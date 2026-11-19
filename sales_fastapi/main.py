@@ -34,6 +34,8 @@ from .routers import (
     media_router,
     ops_router,
     outreach_forms_router,
+    outreach_whatsapp_router,
+    public_links_router,
     sales_router,
     scheduler_router,
     social_router,
@@ -109,6 +111,8 @@ app.include_router(google_analytics_router, prefix=api_prefix)
 app.include_router(journey_router, prefix=api_prefix)
 app.include_router(ops_router, prefix=api_prefix)
 app.include_router(outreach_forms_router, prefix=api_prefix)
+app.include_router(outreach_whatsapp_router, prefix=api_prefix)
+app.include_router(public_links_router, prefix=api_prefix)
 app.include_router(events_router, prefix=api_prefix)
 app.include_router(dashboard_router, prefix=api_prefix)
 app.include_router(tally_router, prefix=api_prefix)

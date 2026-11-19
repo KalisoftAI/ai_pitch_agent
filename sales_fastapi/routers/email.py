@@ -524,9 +524,20 @@ def sync_analytics(
         return int(q.scalar() or 0)
 
     sent = _msg_count(("sent", "opened"))
-    delivered = _msg_count(("opened",))  # confirmed via tracking pixel
+    opened = _msg_count(("opened",))
+    delivered = opened  # legacy alias: confirmed via tracking pixel
     failed = _msg_count(("failed",))
     pending = _msg_count(("pending_review", "approved", "queued"), created=True)
+    clicked = int(
+        db.query(func.count(CampaignMessage.id))
+        .filter(
+            CampaignMessage.user_id == user.id,
+            CampaignMessage.clicked_at.isnot(None),
+            CampaignMessage.clicked_at >= since_dt,
+        )
+        .scalar()
+        or 0
+    )
 
     channel_rows = (
         db.query(
@@ -604,6 +615,10 @@ def sync_analytics(
         "outreach": {
             "sent": sent,
             "delivered": delivered,
+            "opened": opened,
+            "clicked": clicked,
+            "open_rate": round((opened / sent) * 100, 1) if sent else 0.0,
+            "click_rate": round((clicked / sent) * 100, 1) if sent else 0.0,
             "failed": failed,
             "pending": pending,
             "by_channel": by_channel,

@@ -45,6 +45,8 @@ def public_config():
         "knowledge_graph_review_enabled": graph_review_enabled,
         "google_client_id": settings.GOOGLE_CLIENT_ID if settings.google_signin_configured else "",
         "google_gmail_oauth_configured": settings.google_gmail_oauth_configured,
+        "google_signin_configured": settings.google_signin_configured,
+        "mail_sending_configured": bool(settings.SMTP_HOST and settings.SMTP_USER),
         "dev_mode": settings.AUTH_DEV_MODE,
     }
 
@@ -61,6 +63,7 @@ def health(request: Request):
         "gcs_available": GCSStorage().available,
         "google_signin_configured": settings.google_signin_configured,
         "google_gmail_oauth_configured": settings.google_gmail_oauth_configured,
+        "mail_sending_configured": bool(settings.SMTP_HOST and settings.SMTP_USER),
         "dev_mode": settings.AUTH_DEV_MODE,
     }
 

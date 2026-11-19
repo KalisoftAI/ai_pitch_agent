@@ -34,6 +34,7 @@ jobs:
       graph_chat_enabled: ${{ steps.map.outputs.graph_chat_enabled }}
       gmail_kalisoftai: ${{ steps.map.outputs.gmail_kalisoftai }}
       gmail_kalika: ${{ steps.map.outputs.gmail_kalika }}
+      gmail_kalika2: ${{ steps.map.outputs.gmail_kalika2 }}
     steps:
       - id: map
         run: |

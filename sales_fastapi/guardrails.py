@@ -54,9 +54,15 @@ class RequestGuardrailsMiddleware(BaseHTTPMiddleware):
             is_open_pixel = request.url.path.startswith(
                 "/api/campaigns/track/open/"
             ) or (request.url.path.startswith("/api/campaigns/") and "/open/" in request.url.path)
+            is_public_document = (
+                request.url.path.startswith("/api/public/catalog")
+                or request.url.path.startswith("/api/campaigns/track/catalog/")
+                or request.url.path.startswith("/api/outreach-whatsapp/public/track/")
+            )
             if (
                 request.url.path.startswith("/api/")
                 and not is_open_pixel
+                and not is_public_document
                 and self._limited(f"api:{client}", settings.API_RATE_LIMIT, 60)
             ):
                 return JSONResponse(status_code=429, content={"detail": "Too many requests"})

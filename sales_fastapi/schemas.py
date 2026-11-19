@@ -429,6 +429,7 @@ class CampaignMessageOut(BaseModel):
     provider_id: str
     sent_at: Optional[datetime] = None
     opened_at: Optional[datetime] = None
+    clicked_at: Optional[datetime] = None
     created_at: datetime
 
 
@@ -453,6 +454,7 @@ class CampaignOut(BaseModel):
     sent_count: int
     failed_count: int
     opened_count: int = 0
+    clicked_count: int = 0
     created_at: datetime
     updated_at: datetime
 
