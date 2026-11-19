@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  BarChart3, Check, CheckCircle, Clock, Database, Eye,   FileDown, Mail, MessageCircle,
+  BarChart3, Check, CheckCircle, Clock, Copy, Database, Eye, FileDown, Mail, MessageCircle,
   RefreshCw, Send, ShieldCheck, UploadCloud, Users, X,
 } from "lucide-react";
 
@@ -47,6 +47,15 @@ export function OutreachWhatsApp({ onNotice }) {
 
   const notifyError = (error) => onNotice?.({ type: "error", text: error.message || String(error) });
   const notifySuccess = (text) => onNotice?.({ type: "success", text });
+
+  const copyText = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text || "");
+      notifySuccess("Copied to clipboard");
+    } catch (error) {
+      notifyError(error);
+    }
+  };
 
   const loadAll = async () => {
     setBusy(true);
@@ -438,7 +447,10 @@ export function OutreachWhatsApp({ onNotice }) {
               {(selectedCampaign.messages || []).slice(0, 5).map((message) => (
                 <details key={message.id} className="wa-message">
                   <summary>{message.company || message.name} · {message.status}</summary>
-                  <pre>{message.rendered_body}</pre>
+                  <div className="wa-message-body">
+                    <pre>{message.rendered_body}</pre>
+                    <button className="secondary-button" onClick={() => copyText(message.rendered_body)}><Copy size={14}/> Copy</button>
+                  </div>
                 </details>
               ))}
             </div>
@@ -475,7 +487,10 @@ export function OutreachWhatsApp({ onNotice }) {
           {previews.map((preview) => (
             <details key={`${preview.contact_id}-${preview.name}`} className="wa-message" open={previews.length === 1}>
               <summary>{preview.company}</summary>
-              <pre>{preview.body}</pre>
+              <div className="wa-message-body">
+                <pre>{preview.body}</pre>
+                <button className="secondary-button" onClick={() => copyText(preview.body)}><Copy size={14}/> Copy</button>
+              </div>
             </details>
           ))}
         </div>

@@ -2330,7 +2330,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .wa-campaign { margin-top:12px; border-top:1px solid var(--line); padding-top:10px; }
 .wa-message { border:1px solid var(--line); border-radius:8px; background:#fff; padding:8px 10px; margin-top:6px; }
 .wa-message summary { cursor:pointer; font-size:12px; font-weight:700; }
+.wa-message-body { display:flex; flex-direction:column; align-items:flex-start; gap:6px; }
 .wa-message pre { white-space:pre-wrap; overflow-wrap:anywhere; font-family:inherit; font-size:11px; line-height:1.55; color:var(--muted-strong); margin:8px 0 0; }
+.wa-message-body .secondary-button { align-self:flex-end; }
 .wa-previews { margin-top:12px; }
 @media (max-width: 980px) {
   .wa-grid, .wa-grid-bottom { grid-template-columns:1fr; }

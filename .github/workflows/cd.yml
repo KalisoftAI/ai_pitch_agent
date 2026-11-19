@@ -128,6 +128,21 @@ jobs:
       - name: Push image
         run: docker push "${IMAGE_BASE}:${GITHUB_SHA}"
 
+      - name: Ensure KalisoftAI Gmail secret exists
+        env:
+          KALISOFTAI_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD_KALISOFTAI }}
+        run: |
+          set -euo pipefail
+          P="${{ vars.GCP_PROJECT_ID }}"
+          SECRET="GMAIL_APP_PASSWORD_KALISOFTAI"
+          if [ -z "${KALISOFTAI_PASSWORD:-}" ]; then
+            echo "Missing GitHub secret GMAIL_APP_PASSWORD_KALISOFTAI"; exit 1
+          fi
+          if ! gcloud secrets versions access latest --secret "$SECRET" --project "$P" >/dev/null 2>&1; then
+            gcloud secrets create "$SECRET" --replication-policy=automatic --project "$P" || true
+            printf '%s' "$KALISOFTAI_PASSWORD" | gcloud secrets versions add "$SECRET" --data-file=- --project "$P"
+          fi
+
       - name: Deploy to Cloud Run
         run: |
           set -euo pipefail
