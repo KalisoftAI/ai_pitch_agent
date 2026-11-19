@@ -7,6 +7,7 @@ import {
 import { filterByChannel, normalizeEmail, validEmail, validPhone } from "./validation";
 import { CampaignManager } from "./features/CampaignManager";
 import { OutreachWhatsApp } from "./features/OutreachWhatsApp";
+import { SalesOpsStudio } from "./features/SalesOpsStudio";
 
 const API = "/api";
 const readToken = () => sessionStorage.getItem("sales_token") || "";
@@ -3551,6 +3552,7 @@ function Templates({ onNotice }) {
 }
 
 export { CampaignManager };
+export { SalesOpsStudio };
 
 // ---------------------------------------------------------------- Knowledge graph review (DEV / UAT)
 export function KnowledgeGraphReview({ onNotice, user, config }) {

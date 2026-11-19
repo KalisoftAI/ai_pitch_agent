@@ -23,8 +23,10 @@ from .outreach_forms import router as outreach_forms_router
 from .outreach_whatsapp import router as outreach_whatsapp_router
 from .public_links import router as public_links_router
 from .sales import router as sales_router
+from .sales_ops import router as sales_ops_router
 from .scheduler import router as scheduler_router
 from .social import router as social_router
+from .studio import router as studio_router
 from .sync import router as sync_router
 from .system import router as system_router
 from .tally import router as tally_router
@@ -62,8 +64,10 @@ __all__ = [
     "marketing_companies_router",
     "media_router",
     "sales_router",
+    "sales_ops_router",
     "scheduler_router",
     "social_router",
+    "studio_router",
     "sync_router",
     "system_router",
     "tally_router",

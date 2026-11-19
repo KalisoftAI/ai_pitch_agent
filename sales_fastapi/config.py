@@ -24,6 +24,13 @@ class Settings(BaseSettings):
     GOOGLE_CLOUD_PROJECT: str = Field(default="", alias="GOOGLE_CLOUD_PROJECT")
     GCS_BUCKET_CONTACTS: str = Field(default="kalisoftai-datahub", alias="GCS_BUCKET_CONTACTS")
     GCS_PATH_CONTACTS: str = Field(default="all-sales-contacts-data", alias="GCS_PATH_CONTACTS")
+    GCS_BUCKET_CRM: str = Field(default="sales-crm", alias="GCS_BUCKET_CRM")
+    GCS_PATH_SALES_APP_DATA: str = Field(
+        default="kalika_enterprises/sales-metadata/sales-app-data/",
+        alias="GCS_PATH_SALES_APP_DATA",
+    )
+    GCS_SIGNING_SERVICE_ACCOUNT: str = Field(default="", alias="GCS_SIGNING_SERVICE_ACCOUNT")
+    OLLAMA_BASE_URL: str = Field(default="http://127.0.0.1:11434", alias="OLLAMA_BASE_URL")
     GCS_BUCKET_MEDIA: str = Field(default="kalika_enterprises", alias="GCS_BUCKET_MEDIA")
     GCS_PATH_VISITS: str = Field(default="sales-app/visits/", alias="GCS_PATH_VISITS")
     # Instore mail extraction: mailbox -> insights JSON -> GCS snapshot.

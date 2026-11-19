@@ -35,10 +35,19 @@ def public_catalog(kind: str):
             blob.reload()
             size = int(blob.size or 0)
             if size > MAX_INLINE_BYTES:
-                signed_url = blob.generate_signed_url(
-                    expiration=datetime.now(timezone.utc) + timedelta(hours=1),
-                    method="GET",
-                )
+                sign_args = {
+                    "expiration": datetime.now(timezone.utc) + timedelta(hours=1),
+                    "method": "GET",
+                }
+                signer = settings.GCS_SIGNING_SERVICE_ACCOUNT
+                if not signer and settings.GOOGLE_CLOUD_PROJECT:
+                    signer = (
+                        f"kalisoft-sales-run@{settings.GOOGLE_CLOUD_PROJECT}."
+                        "iam.gserviceaccount.com"
+                    )
+                if signer:
+                    sign_args["service_account_email"] = signer
+                signed_url = blob.generate_signed_url(**sign_args)
                 return RedirectResponse(signed_url, status_code=307)
             data = blob.download_as_bytes()
             break

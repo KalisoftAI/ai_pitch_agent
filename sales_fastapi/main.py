@@ -36,9 +36,11 @@ from .routers import (
     outreach_forms_router,
     outreach_whatsapp_router,
     public_links_router,
+    sales_ops_router,
     sales_router,
     scheduler_router,
     social_router,
+    studio_router,
     sync_router,
     system_router,
     tally_router,
@@ -123,6 +125,8 @@ app.include_router(visits_router, prefix=api_prefix)
 app.include_router(users_router, prefix=api_prefix)
 app.include_router(sync_router, prefix=api_prefix)
 app.include_router(approvals_router, prefix=api_prefix)
+app.include_router(sales_ops_router, prefix=api_prefix)
+app.include_router(studio_router, prefix=api_prefix)
 
 
 @app.get("//api/email/google/callback", include_in_schema=False)

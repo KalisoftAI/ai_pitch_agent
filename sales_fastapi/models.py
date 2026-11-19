@@ -763,7 +763,9 @@ class OutreachWhatsAppMessage(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
-    campaign_id: Mapped[int] = mapped_column(Integer, ForeignKey("outreach_whatsapp_campaigns.id"), index=True)
+    campaign_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("outreach_whatsapp_campaigns.id"), index=True
+    )
     contact_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
     contact_type: Mapped[str] = mapped_column(String(32), default="marketing_companies")
     phone: Mapped[str] = mapped_column(String(64), index=True)
@@ -804,3 +806,106 @@ class OutreachEngagementEvent(Base):
     meta: Mapped[dict] = mapped_column(JSON, default=dict)
     occurred_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class AdminFeatureFlag(Base):
+    """Isolated sales-ops/studio feature flag; existing ERP flags are untouched."""
+
+    __tablename__ = "admin_feature_flags"
+
+    name: Mapped[str] = mapped_column(String(64), primary_key=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    daily_limit: Mapped[int] = mapped_column(Integer, default=0)
+    updated_by: Mapped[str] = mapped_column(String(255), default="")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class SalesOpsDailyCounter(Base):
+    """Per-day safe automation counters for WhatsApp and YouTube quota."""
+
+    __tablename__ = "sales_ops_daily_counters"
+
+    day: Mapped[str] = mapped_column(String(10), primary_key=True)
+    whatsapp_sent: Mapped[int] = mapped_column(Integer, default=0)
+    yt_quota_used: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class SalesOpsBarcodeScan(Base):
+    """Mobile camera barcode + confirmed weight event for ERP follow-up."""
+
+    __tablename__ = "sales_ops_barcode_scans"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    barcode: Mapped[str] = mapped_column(String(128), index=True)
+    sku: Mapped[str] = mapped_column(String(64), default="", index=True)
+    net_weight_kg: Mapped[float] = mapped_column(Float, default=0.0)
+    customer_name: Mapped[str] = mapped_column(String(255), default="")
+    customer_email: Mapped[str] = mapped_column(String(255), default="")
+    customer_whatsapp: Mapped[str] = mapped_column(String(64), default="")
+    trigger_followup: Mapped[bool] = mapped_column(Boolean, default=True)
+    followup_status: Mapped[str] = mapped_column(String(32), index=True, default="LOGGED")
+    gcs_uri: Mapped[str] = mapped_column(String(512), default="")
+    created_by: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
+
+
+class SalesOpsDispatch(Base):
+    """Human-reviewed omni-channel campaign preview/dispatch record."""
+
+    __tablename__ = "sales_ops_dispatches"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    contact_name: Mapped[str] = mapped_column(String(255), default="")
+    company_name: Mapped[str] = mapped_column(String(255), default="")
+    phone: Mapped[str] = mapped_column(String(64), default="", index=True)
+    email: Mapped[str] = mapped_column(String(255), default="")
+    channels: Mapped[list] = mapped_column(JSON, default=list)
+    preview: Mapped[dict] = mapped_column(JSON, default=dict)
+    status: Mapped[str] = mapped_column(String(32), index=True, default="pending_review")
+    approved_by: Mapped[str] = mapped_column(String(255), default="")
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_by: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
+
+
+class SalesOpsYouTubeSignal(Base):
+    """Quota-guarded YouTube discovery result and extracted hook pattern."""
+
+    __tablename__ = "sales_ops_youtube_signals"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    query: Mapped[str] = mapped_column(String(255), index=True)
+    video_id: Mapped[str] = mapped_column(String(64), default="", index=True)
+    title: Mapped[str] = mapped_column(String(512), default="")
+    video_url: Mapped[str] = mapped_column(String(1024), default="")
+    channel: Mapped[str] = mapped_column(String(255), default="")
+    view_count: Mapped[int] = mapped_column(Integer, default=0)
+    hook_pattern: Mapped[str] = mapped_column(Text, default="")
+    source_mode: Mapped[str] = mapped_column(String(32), default="deterministic_stub")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
+
+
+class StudioRefinement(Base):
+    """Prompt refinement result with model/cost provenance for admin review."""
+
+    __tablename__ = "studio_refinements"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    prompt_text: Mapped[str] = mapped_column(Text, default="")
+    refined_prompt: Mapped[str] = mapped_column(Text, default="")
+    model_choice: Mapped[str] = mapped_column(String(32), index=True)
+    template_path: Mapped[str] = mapped_column(String(512), default="")
+    aspect_ratio: Mapped[str] = mapped_column(String(8), default="16:9")
+    cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
+    source_mode: Mapped[str] = mapped_column(String(32), default="deterministic_fallback")
+    gcs_uri: Mapped[str] = mapped_column(String(512), default="")
+    created_by: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)

@@ -3,9 +3,9 @@ import { createRoot } from "react-dom/client";
 import {
   Activity, ArrowLeft, ArrowUpRight, BarChart3, Bell, Bot, BriefcaseBusiness, Calculator, CalendarDays, Check, ChevronDown,
   CircleAlert, Clock, Database, FileText, Link2, LogOut, Mail, MapPin, Menu, MessageSquarePlus, Mic, Plus, RefreshCw,
-  Search, Send, Settings2, ShieldCheck, Sparkles, Square, Star, Trash2, UploadCloud, Users, Video, X,
+  ScanLine, Search, Send, Settings2, ShieldCheck, Sparkles, Square, Star, Trash2, UploadCloud, Users, Video, X,
 } from "lucide-react";
-import { InstoreSummaryCard, KnowledgeGraphReview, MarketingCompanies, SalesBi, TallySalesPanel } from "./features.jsx";
+import { InstoreSummaryCard, KnowledgeGraphReview, MarketingCompanies, SalesBi, SalesOpsStudio, TallySalesPanel } from "./features.jsx";
 import { KALIKA_LOGO, KALISOFT_LOGO } from "./branding.js";
 import "./styles.css";
 
@@ -89,6 +89,7 @@ function App() {
           <NavItem icon={Activity} label="Overview" active={tab === "overview"} onClick={() => { setTab("overview"); setMobileNav(false); }} />
           <NavItem icon={BarChart3} label="Sales analytics" active={tab === "sales-bi"} onClick={() => { setTab("sales-bi"); setMobileNav(false); }} />
           <NavItem icon={Send} label="Outreach" active={tab === "outreach"} onClick={() => { setTab("outreach"); setMobileNav(false); }} />
+          <NavItem icon={ScanLine} label="Sales Ops" active={tab === "sales-ops"} onClick={() => { setTab("sales-ops"); setMobileNav(false); }} />
           {config.knowledge_graph_review_enabled && <NavItem icon={Link2} label="Graph review" active={tab === "graph-review"} onClick={() => { setTab("graph-review"); setMobileNav(false); }} />}
           <NavItem icon={Users} label="Contacts" active={tab === "contacts"} onClick={() => { setTab("contacts"); setMobileNav(false); }} />
           <NavItem icon={Mic} label="Field desk" active={tab === "field"} onClick={() => { setTab("field"); setMobileNav(false); }} />
@@ -105,13 +106,14 @@ function App() {
       </aside>
       {mobileNav && <button className="scrim" aria-label="Close menu" onClick={() => setMobileNav(false)} />}
       <main className="main">
-        <header className="topbar"><div className="topbar-left"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open navigation menu"><Menu size={25} /><span>Menu</span></button><button className="icon-button" onClick={() => setTab("overview")} aria-label="Back"><ArrowLeft size={18} /></button><button className="icon-button" onClick={() => window.location.reload()} aria-label="Refresh"><RefreshCw size={18} /></button></div><div className="topbar-title"><div className="eyebrow">{isKalikaUser ? "KALIKA ENTERPRISES" : "KALISOFT AI"} / SALES PIPELINE</div><h1>{tab === "overview" ? "Good work starts with a clear signal." : tab === "sales-bi" ? "Sales analytics & BI" : tab === "graph-review" ? "Knowledge graph review" : tab === "contacts" ? "Contacts" : tab === "email" ? "Email connections" : tab === "scheduler" ? "Scheduler" : tab === "kpis" ? "Business KPIs" : tab === "feedback" ? "Feedback" : tab === "field" ? "Field desk" : tab === "uat" ? "UAT & operations" : tab === "visits" ? "Company visits" : "Outreach - templates - contacts - mail"}</h1></div><div className="topbar-actions"><EnvBadge env={health?.env} /><button className="text-button" onClick={() => setTour(true)}><Sparkles size={15} /> Take the tour</button><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Email connections" title="Email connections" onClick={() => setTab("email")}><Settings2 size={18} /></button></div></header>
+        <header className="topbar"><div className="topbar-left"><button className="icon-button menu-button" onClick={() => setMobileNav(true)} aria-label="Open navigation menu"><Menu size={25} /><span>Menu</span></button><button className="icon-button" onClick={() => setTab("overview")} aria-label="Back"><ArrowLeft size={18} /></button><button className="icon-button" onClick={() => window.location.reload()} aria-label="Refresh"><RefreshCw size={18} /></button></div><div className="topbar-title"><div className="eyebrow">{isKalikaUser ? "KALIKA ENTERPRISES" : "KALISOFT AI"} / SALES PIPELINE</div><h1>{tab === "overview" ? "Good work starts with a clear signal." : tab === "sales-bi" ? "Sales analytics & BI" : tab === "graph-review" ? "Knowledge graph review" : tab === "contacts" ? "Contacts" : tab === "email" ? "Email connections" : tab === "scheduler" ? "Scheduler" : tab === "kpis" ? "Business KPIs" : tab === "feedback" ? "Feedback" : tab === "field" ? "Field desk" : tab === "sales-ops" ? "Sales Ops & AI Studio" : tab === "uat" ? "UAT & operations" : tab === "visits" ? "Company visits" : "Outreach - templates - contacts - mail"}</h1></div><div className="topbar-actions"><EnvBadge env={health?.env} /><button className="text-button" onClick={() => setTour(true)}><Sparkles size={15} /> Take the tour</button><span className="live-dot"><i /> API healthy</span><button className="icon-button" aria-label="Email connections" title="Email connections" onClick={() => setTab("email")}><Settings2 size={18} /></button></div></header>
         {tab === "overview" && <Overview onNavigate={setTab} onNotice={setNotice} health={health} setHealth={setHealth} />}
         {tab === "sales-bi" && <SalesBi onNotice={setNotice} />}
         {tab === "graph-review" && config.knowledge_graph_review_enabled && <KnowledgeGraphReview onNotice={setNotice} user={user} config={config} />}
         {tab === "contacts" && <Contacts onNotice={setNotice} onNavigate={setTab} />}
         {tab === "email" && <EmailConnections onNotice={setNotice} config={config} />}
         {tab === "outreach" && <MarketingCompanies onNotice={setNotice} />}
+        {tab === "sales-ops" && <SalesOpsStudio onNotice={setNotice} user={user} />}
         {tab === "scheduler" && <Scheduler onNotice={setNotice} />}
         {tab === "kpis" && <Kpis onNotice={setNotice} />}
         {tab === "feedback" && <Feedback onNotice={setNotice} />}
