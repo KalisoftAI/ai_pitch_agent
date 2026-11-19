@@ -235,11 +235,13 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
-      - name: Read Cloud Run logs
+      - name: Inspect catalogue objects
         run: |
-          gcloud logging read \
-            'resource.type="cloud_run_revision" AND resource.labels.service_name="${{ needs.resolve.outputs.service }}"' \
-            --project "${{ vars.GCP_PROJECT_ID }}" \
-            --freshness=30m \
-            --limit=120 \
-            --format='table(timestamp, textPayload, jsonPayload.message)'
+          for uri in \
+            "gs://kalisoftai-datahub/ERP-V1/New_kalika_enterprises_catalog.pdf" \
+            "gs://kalika_enterprises/ERP-V1/New_kalika_enterprises_catalog.pdf" \
+            "gs://kalisoftai-datahub/kalika backup/KALIKA.pdf" \
+            "gs://kalika_enterprises/kalika backup/KALIKA.pdf"; do
+            echo "$uri"
+            gcloud storage ls -l "$uri" || true
+          done
