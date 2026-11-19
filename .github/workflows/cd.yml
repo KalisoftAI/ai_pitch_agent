@@ -138,25 +138,6 @@ jobs:
           # The deployer SA can bind secrets (versions.access) but cannot list or
           # describe them, so probe with `versions access` (value discarded).
           SECRETS="SECRET_KEY=SALES_SECRET_KEY:latest,DATABASE_URL=SALES_DATABASE_URL:latest"
-          for SECRET_NAME in GMAIL_APP_PASSWORD_KALIKA GMAIL_APP_PASSWORD_KALIKA2; do
-            if ! gcloud secrets versions access latest --secret "$SECRET_NAME" --project "$P" >/dev/null 2>&1; then
-              echo "Required Gmail secret is not accessible/configured: $SECRET_NAME"; exit 1
-            fi
-          done
-          SECRETS="$SECRETS,GMAIL_APP_PASSWORD_KALIKA=GMAIL_APP_PASSWORD_KALIKA:latest,GMAIL_APP_PASSWORD_KALIKA2=GMAIL_APP_PASSWORD_KALIKA2:latest"
-          KALISOFTAI_SECRET=""
-          for SECRET_NAME in GMAIL_APP_PASSWORD_KALISOFTAI GMAIL_APP_PASSWORD; do
-            if gcloud secrets versions access latest --secret "$SECRET_NAME" --project "$P" >/dev/null 2>&1; then
-              KALISOFTAI_SECRET="$SECRET_NAME"; break
-            fi
-          done
-          if [ -z "$KALISOFTAI_SECRET" ]; then
-            echo "Required Gmail secret is not accessible/configured: GMAIL_APP_PASSWORD_KALISOFTAI"; exit 1
-          fi
-          SECRETS="$SECRETS,GMAIL_APP_PASSWORD_KALISOFTAI=$KALISOFTAI_SECRET:latest"
-          if gcloud secrets versions access latest --secret GMAIL_APP_PASSWORD --project "$P" >/dev/null 2>&1; then
-            SECRETS="$SECRETS,GMAIL_APP_PASSWORD=GMAIL_APP_PASSWORD:latest"
-          fi
           add_optional_secret() {  # $1 = env var name, $2 = Secret Manager secret name
             if gcloud secrets versions access latest --secret "$2" --project "$P" >/dev/null 2>&1; then
               SECRETS="${SECRETS:+$SECRETS,}$1=$2:latest"
@@ -164,6 +145,20 @@ jobs:
               echo "Optional secret not accessible/configured: $2"
             fi
           }
+          add_optional_secret GMAIL_APP_PASSWORD_KALIKA GMAIL_APP_PASSWORD_KALIKA
+          add_optional_secret GMAIL_APP_PASSWORD_KALIKA2 GMAIL_APP_PASSWORD_KALIKA2
+          KALISOFTAI_SECRET=""
+          for SECRET_NAME in GMAIL_APP_PASSWORD_KALISOFTAI GMAIL_APP_PASSWORD; do
+            if gcloud secrets versions access latest --secret "$SECRET_NAME" --project "$P" >/dev/null 2>&1; then
+              KALISOFTAI_SECRET="$SECRET_NAME"; break
+            fi
+          done
+          if [ -n "$KALISOFTAI_SECRET" ]; then
+            SECRETS="$SECRETS,GMAIL_APP_PASSWORD_KALISOFTAI=$KALISOFTAI_SECRET:latest"
+          else
+            echo "Optional secret not accessible/configured: GMAIL_APP_PASSWORD_KALISOFTAI"
+          fi
+          add_optional_secret GMAIL_APP_PASSWORD GMAIL_APP_PASSWORD
           add_optional_secret GEMINI_API_KEY GEMINI_API_KEY
           add_optional_secret GOOGLE_CLIENT_SECRET GOOGLE_CLIENT_SECRET
 
