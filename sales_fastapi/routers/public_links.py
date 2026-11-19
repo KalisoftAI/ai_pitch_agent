@@ -32,9 +32,9 @@ def public_catalog(kind: str):
             continue
         try:
             blob = storage._client.bucket(bucket).blob(path)
-            if not blob.exists():
-                continue
-            if int(blob.size or 0) > MAX_INLINE_BYTES:
+            blob.reload()
+            size = int(blob.size or 0)
+            if size > MAX_INLINE_BYTES:
                 signed_url = blob.generate_signed_url(
                     expiration=datetime.now(timezone.utc) + timedelta(hours=1),
                     method="GET",

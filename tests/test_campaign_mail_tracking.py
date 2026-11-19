@@ -490,8 +490,8 @@ def test_public_catalog_proxy_serves_allowlisted_pdfs(client, monkeypatch):
         def blob(self, path):
             return self
 
-        def exists(self):
-            return True
+        def reload(self):
+            return None
 
         def generate_signed_url(self, **kwargs):
             return "https://signed.example/catalogue.pdf"
@@ -523,8 +523,8 @@ def test_public_catalog_proxy_redirects_large_pdf(client, monkeypatch):
         def blob(self, path):
             return self
 
-        def exists(self):
-            return True
+        def reload(self):
+            return None
 
         def generate_signed_url(self, **kwargs):
             return "https://signed.example/large-catalogue.pdf"
