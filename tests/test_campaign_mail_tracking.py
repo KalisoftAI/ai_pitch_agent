@@ -436,9 +436,7 @@ def test_campaign_uses_env_password_for_stale_stored_connection(client, auth_hea
         headers=headers,
     )
     assert stale.status_code == 201, stale.text
-    campaign = _setup_campaign(
-        client, headers, monkeypatch, "<p>Hello</p>", stale.json()["id"]
-    )
+    campaign = _setup_campaign(client, headers, monkeypatch, "<p>Hello</p>", stale.json()["id"])
     assert campaign["status"] == "completed"
     assert FakeMailSender.credentials[0] == {
         "user": "kalika@example.test",
@@ -469,9 +467,7 @@ def test_campaign_uses_org_env_address_over_different_stored_connection(
         headers=headers,
     )
     assert stale.status_code == 201, stale.text
-    campaign = _setup_campaign(
-        client, headers, monkeypatch, "<p>Hello</p>", stale.json()["id"]
-    )
+    campaign = _setup_campaign(client, headers, monkeypatch, "<p>Hello</p>", stale.json()["id"])
     assert campaign["status"] == "completed"
     assert FakeMailSender.credentials[0] == {
         "user": "sales.kalika@example.test",
@@ -486,6 +482,7 @@ def test_public_catalog_proxy_serves_allowlisted_pdfs(client, monkeypatch):
         def __init__(self, bucket_name=None):
             self.available = True
             self._client = self
+            self.size = 123
 
         def bucket(self, name):
             return self
@@ -493,12 +490,16 @@ def test_public_catalog_proxy_serves_allowlisted_pdfs(client, monkeypatch):
         def blob(self, path):
             return self
 
+        def exists(self):
+            return True
+
+        def generate_signed_url(self, **kwargs):
+            return "https://signed.example/catalogue.pdf"
+
         def download_as_bytes(self):
             return b"%PDF-1.4 fake catalogue"
 
-    monkeypatch.setattr(
-        "sales_fastapi.routers.public_links.GCSStorage", FakeGCSStorage
-    )
+    monkeypatch.setattr("sales_fastapi.routers.public_links.GCSStorage", FakeGCSStorage)
 
     response = client.get("/api/public/catalog/catalog")
     assert response.status_code == 200, response.text
@@ -507,6 +508,34 @@ def test_public_catalog_proxy_serves_allowlisted_pdfs(client, monkeypatch):
     assert "kalika-catalogue.pdf" in response.headers["content-disposition"]
     assert client.get("/api/public/catalog/profile").status_code == 200
     assert client.get("/api/public/catalog/unknown").status_code == 404
+
+
+def test_public_catalog_proxy_redirects_large_pdf(client, monkeypatch):
+    class FakeGCSStorage:
+        def __init__(self, bucket_name=None):
+            self.available = True
+            self._client = self
+            self.size = 21 * 1024 * 1024
+
+        def bucket(self, name):
+            return self
+
+        def blob(self, path):
+            return self
+
+        def exists(self):
+            return True
+
+        def generate_signed_url(self, **kwargs):
+            return "https://signed.example/large-catalogue.pdf"
+
+        def download_as_bytes(self):
+            raise AssertionError("large documents must not be streamed through Cloud Run")
+
+    monkeypatch.setattr("sales_fastapi.routers.public_links.GCSStorage", FakeGCSStorage)
+    response = client.get("/api/public/catalog/catalog", follow_redirects=False)
+    assert response.status_code == 307
+    assert response.headers["location"] == "https://signed.example/large-catalogue.pdf"
 
 
 def test_email_catalogue_link_tracks_clicks_and_rates(client, auth_headers, monkeypatch):
@@ -533,9 +562,7 @@ def test_email_catalogue_link_tracks_clicks_and_rates(client, auth_headers, monk
     detail = client.get(f"/api/campaigns/{campaign['id']}", headers=auth_headers).json()
     assert detail["clicked_count"] == 0
 
-    clicked = client.get(
-        f"/api/campaigns/track/catalog/{token}", follow_redirects=False
-    )
+    clicked = client.get(f"/api/campaigns/track/catalog/{token}", follow_redirects=False)
     assert clicked.status_code == 302
     assert clicked.headers["location"].endswith("/api/public/catalog/catalog")
 

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import Response
+from fastapi.responses import RedirectResponse, Response
 
 from ..config import settings
 from ..services import GCSStorage
@@ -9,6 +11,7 @@ from ..services import GCSStorage
 router = APIRouter(prefix="/public", tags=["public-links"])
 
 BUCKET = "kalika_enterprises"
+MAX_INLINE_BYTES = 20 * 1024 * 1024
 DOCUMENTS = {
     "catalog": ("ERP-V1/New_kalika_enterprises_catalog.pdf", "kalika-catalogue.pdf"),
     "profile": ("kalika backup/KALIKA.pdf", "kalika-profile.pdf"),
@@ -29,6 +32,14 @@ def public_catalog(kind: str):
             continue
         try:
             blob = storage._client.bucket(bucket).blob(path)
+            if not blob.exists():
+                continue
+            if int(blob.size or 0) > MAX_INLINE_BYTES:
+                signed_url = blob.generate_signed_url(
+                    expiration=datetime.now(timezone.utc) + timedelta(hours=1),
+                    method="GET",
+                )
+                return RedirectResponse(signed_url, status_code=307)
             data = blob.download_as_bytes()
             break
         except Exception:  # noqa: BLE001 - try the next configured bucket
