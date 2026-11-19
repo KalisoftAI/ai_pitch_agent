@@ -4,9 +4,9 @@ import io
 import re
 import secrets
 import zipfile
-from pathlib import Path
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import quote
 
@@ -31,7 +31,7 @@ from ..models import (
     User,
 )
 from ..pipeline_templates import CATALOGUE_LINK, PROFILE_LINK
-from ..security import get_current_user, is_admin_user, require_admin
+from ..security import get_current_user, require_admin
 from ..wechaty import WechatyGateway, verify_webhook_signature
 
 router = APIRouter(prefix="/outreach-whatsapp", tags=["outreach-whatsapp"])

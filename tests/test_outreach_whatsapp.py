@@ -1,10 +1,8 @@
 import io
 import zipfile
-from datetime import datetime, timezone
 
 from sales_fastapi.config import settings
 from sales_fastapi.database import SessionLocal
-from sales_fastapi.pipeline_templates import CATALOGUE_LINK
 from sales_fastapi.models import (
     MarketingCompany,
     OutreachEngagementEvent,
@@ -13,6 +11,7 @@ from sales_fastapi.models import (
     ProductRate,
     User,
 )
+from sales_fastapi.pipeline_templates import CATALOGUE_LINK
 
 
 def _seed_approved(client, auth_headers):
