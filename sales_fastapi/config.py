@@ -40,14 +40,14 @@ class Settings(BaseSettings):
     MAIL_SYNC_BATCH: int = Field(default=25, alias="MAIL_SYNC_BATCH")  # clamped 20..50
     MAIL_RETENTION_RAW_DAYS: int = Field(default=180, alias="MAIL_RETENTION_RAW_DAYS")
     MAIL_RETENTION_PROCESSED_DAYS: int = Field(default=365, alias="MAIL_RETENTION_PROCESSED_DAYS")
-    MAIL_RETENTION_ATTACHMENTS_DAYS: int = Field(default=90, alias="MAIL_RETENTION_ATTACHMENTS_DAYS")
+    MAIL_RETENTION_ATTACHMENTS_DAYS: int = Field(
+        default=90, alias="MAIL_RETENTION_ATTACHMENTS_DAYS"
+    )
     MAIL_RETENTION_LOGS_DAYS: int = Field(default=365, alias="MAIL_RETENTION_LOGS_DAYS")
     KNOWLEDGE_GRAPH_GCS_PREFIX: str = Field(
         default="sales-app/knowledge_graph/", alias="KNOWLEDGE_GRAPH_GCS_PREFIX"
     )
-    KNOWLEDGE_GRAPH_CHAT_ENABLED: bool = Field(
-        default=False, alias="KNOWLEDGE_GRAPH_CHAT_ENABLED"
-    )
+    KNOWLEDGE_GRAPH_CHAT_ENABLED: bool = Field(default=False, alias="KNOWLEDGE_GRAPH_CHAT_ENABLED")
     KNOWLEDGE_GRAPH_REFRESH_DAYS: int = Field(default=7, alias="KNOWLEDGE_GRAPH_REFRESH_DAYS")
 
     # --- Database ---
@@ -352,9 +352,7 @@ class Settings(BaseSettings):
                 ),
             )
         else:
-            profiles = (
-                ("kalisoftai", "KalisoftAI", lambda: self.gmail_credentials("kalisoftai")),
-            )
+            profiles = (("kalisoftai", "KalisoftAI", lambda: self.gmail_credentials("kalisoftai")),)
 
         senders: list[dict[str, str | bool]] = []
         seen: set[str] = set()
@@ -418,18 +416,22 @@ class Settings(BaseSettings):
                 "*" in origin for origin in self.cors_origin_list
             ):
                 raise ValueError("Production CORS_ORIGINS must list explicit origins")
-            if not self.allowed_host_list or any(
-                "*" in host for host in self.allowed_host_list
-            ):
+            if not self.allowed_host_list or any("*" in host for host in self.allowed_host_list):
                 raise ValueError("Production ALLOWED_HOSTS must be restricted")
             if not self.PII_REDACTION_ENABLED:
                 raise ValueError("PII_REDACTION_ENABLED must be true in production")
             if not self.AUDIT_LOG_ENABLED:
                 raise ValueError("AUDIT_LOG_ENABLED must be true in production")
-            if self.WHATSAPP_ENABLED and not self.WECHATY_GATEWAY_TOKEN:
-                raise ValueError("WECHATY_GATEWAY_TOKEN is required when WHATSAPP_ENABLED is true")
-            if self.WHATSAPP_ENABLED and not self.WECHATY_WEBHOOK_SECRET:
-                raise ValueError("WECHATY_WEBHOOK_SECRET is required when WHATSAPP_ENABLED is true")
+            if self.WHATSAPP_ENABLED:
+                meta_ready = bool(self.WHATSAPP_API_KEY and self.WHATSAPP_PHONE_NUMBER_ID)
+                if not meta_ready and not self.WECHATY_GATEWAY_TOKEN:
+                    raise ValueError(
+                        "WECHATY_GATEWAY_TOKEN is required when WHATSAPP_ENABLED is true"
+                    )
+                if not meta_ready and not self.WECHATY_WEBHOOK_SECRET:
+                    raise ValueError(
+                        "WECHATY_WEBHOOK_SECRET is required when WHATSAPP_ENABLED is true"
+                    )
         if self.LLM_MONTHLY_TOKEN_BUDGET < 1:
             raise ValueError("LLM_MONTHLY_TOKEN_BUDGET must be positive")
         if self.LLM_MAX_INPUT_CHARS < 1024:

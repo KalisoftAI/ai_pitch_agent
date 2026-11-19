@@ -3,6 +3,7 @@ import hmac
 import json
 
 from sales_fastapi.config import settings
+from sales_fastapi.wechaty import WechatyGateway
 
 
 def _sign(secret: str, body: bytes) -> str:
@@ -125,3 +126,43 @@ def test_webhook_matches_existing_contact_by_phone(client, auth_headers, monkeyp
 
 def test_messages_require_auth(client):
     assert client.get("/api/whatsapp/messages").status_code == 401
+
+
+def test_meta_cloud_transport_sends_text(monkeypatch):
+    monkeypatch.setattr(settings, "WHATSAPP_ENABLED", True)
+    monkeypatch.setattr(settings, "WHATSAPP_API_KEY", "meta-token")
+    monkeypatch.setattr(settings, "WHATSAPP_PHONE_NUMBER_ID", "123456")
+    calls = {}
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"messages": [{"id": "wamid.1"}]}
+
+    class FakeClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def post(self, url, json=None, headers=None):
+            calls["url"] = url
+            calls["json"] = json
+            calls["headers"] = headers
+            return FakeResponse()
+
+    monkeypatch.setattr("sales_fastapi.wechaty.httpx.Client", FakeClient)
+    gateway = WechatyGateway()
+    assert gateway.health() == {"available": True, "provider": "meta-cloud"}
+    result = gateway.send_text("919000000000", "Hello")
+    assert result["id"] == "wamid.1"
+    assert result["provider"] == "meta-cloud"
+    assert calls["url"].endswith("/123456/messages")
+    assert calls["headers"]["Authorization"] == "Bearer meta-token"
+    assert calls["json"]["text"]["body"] == "Hello"

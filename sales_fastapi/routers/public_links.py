@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 
+from ..config import settings
 from ..services import GCSStorage
 
 router = APIRouter(prefix="/public", tags=["public-links"])
@@ -20,14 +21,20 @@ def public_catalog(kind: str):
     if key not in DOCUMENTS:
         raise HTTPException(status_code=404, detail="Unknown document")
     path, filename = DOCUMENTS[key]
-    storage = GCSStorage(bucket_name=BUCKET)
-    if not storage.available or storage._client is None:
-        raise HTTPException(status_code=503, detail="Document storage unavailable")
-    try:
-        blob = storage._client.bucket(BUCKET).blob(path)
-        data = blob.download_as_bytes()
-    except Exception as exc:  # noqa: BLE001 - storage errors must not leak details
-        raise HTTPException(status_code=503, detail="Document temporarily unavailable") from exc
+    buckets = [settings.GCS_BUCKET_CONTACTS, BUCKET]
+    data = None
+    for bucket in [value for value in buckets if value]:
+        storage = GCSStorage(bucket_name=bucket)
+        if not storage.available or storage._client is None:
+            continue
+        try:
+            blob = storage._client.bucket(bucket).blob(path)
+            data = blob.download_as_bytes()
+            break
+        except Exception:  # noqa: BLE001 - try the next configured bucket
+            continue
+    if data is None:
+        raise HTTPException(status_code=503, detail="Document temporarily unavailable")
     return Response(
         content=data,
         media_type="application/pdf",

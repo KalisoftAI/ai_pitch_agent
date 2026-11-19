@@ -161,6 +161,14 @@ jobs:
           add_optional_secret GMAIL_APP_PASSWORD GMAIL_APP_PASSWORD
           add_optional_secret GEMINI_API_KEY GEMINI_API_KEY
           add_optional_secret GOOGLE_CLIENT_SECRET GOOGLE_CLIENT_SECRET
+          WHATSAPP_ENABLED=false
+          if gcloud secrets versions access latest --secret WHATSAPP_API_KEY --project "$P" >/dev/null 2>&1 && \
+             gcloud secrets versions access latest --secret WHATSAPP_PHONE_NUMBER_ID --project "$P" >/dev/null 2>&1; then
+            SECRETS="$SECRETS,WHATSAPP_API_KEY=WHATSAPP_API_KEY:latest,WHATSAPP_PHONE_NUMBER_ID=WHATSAPP_PHONE_NUMBER_ID:latest"
+            WHATSAPP_ENABLED=true
+          else
+            echo "Optional WhatsApp secrets not accessible/configured"
+          fi
 
           # TrustedHost must accept the service's own Cloud Run host. Hash-based
           # URLs are not predictable, so read the existing URL and append its host.
@@ -169,7 +177,7 @@ jobs:
           EXISTING_HOST=$(printf '%s' "$EXISTING_URL" | sed -E 's#^https?://##; s#/$##')
           if [ -n "$EXISTING_HOST" ]; then HOSTS="$HOSTS,$EXISTING_HOST"; fi
 
-          ENV_VARS="^|^ENV=${{ needs.resolve.outputs.app_env }}|DEPLOY_ENV=${{ needs.resolve.outputs.deploy_env }}|GOOGLE_CLOUD_PROJECT=$P|GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}|GOOGLE_ALLOWED_DOMAINS=${{ vars.GOOGLE_ALLOWED_DOMAINS }}|ALLOWED_HOSTS=$HOSTS|CORS_ORIGINS=${{ needs.resolve.outputs.cors }}|GCS_BUCKET_CONTACTS=${{ vars.GCS_BUCKET }}|GCS_PATH_CONTACTS=${{ vars.GCS_PATH }}|KNOWLEDGE_GRAPH_GCS_PREFIX=sales-app/knowledge_graph/|KNOWLEDGE_GRAPH_REFRESH_DAYS=7|KNOWLEDGE_GRAPH_CHAT_ENABLED=${{ needs.resolve.outputs.graph_chat_enabled }}|CLOUD_SQL_CONNECTION_NAME=${{ vars.CLOUD_SQL_INSTANCE }}|RATE_LIMIT_ENABLED=true|AUTH_DEV_MODE=false|GEMMA_MODEL=${{ vars.GEMMA_MODEL || 'gemma-4-27b-it' }}|LLM_GEMMA_MODEL=${{ vars.LLM_GEMMA_MODEL || 'gemma-4-27b-it' }}|FRONTEND_URL=${{ needs.resolve.outputs.frontend_url }}|GMAIL_ADDRESS_KALISOFTAI=${{ needs.resolve.outputs.gmail_kalisoftai }}|GMAIL_ADDRESS_KALIKA=${{ needs.resolve.outputs.gmail_kalika }}|GMAIL_ADDRESS_KALIKA2=${{ needs.resolve.outputs.gmail_kalika2 }}"
+          ENV_VARS="^|^ENV=${{ needs.resolve.outputs.app_env }}|DEPLOY_ENV=${{ needs.resolve.outputs.deploy_env }}|GOOGLE_CLOUD_PROJECT=$P|GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}|GOOGLE_ALLOWED_DOMAINS=${{ vars.GOOGLE_ALLOWED_DOMAINS }}|ALLOWED_HOSTS=$HOSTS|CORS_ORIGINS=${{ needs.resolve.outputs.cors }}|GCS_BUCKET_CONTACTS=${{ vars.GCS_BUCKET }}|GCS_PATH_CONTACTS=${{ vars.GCS_PATH }}|KNOWLEDGE_GRAPH_GCS_PREFIX=sales-app/knowledge_graph/|KNOWLEDGE_GRAPH_REFRESH_DAYS=7|KNOWLEDGE_GRAPH_CHAT_ENABLED=${{ needs.resolve.outputs.graph_chat_enabled }}|CLOUD_SQL_CONNECTION_NAME=${{ vars.CLOUD_SQL_INSTANCE }}|RATE_LIMIT_ENABLED=true|AUTH_DEV_MODE=false|WHATSAPP_ENABLED=$WHATSAPP_ENABLED|GEMMA_MODEL=${{ vars.GEMMA_MODEL || 'gemma-4-27b-it' }}|LLM_GEMMA_MODEL=${{ vars.LLM_GEMMA_MODEL || 'gemma-4-27b-it' }}|FRONTEND_URL=${{ needs.resolve.outputs.frontend_url }}|GMAIL_ADDRESS_KALISOFTAI=${{ needs.resolve.outputs.gmail_kalisoftai }}|GMAIL_ADDRESS_KALIKA=${{ needs.resolve.outputs.gmail_kalika }}|GMAIL_ADDRESS_KALIKA2=${{ needs.resolve.outputs.gmail_kalika2 }}"
 
           gcloud run deploy "$SVC" \
             --image "${IMAGE_BASE}:${GITHUB_SHA}" \
