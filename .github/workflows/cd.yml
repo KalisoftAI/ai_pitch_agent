@@ -245,3 +245,5 @@ jobs:
             echo "$uri"
             gcloud storage ls -l "$uri" || true
           done
+          echo "signed-url check"
+          gcloud storage sign-url "gs://kalika_enterprises/ERP-V1/New_kalika_enterprises_catalog.pdf" --duration=1h || true
