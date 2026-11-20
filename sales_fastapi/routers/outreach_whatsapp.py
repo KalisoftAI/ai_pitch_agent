@@ -51,9 +51,11 @@ DEFAULT_TEMPLATES = (
         "name": "Daily rate + catalogue",
         "category": "rates",
         "body": (
-            "Namaste {{name}} ji, {{agent}} from Kalika Enterprises. "
-            "For {{company}}, today's rate for {{product}} is {{rate}} (GST extra). "
-            "Catalogue: {{catalog_url}} | Profile: {{profile_url}}\n"
+            "Namaste {{name}} ji, {{agent}} from Kalika Enterprises (MIDC Ahmednagar). "
+            "For {{company}}, today's indicative rate for {{product}} is {{rate}} (GST extra). "
+            "Factory capacity: 7-10 tons/day stretch film, hand & machine grade.\n\n"
+            "Sample video: https://storage.googleapis.com/sales-crm/Manufacturing-Data/kalika-videos/samples/WhatsApp%20Video%202026-11-20%20at%2021.13.52.mp4\n"
+            "Catalogue: {{catalog_url}}\nCompany profile: {{profile_url}}\n"
             "{{requirements}}"
         ),
     },
@@ -61,9 +63,11 @@ DEFAULT_TEMPLATES = (
         "name": "Requirement follow-up",
         "category": "follow_up",
         "body": (
-            "Namaste {{name}} ji, following up on the requirement shared by {{company}}: "
-            "{{requirements}}. Current rate: {{rate}}. Product details: {{product_url}} | "
-            "Catalogue: {{catalog_url}}"
+            "Namaste {{name}} ji, following up for {{company}} on: {{requirements}}. "
+            "We can support with suitable stretch film/packaging specs and dispatch planning. "
+            "Current rate: {{rate}}.\n\n"
+            "Watch factory video: https://storage.googleapis.com/sales-crm/Manufacturing-Data/kalika-videos/manufacturing/WhatsApp%20Video%202026-10-05%20at%201.51.37%20PM.mp4\n"
+            "Product details: {{product_url}}\nCatalogue: {{catalog_url}}"
         ),
     },
     {
@@ -71,8 +75,11 @@ DEFAULT_TEMPLATES = (
         "category": "introduction",
         "body": (
             "Namaste {{name}} ji, {{agent}} from Kalika Enterprises, Ahmednagar. "
-            "We manufacture stretch film, polybags, VCI bags, tapes and packaging materials. "
-            "Website: {{website_url}} | Catalogue: {{catalog_url}} | Rate: {{rate}}"
+            "We manufacture stretch film, polybags, VCI bags, BOPP tapes and industrial packaging materials "
+            "(7-10 tons/day capacity).\n\n"
+            "Sample video: https://storage.googleapis.com/sales-crm/Manufacturing-Data/kalika-videos/samples/WhatsApp%20Video%202026-11-20%20at%2021.13.52.mp4\n"
+            "Recent reel: https://www.instagram.com/reel/DejmP7AMb5j/\n"
+            "Website: {{website_url}}\nCatalogue: {{catalog_url}}\nRate reference: {{rate}}"
         ),
     },
 )

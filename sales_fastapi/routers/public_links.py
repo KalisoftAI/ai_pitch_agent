@@ -58,7 +58,10 @@ def public_catalog(kind: str):
                             scopes=["https://www.googleapis.com/auth/cloud-platform"]
                         )
                         request = google_requests.Request()
-                        if not getattr(creds, "valid", False) or getattr(creds, "token", None) is None:
+                        if (
+                            not getattr(creds, "valid", False)
+                            or getattr(creds, "token", None) is None
+                        ):
                             if hasattr(creds, "refresh"):
                                 creds.refresh(request)
                         if not sa_email:
