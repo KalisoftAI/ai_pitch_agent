@@ -153,6 +153,17 @@ def _ensure_columns() -> None:
         if "status" not in cols:
             with engine.begin() as conn:
                 conn.execute(text("ALTER TABLE campaign_messages ADD COLUMN status VARCHAR(32) DEFAULT 'pending_review'"))
+    if "product_rates" in insp.get_table_names():
+        cols = {c["name"] for c in insp.get_columns("product_rates")}
+        for column, ddl in (
+            ("source", "VARCHAR(32) DEFAULT 'manual'"),
+            ("source_key", "VARCHAR(255) DEFAULT ''"),
+            ("gcs_path", "VARCHAR(512) DEFAULT ''"),
+            ("gcs_updated", "VARCHAR(64) DEFAULT ''"),
+        ):
+            if column not in cols:
+                with engine.begin() as conn:
+                    conn.execute(text(f"ALTER TABLE product_rates ADD COLUMN {column} {ddl}"))
     if "message_templates" in insp.get_table_names():
         # Older databases were created before strategy/funnel_stage/variables
         # existed; create_all never alters existing tables, so add them here.

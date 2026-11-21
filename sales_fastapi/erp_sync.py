@@ -13,13 +13,15 @@ import json
 import re
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from .config import settings
-from .models import ErpDispatch, ErpOrder, SyncRun, TallySale
+from .models import ErpDispatch, ErpOrder, Product, ProductRate, SyncRun, TallySale
+from .services import GCSStorage
 
 
 # ------------------------------------------------------------------ fetch
@@ -162,6 +164,177 @@ def sync_erp_report(db: Session) -> dict:
             run.finished_at = datetime.now(timezone.utc)
             db.commit()
         raise
+
+
+# ------------------------------------------------------------------ daily rates
+_RATE_COLUMNS = {
+    "code": ("product code", "item code", "sku", "code", "product id"),
+    "name": ("product", "product name", "item", "item name", "description"),
+    "rate": ("rate", "price", "selling price", "rate per kg", "amount"),
+    "date": ("effective date", "date", "valid from", "report date"),
+    "unit": ("unit", "uom"),
+    "category": ("category", "product category"),
+}
+
+
+def _column(frame: pd.DataFrame, key: str) -> str:
+    lowered = {str(column).strip().lower(): column for column in frame.columns}
+    for candidate in _RATE_COLUMNS.get(key, ()):
+        if candidate in lowered:
+            return str(lowered[candidate])
+    return ""
+
+
+def _rate_text(value: Any) -> str:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return ""
+    text = str(value).strip()
+    return "" if text.lower() in {"nan", "nat", "none"} else text
+
+
+def _rate_date(value: Any) -> str:
+    text = _rate_text(value)
+    if not text:
+        return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    try:
+        return pd.to_datetime(text).strftime("%Y-%m-%d")
+    except Exception:
+        return text[:10]
+
+
+def sync_erp_rates(db: Session) -> dict:
+    """Upsert the latest ERP rate workbook into ProductRate (idempotent)."""
+    run = SyncRun(job="erp_rate_sync", status="running", detail="")
+    db.add(run)
+    db.commit()
+    gcs = GCSStorage(bucket_name=settings.GCS_BUCKET_MAIL)
+    if not gcs.available:
+        run.status = "error"
+        run.detail = "GCS is not available"
+        run.finished_at = datetime.now(timezone.utc)
+        db.commit()
+        raise FileNotFoundError(run.detail)
+
+    blobs = gcs.list_blobs(prefix=settings.ERP_RATE_PREFIX, suffixes=(".xlsx", ".xls"), max_results=20)
+    if not blobs:
+        run.status = "error"
+        run.detail = f"no rate workbooks under gs://{gcs.bucket_name}/{settings.ERP_RATE_PREFIX}"
+        run.finished_at = datetime.now(timezone.utc)
+        db.commit()
+        raise FileNotFoundError(run.detail)
+    latest = sorted(blobs, key=lambda item: str(item.get("updated") or ""))[-1]
+    raw = gcs.download_blob(latest["name"])
+    if not raw:
+        run.status = "error"
+        run.detail = "rate workbook download failed"
+        run.finished_at = datetime.now(timezone.utc)
+        db.commit()
+        raise RuntimeError(run.detail)
+
+    created = updated = skipped = 0
+    xl = pd.ExcelFile(io.BytesIO(raw))
+    for sheet_name in xl.sheet_names:
+        frame = xl.parse(sheet_name).fillna("")
+        code_col = _column(frame, "code")
+        name_col = _column(frame, "name")
+        rate_col = _column(frame, "rate")
+        if not rate_col or (not code_col and not name_col):
+            continue
+        for _, row in frame.iterrows():
+            code = _rate_text(row.get(code_col)) if code_col else ""
+            name = _rate_text(row.get(name_col)) if name_col else ""
+            rate = _num(row.get(rate_col))
+            if not code:
+                code = name[:64]
+            if not code or rate <= 0:
+                skipped += 1
+                continue
+            date_col = _column(frame, "date")
+            unit_col = _column(frame, "unit")
+            category_col = _column(frame, "category")
+            effective_date = (
+                _rate_date(row.get(date_col)) if date_col else datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            )
+            unit = (_rate_text(row.get(unit_col)) if unit_col else "") or "kg"
+            category = _rate_text(row.get(category_col)) if category_col else ""
+            source_key = f"{latest['name']}|{code}|{effective_date}"
+
+            product = (
+                db.query(Product)
+                .filter(Product.user_id == 0, Product.code == code)
+                .first()
+            )
+            if product is None:
+                product = Product(user_id=0, code=code, name=name or code, category=category, unit=unit)
+                db.add(product)
+                db.flush()
+            else:
+                if not product.name and name:
+                    product.name = name
+                if not product.category and category:
+                    product.category = category
+
+            rate_row = (
+                db.query(ProductRate)
+                .filter(
+                    ProductRate.source == "erp",
+                    ProductRate.source_key == source_key,
+                )
+                .first()
+            )
+            if rate_row is None:
+                rate_row = (
+                    db.query(ProductRate)
+                    .filter(
+                        ProductRate.product_id == product.id,
+                        ProductRate.effective_date == effective_date,
+                        ProductRate.source == "erp",
+                    )
+                    .first()
+                )
+            if rate_row is None:
+                rate_row = ProductRate(
+                    user_id=0,
+                    product_id=product.id,
+                    source="erp",
+                    source_key=source_key,
+                    gcs_path=latest["name"],
+                    gcs_updated=str(latest.get("updated") or ""),
+                )
+                db.add(rate_row)
+                created += 1
+            else:
+                updated += 1
+            rate_row.rate = round(rate, 4)
+            rate_row.unit = unit
+            rate_row.effective_date = effective_date
+            rate_row.source_key = source_key
+            rate_row.gcs_path = latest["name"]
+            rate_row.gcs_updated = str(latest.get("updated") or "")
+            rate_row.status = "approved" if settings.ERP_RATE_AUTO_APPROVE else "pending"
+            rate_row.submitted_by = "erp_sync"
+            rate_row.notes = f"Imported from {latest['name']} ({sheet_name})"
+
+    run.status = "ok"
+    run.detail = json.dumps(
+        {
+            "gcs_path": latest["name"],
+            "created": created,
+            "updated": updated,
+            "skipped": skipped,
+            "auto_approved": bool(settings.ERP_RATE_AUTO_APPROVE),
+        }
+    )
+    run.finished_at = datetime.now(timezone.utc)
+    db.commit()
+    return {
+        "ok": True,
+        "gcs_path": latest["name"],
+        "created": created,
+        "updated": updated,
+        "skipped": skipped,
+        "status": "approved" if settings.ERP_RATE_AUTO_APPROVE else "pending",
+    }
 
 
 # ------------------------------------------------------------------ read models

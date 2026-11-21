@@ -1,13 +1,16 @@
 from datetime import datetime, timedelta
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import RedirectResponse
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from ..config import settings
 from ..database import get_db
+from ..gmail_sync import message_out, sync_gmail_mailbox
 from ..governance.audit import log_event
-from ..models import GoogleMailbox, User
+from ..models import GmailMessage, GmailSyncState, GoogleMailbox, User
 from ..schemas import EmailFetchIn, EmailFetchOut, GoogleMailboxOut, GoogleOAuthAuthorizeOut
 from ..security import (
     create_oauth_state,
@@ -16,7 +19,7 @@ from ..security import (
     encrypt_secret,
     get_current_user,
 )
-from ..services import GmailExtractor, GoogleOAuthClient
+from ..services import GCSStorage, GmailExtractor, GoogleOAuthClient
 from .email import _email_context, _fetch_filters
 
 router = APIRouter(prefix="/email/google", tags=["email"])
@@ -181,3 +184,170 @@ def fetch_mailbox(
             "context_chars": payload.context_chars,
         },
     )
+
+
+def _owned_mailbox(mailbox_id: int, user: User, db: Session) -> GoogleMailbox:
+    mailbox = (
+        db.query(GoogleMailbox)
+        .filter(GoogleMailbox.id == mailbox_id, GoogleMailbox.user_id == user.id)
+        .first()
+    )
+    if mailbox is None:
+        raise HTTPException(status_code=404, detail="Google mailbox not found")
+    return mailbox
+
+
+def _attachment_url(path: str) -> str:
+    if not path:
+        return ""
+    gcs = GCSStorage(bucket_name=settings.GCS_BUCKET_MAIL)
+    if gcs.available and gcs._client is not None:
+        try:
+            blob = gcs._client.bucket(gcs.bucket_name).blob(path)
+            return blob.generate_signed_url(
+                expires=datetime.utcnow() + timedelta(hours=1), method="GET"
+            )
+        except Exception:  # noqa: BLE001 - graceful fallback
+            pass
+    return f"https://storage.googleapis.com/{gcs.bucket_name}/{path}"
+
+
+@router.post("/mailboxes/{mailbox_id}/sync")
+def sync_mailbox_drilldown(
+    mailbox_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Incremental Gmail history sync (backend-only, checkpointed + deduped)."""
+    mailbox = _owned_mailbox(mailbox_id, user, db)
+    try:
+        result = sync_gmail_mailbox(db, mailbox, user)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    log_event(
+        db,
+        action="email.google_incremental_sync",
+        actor_user_id=user.id,
+        resource_type="google_mailbox",
+        resource_id=str(mailbox.id),
+        tenant_id=user.domain,
+        detail={
+            "scanned": result["scanned"],
+            "created": result["created"],
+            "updated": result["updated"],
+        },
+        commit=True,
+    )
+    return result
+
+
+@router.get("/mailboxes/{mailbox_id}/sync-state")
+def mailbox_sync_state(
+    mailbox_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _owned_mailbox(mailbox_id, user, db)
+    state = db.query(GmailSyncState).filter(GmailSyncState.mailbox_id == mailbox_id).first()
+    if state is None:
+        return {"mailbox_id": mailbox_id, "status": "never", "messages_stored": 0}
+    stored = (
+        db.query(func.count(GmailMessage.id))
+        .filter(GmailMessage.mailbox_id == mailbox_id)
+        .scalar()
+        or 0
+    )
+    return {
+        "mailbox_id": mailbox_id,
+        "status": state.last_status or "never",
+        "history_id": state.history_id,
+        "messages_stored": stored,
+        "stats": state.stats or {},
+        "last_error": state.last_error,
+        "last_sync_at": str(state.last_sync_at) if state.last_sync_at else None,
+    }
+
+
+@router.get("/mailboxes/{mailbox_id}/messages")
+def list_mailbox_messages(
+    mailbox_id: int,
+    q: str = Query(default="", max_length=256),
+    intent: str = Query(default="", max_length=64),
+    client: str = Query(default="", max_length=255),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Second-level mail list for conversation drilldown."""
+    _owned_mailbox(mailbox_id, user, db)
+    query = db.query(GmailMessage).filter(GmailMessage.mailbox_id == mailbox_id)
+    if q:
+        pattern = f"%{q.strip()}%"
+        query = query.filter(
+            or_(
+                GmailMessage.subject.ilike(pattern),
+                GmailMessage.sender.ilike(pattern),
+                GmailMessage.sender_email.ilike(pattern),
+                GmailMessage.snippet.ilike(pattern),
+                GmailMessage.client.ilike(pattern),
+            )
+        )
+    if intent:
+        query = query.filter(GmailMessage.intent == intent.strip().lower())
+    if client:
+        query = query.filter(GmailMessage.client.ilike(f"%{client.strip()}%"))
+    total = query.count()
+    rows = query.order_by(GmailMessage.internal_date.desc(), GmailMessage.id.desc()).offset(offset).limit(limit).all()
+    return {
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+        "messages": [message_out(row, include_body=False) for row in rows],
+    }
+
+
+@router.get("/mailboxes/{mailbox_id}/messages/{message_id}")
+def get_mailbox_message(
+    mailbox_id: int,
+    message_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _owned_mailbox(mailbox_id, user, db)
+    row = (
+        db.query(GmailMessage)
+        .filter(GmailMessage.mailbox_id == mailbox_id, GmailMessage.message_id == message_id)
+        .first()
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="Gmail message not found")
+    payload: dict[str, Any] = message_out(row, include_body=True)
+    for item in payload["attachments"]:
+        item["url"] = _attachment_url(str(item.get("gcs_path", "")))
+    return payload
+
+
+@router.get("/mailboxes/{mailbox_id}/threads/{thread_id}")
+def get_mailbox_thread(
+    mailbox_id: int,
+    thread_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _owned_mailbox(mailbox_id, user, db)
+    rows = (
+        db.query(GmailMessage)
+        .filter(GmailMessage.mailbox_id == mailbox_id, GmailMessage.thread_id == thread_id)
+        .order_by(GmailMessage.internal_date.asc(), GmailMessage.id.asc())
+        .all()
+    )
+    if not rows:
+        raise HTTPException(status_code=404, detail="Gmail thread not found")
+    return {
+        "thread_id": thread_id,
+        "message_count": len(rows),
+        "subject": rows[0].subject,
+        "client": rows[0].client,
+        "messages": [message_out(row, include_body=True) for row in rows],
+    }

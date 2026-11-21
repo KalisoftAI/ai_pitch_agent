@@ -26,16 +26,15 @@ def public_config():
     """Public client config (no secrets)."""
     deploy_env = settings.DEPLOY_ENV.lower()
     try:
-        uat_active = settings.UAT_ENABLED and date.fromisoformat(settings.UAT_ENABLED_UNTIL) >= date.today()
+        uat_active = (
+            settings.UAT_ENABLED and date.fromisoformat(settings.UAT_ENABLED_UNTIL) >= date.today()
+        )
     except ValueError:
         uat_active = False
     graph_review_enabled = (
         settings.ENV.lower() not in {"prod", "production"}
         and deploy_env in {"dev", "development", "preprod", "stage", "staging", "uat"}
-        and (
-            deploy_env not in {"stage", "staging", "uat"}
-            or uat_active
-        )
+        and (deploy_env not in {"stage", "staging", "uat"} or uat_active)
     )
     return {
         "project_name": settings.PROJECT_NAME,
@@ -43,6 +42,8 @@ def public_config():
         "env": settings.ENV,
         "deploy_env": settings.DEPLOY_ENV,
         "knowledge_graph_review_enabled": graph_review_enabled,
+        "ui_assets_enabled": settings.UI_ASSETS_ENABLED,
+        "ui_assets_prompt_tag": settings.UI_ASSETS_PROMPT_TAG,
         "google_client_id": settings.GOOGLE_CLIENT_ID if settings.google_signin_configured else "",
         "google_gmail_oauth_configured": settings.google_gmail_oauth_configured,
         "google_signin_configured": settings.google_signin_configured,

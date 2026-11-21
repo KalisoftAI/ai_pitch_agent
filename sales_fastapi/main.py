@@ -14,6 +14,7 @@ from .routers import (
     ai_router,
     approvals_router,
     auth_router,
+    business_kpi_router,
     campaigns_router,
     catalog_router,
     contacts_router,
@@ -90,6 +91,7 @@ api_prefix = "/api"
 app.include_router(system_router, prefix=api_prefix)
 app.include_router(ai_router, prefix=api_prefix)
 app.include_router(auth_router, prefix=api_prefix)
+app.include_router(business_kpi_router, prefix=api_prefix)
 app.include_router(contacts_router, prefix=api_prefix)
 app.include_router(email_router, prefix=api_prefix)
 app.include_router(erp_router, prefix=api_prefix)

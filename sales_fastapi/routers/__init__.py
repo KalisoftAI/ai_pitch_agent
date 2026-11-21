@@ -1,6 +1,7 @@
 from .ai import router as ai_router
 from .approvals import router as approvals_router
 from .auth import router as auth_router
+from .business_kpi import router as business_kpi_router
 from .campaigns import router as campaigns_router
 from .catalog import router as catalog_router
 from .contacts import router as contacts_router
@@ -41,6 +42,7 @@ __all__ = [
     "ai_router",
     "approvals_router",
     "auth_router",
+    "business_kpi_router",
     "campaigns_router",
     "catalog_router",
     "contacts_router",

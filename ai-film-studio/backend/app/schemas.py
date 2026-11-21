@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 Category = Literal["business-tips", "erp-walkthrough", "financial-education"]
 
@@ -233,6 +233,15 @@ class RenderCreate(BaseModel):
     effects: list[str] = Field(default_factory=list)
     audio: bool = True
     scene_patterns: dict[str, str] = Field(default_factory=dict)
+    template: str = "default"
+
+    @field_validator("template")
+    @classmethod
+    def validate_template(cls, value: str) -> str:
+        value = (value or "").strip().lower() or "default"
+        if not all(char.isalnum() or char in "-_" for char in value):
+            raise ValueError("template must contain only letters, digits, - or _")
+        return value
 
 
 class RenderRead(ORMModel):

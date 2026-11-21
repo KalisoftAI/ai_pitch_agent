@@ -1,0 +1,10 @@
+{
+  "templates": {
+    "default": {
+      "html": "index.html",
+      "css": "style.css",
+      "js": "film.js"
+    }
+  },
+  "default": "default"
+}

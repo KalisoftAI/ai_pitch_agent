@@ -10,14 +10,17 @@ user has not uploaded a video yet.
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
+from ..config import settings
 from ..database import get_db
 from ..governance.audit import log_event
+from ..media_inventory import media_inventory
 from ..models import User
 from ..security import get_current_user
 from ..services import GCSStorage
@@ -49,16 +52,22 @@ DEFAULT_VIDEOS = [
 ]
 
 
-def _signed_url(path: str, hours: int = 24) -> str:
+def _signed_url_for(path: str, bucket: str, hours: int = 24) -> str:
     """Return a signed download URL when GCS is available; otherwise the public URL."""
-    gcs = GCSStorage(bucket_name=GCS_BUCKET)
+    gcs = GCSStorage(bucket_name=bucket)
     if gcs.available and gcs._client is not None:
         try:
             blob = gcs._client.bucket(gcs.bucket_name).blob(path)
-            return blob.generate_signed_url(expires=datetime.utcnow() + timedelta(hours=hours), method="GET")
+            return blob.generate_signed_url(
+                expires=datetime.utcnow() + timedelta(hours=hours), method="GET"
+            )
         except Exception:  # noqa: BLE001 - fall back to plain URL
             pass
-    return f"https://storage.googleapis.com/{GCS_BUCKET}/{path}"
+    return f"https://storage.googleapis.com/{bucket}/{path}"
+
+
+def _signed_url(path: str, hours: int = 24) -> str:
+    return _signed_url_for(path, GCS_BUCKET, hours)
 
 
 @router.get("/default-videos")
@@ -96,6 +105,71 @@ def image_templates(user: User = Depends(get_current_user)):
     return {"items": items, "prefix": f"gs://{GCS_BUCKET}/{IMAGE_TEMPLATE_PREFIX}"}
 
 
+@router.get("/ui-assets")
+def ui_assets(user: User = Depends(get_current_user)):
+    """UI-only assets from ``gs://sales-crm/assets/UI`` for the overview panel."""
+    bucket = settings.UI_ASSETS_GCS_BUCKET
+    prefix = settings.UI_ASSETS_GCS_PREFIX.strip("/")
+    source = f"gs://{bucket}/{prefix}/"
+    payload: dict[str, Any] = {
+        "enabled": settings.UI_ASSETS_ENABLED,
+        "prompt_tag": settings.UI_ASSETS_PROMPT_TAG,
+        "prompt_text": settings.UI_ASSETS_PROMPT_TEXT,
+        "source": source,
+        "items": [],
+        "daily_rate_template": None,
+        "business_kpis": None,
+        "dashboards": [],
+    }
+    if not settings.UI_ASSETS_ENABLED:
+        return payload
+
+    gcs = GCSStorage(bucket_name=bucket)
+    if not gcs.available:
+        payload["error"] = "GCS is not available"
+        return payload
+
+    for blob in gcs.list_blobs(prefix=f"{prefix}/"):
+        name = str(blob.get("name") or "")
+        filename = name.rsplit("/", 1)[-1]
+        if not filename:
+            continue
+        item = {
+            "name": filename,
+            "path": name,
+            "url": _signed_url_for(name, bucket),
+            "size": blob.get("size"),
+            "updated": blob.get("updated"),
+            "kind": "json"
+            if filename.endswith(".json")
+            else "html"
+            if filename.endswith(".html")
+            else "other",
+        }
+        payload["items"].append(item)
+        if filename.endswith(".html") and "dashboard" in filename.lower():
+            payload["dashboards"].append(item)
+
+        size = int(blob.get("size") or 0)
+        if filename.endswith(".json") and 0 < size <= settings.UI_ASSETS_JSON_MAX_BYTES:
+            raw = gcs.download_blob(name)
+            if not raw:
+                continue
+            try:
+                data = json.loads(raw.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                continue
+            if data.get("template_id") and payload["daily_rate_template"] is None:
+                payload["daily_rate_template"] = data
+            if "business_kpis" in data and payload["business_kpis"] is None:
+                payload["business_kpis"] = data
+
+    payload["items"].sort(key=lambda x: str(x.get("updated") or ""), reverse=True)
+    preferred = "kaliflow_kalika_enterprises_3d_manufacturing_dashboard.html"
+    payload["dashboards"].sort(key=lambda x: (x["name"] != preferred, x["name"]))
+    return payload
+
+
 @router.post("/upload")
 async def upload_media(
     kind: str = Query(default="image"),
@@ -109,7 +183,11 @@ async def upload_media(
     filename = (file.filename or "").strip()
     if not filename:
         raise HTTPException(status_code=400, detail="File name is required")
-    allowed = ALLOWED_VIDEO_EXTENSIONS if kind == "video" else (ALLOWED_DOC_EXTENSIONS if kind == "catalogue" else ALLOWED_IMAGE_EXTENSIONS)
+    allowed = (
+        ALLOWED_VIDEO_EXTENSIONS
+        if kind == "video"
+        else (ALLOWED_DOC_EXTENSIONS if kind == "catalogue" else ALLOWED_IMAGE_EXTENSIONS)
+    )
     if not filename.lower().endswith(allowed):
         raise HTTPException(
             status_code=400,
@@ -128,7 +206,9 @@ async def upload_media(
     else:
         prefix = "videos"
     timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
-    safe_name = "".join(c if c.isalnum() or c in "._-" else "_" for c in filename.replace(" ", "_"))[-120:]
+    safe_name = "".join(
+        c if c.isalnum() or c in "._-" else "_" for c in filename.replace(" ", "_")
+    )[-120:]
     path = f"{prefix}/{timestamp}_{safe_name}"
 
     gcs = GCSStorage(bucket_name=GCS_BUCKET)
@@ -172,8 +252,26 @@ def list_media(
     ]
 
 
+@router.get("/inventory")
+def get_media_inventory(
+    kind: str = Query(default="image", pattern="^(image|video)$"),
+    prefix: str = Query(default=""),
+    limit: int = Query(default=500, ge=1, le=2000),
+    signed: bool = Query(default=False),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Metadata-only GCS inventory for videos/images; bytes are never fetched."""
+    try:
+        return media_inventory(db, kind=kind, prefix=prefix, limit=limit, signed=signed)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @router.post("/video-link")
-def store_video_link(payload: dict[str, Any], user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def store_video_link(
+    payload: dict[str, Any], user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
     """Store a video URL (e.g. Instagram reel) reference under videos/ as a .txt pointer."""
     url = str(payload.get("url") or "").strip()
     name = str(payload.get("name") or "video link").strip() or "video link"
@@ -183,7 +281,10 @@ def store_video_link(payload: dict[str, Any], user: User = Depends(get_current_u
         raise HTTPException(status_code=400, detail="Video url must start with https://")
 
     timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
-    safe_name = "".join(c if c.isalnum() or c in "._-" else "_" for c in name.replace(" ", "_"))[:80] or "video"
+    safe_name = (
+        "".join(c if c.isalnum() or c in "._-" else "_" for c in name.replace(" ", "_"))[:80]
+        or "video"
+    )
     path = f"videos/{timestamp}_link_{safe_name}.txt"
 
     gcs = GCSStorage(bucket_name=GCS_BUCKET)

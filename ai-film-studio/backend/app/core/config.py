@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, field_validator
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     export_height: int = 720
 
     motion_renderer_dir: str = "./renderer"
+    motion_template: str = "default"
     motion_chrome_path: str = ""
     motion_fps: int = 24
     motion_workers: int = 2
@@ -83,6 +84,14 @@ class Settings(BaseSettings):
         value = value.strip().lower()
         if value not in {"motion", "ffmpeg", "simulated"}:
             raise ValueError("RENDER_MODE must be motion, ffmpeg or simulated")
+        return value
+
+    @field_validator("motion_template")
+    @classmethod
+    def validate_motion_template(cls, value: str) -> str:
+        value = value.strip().lower() or "default"
+        if not all(char.isalnum() or char in "-_" for char in value):
+            raise ValueError("MOTION_TEMPLATE must contain only letters, digits, - or _")
         return value
 
     @property

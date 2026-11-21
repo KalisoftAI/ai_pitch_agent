@@ -24,6 +24,7 @@ from ..erp_sync import (
     latest_report_date,
     orders_stats,
     rate_calculator,
+    sync_erp_rates,
     sync_erp_report,
 )
 from ..models import ErpDispatch, ErpOrder, IntegrationSetting, SyncRun, User
@@ -165,6 +166,17 @@ def run_sync(admin: User = Depends(require_admin), db: Session = Depends(get_db)
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:  # surface the sync error to the admin UI
         raise HTTPException(status_code=500, detail=f"ERP sync failed: {exc}") from exc
+
+
+@router.post("/sync-rates")
+def run_rate_sync(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Pull the latest ERP rate workbook from GCS (idempotent upsert)."""
+    try:
+        return sync_erp_rates(db)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"ERP rate sync failed: {exc}") from exc
 
 
 # ---------------------------------------------------------------- read data

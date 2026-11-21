@@ -215,7 +215,8 @@ class MotionRenderer:
         if page_dir.exists():
             shutil.rmtree(page_dir, ignore_errors=True)
         page_dir.mkdir(parents=True, exist_ok=True)
-        self._copy_template(page_dir)
+        template_name = str(options.get("template") or self.settings.motion_template)
+        template_name = self._copy_template(page_dir, template_name)
 
         progress(6, "directing motion", "Building the visual direction for this film.")
         direction, direction_note = self._direction(db, project, scenes, options)
@@ -234,6 +235,7 @@ class MotionRenderer:
             fps=fps,
             include_captions=include_captions,
             options=options,
+            template=template_name,
         )
         (page_dir / "data.json").write_text(
             json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -283,15 +285,41 @@ class MotionRenderer:
         shutil.rmtree(page_dir, ignore_errors=True)
         return output
 
-    def _copy_template(self, page_dir: Path) -> None:
-        template = self.settings.renderer_path / "template"
-        if not template.exists():
-            raise MotionRenderError(f"Motion template is missing at {template}.")
-        for name in ("index.html", "style.css", "film.js"):
-            source = template / name
-            if not source.exists():
-                raise MotionRenderError(f"Motion template file is missing: {source}.")
-            shutil.copy2(source, page_dir / name)
+    def _template_files(self, name: str) -> dict[str, Path]:
+        template_root = (self.settings.renderer_path / "template").resolve()
+        renderer_root = self.settings.renderer_path.resolve()
+        if not template_root.exists():
+            raise MotionRenderError(f"Motion template is missing at {template_root}.")
+        manifest_path = template_root / "templates.json"
+        manifest: dict = {}
+        if manifest_path.exists():
+            try:
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                raise MotionRenderError(f"Invalid template manifest: {exc}") from exc
+            templates = manifest.get("templates", {}) if isinstance(manifest, dict) else {}
+        else:
+            templates = {}
+        if name not in templates:
+            name = str(manifest.get("default", "default")) if isinstance(manifest, dict) else "default"
+        entry = templates.get(name) if isinstance(templates, dict) else None
+        if not isinstance(entry, dict):
+            entry = {"html": "index.html", "css": "style.css", "js": "film.js"}
+
+        files: dict[str, Path] = {}
+        for target, key in (("index.html", "html"), ("style.css", "css"), ("film.js", "js")):
+            relative = str(entry.get(key, target)).strip().lstrip("/")
+            source = (template_root / relative).resolve()
+            if renderer_root not in source.parents or not source.is_file():
+                raise MotionRenderError(f"Motion template file is missing or unsafe: {source}.")
+            files[target] = source
+        return files
+
+    def _copy_template(self, page_dir: Path, name: str | None = None) -> str:
+        template_name = str(name or self.settings.motion_template).strip().lower() or "default"
+        for target, source in self._template_files(template_name).items():
+            shutil.copy2(source, page_dir / target)
+        return template_name
 
     def _find_ffmpeg(self) -> str | None:
         if Path(self.settings.ffmpeg_bin).exists():
@@ -600,6 +628,7 @@ class MotionRenderer:
         fps: int,
         include_captions: bool,
         options: dict | None = None,
+        template: str = "default",
     ) -> dict:
         options = options or {}
         plans = {
@@ -657,6 +686,7 @@ class MotionRenderer:
             "duration": round(max(1.0, cursor), 3),
             "showCaptions": bool(include_captions),
             "audio": bool(options.get("audio", self.settings.motion_audio)),
+            "template": template,
             "scenes": data_scenes,
         }
 

@@ -51,6 +51,31 @@ class Settings(BaseSettings):
         default=90, alias="MAIL_RETENTION_ATTACHMENTS_DAYS"
     )
     MAIL_RETENTION_LOGS_DAYS: int = Field(default=365, alias="MAIL_RETENTION_LOGS_DAYS")
+    # --- Gmail incremental history sync (kalikaenterprises@gmail.com drilldown) ---
+    GMAIL_SYNC_TARGET_EMAIL: str = Field(
+        default="kalikaenterprises@gmail.com", alias="GMAIL_SYNC_TARGET_EMAIL"
+    )
+    GMAIL_SYNC_LOOKBACK_DAYS: int = Field(default=7, alias="GMAIL_SYNC_LOOKBACK_DAYS")
+    GMAIL_SYNC_BATCH: int = Field(default=25, alias="GMAIL_SYNC_BATCH")
+    GMAIL_ATTACHMENT_MAX_BYTES: int = Field(default=25_000_000, alias="GMAIL_ATTACHMENT_MAX_BYTES")
+    # --- Cheap GCS media inventory (metadata only; signed URLs on demand) ---
+    GCS_MEDIA_INVENTORY_LIMIT: int = Field(default=500, alias="GCS_MEDIA_INVENTORY_LIMIT")
+    # --- GCS-backed UI assets (non-breaking dashboard enhancement) ---
+    UI_ASSETS_ENABLED: bool = Field(default=True, alias="UI_ASSETS_ENABLED")
+    UI_ASSETS_PROMPT_TAG: str = Field(default="ui-assets-from-gcs-v1", alias="UI_ASSETS_PROMPT_TAG")
+    UI_ASSETS_PROMPT_TEXT: str = Field(
+        default=(
+            "Use only UI assets under gs://sales-crm/assets/UI. Check the daily-rate template JSON, "
+            "business-KPI JSON, and dashboard HTML before editing UI. Add a non-breaking overview panel "
+            "through /api/media/ui-assets, keep React layout and mobile behavior intact, gate with "
+            "ui_assets_enabled, and show ui_assets_prompt_tag. Never hardcode public GCS URLs, replace "
+            "the ai-film-studio renderer template, or remove existing dashboard sections."
+        ),
+        alias="UI_ASSETS_PROMPT_TEXT",
+    )
+    UI_ASSETS_GCS_BUCKET: str = Field(default="sales-crm", alias="UI_ASSETS_GCS_BUCKET")
+    UI_ASSETS_GCS_PREFIX: str = Field(default="assets/UI/", alias="UI_ASSETS_GCS_PREFIX")
+    UI_ASSETS_JSON_MAX_BYTES: int = Field(default=1_000_000, alias="UI_ASSETS_JSON_MAX_BYTES")
     KNOWLEDGE_GRAPH_GCS_PREFIX: str = Field(
         default="sales-app/knowledge_graph/", alias="KNOWLEDGE_GRAPH_GCS_PREFIX"
     )
@@ -159,6 +184,8 @@ class Settings(BaseSettings):
 
     # --- ERP report sync (ERP-V1/Reports -> Dispatch/Orders) ---
     ERP_REPORT_PREFIX: str = Field(default="ERP-V1/Reports/", alias="ERP_REPORT_PREFIX")
+    ERP_RATE_PREFIX: str = Field(default="ERP-V1/Rates/", alias="ERP_RATE_PREFIX")
+    ERP_RATE_AUTO_APPROVE: bool = Field(default=False, alias="ERP_RATE_AUTO_APPROVE")
     ERP_CACHE_PATH: str = Field(default="gcs_data", alias="ERP_CACHE_PATH")
 
     # --- Tally Sales Register sync (kalika_sales2026/ -> dashboard/field views) ---

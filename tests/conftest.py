@@ -20,7 +20,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
-from sales_fastapi.database import Base, engine, init_db  # noqa: E402
+from sales_fastapi.database import Base, SessionLocal, engine, init_db  # noqa: E402
 from sales_fastapi.main import app  # noqa: E402
 
 
@@ -36,6 +36,15 @@ def _clean_tables():
     yield
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+
+
+@pytest.fixture()
+def db_session():
+    session = SessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
 
 
 @pytest.fixture()

@@ -108,12 +108,20 @@ class GCSStorage:
             return out
         return out
 
-    def list_blobs(self, prefix: str = "", suffixes: tuple[str, ...] | None = None) -> list[dict[str, Any]]:
+    def list_blobs(
+        self,
+        prefix: str = "",
+        suffixes: tuple[str, ...] | None = None,
+        max_results: int | None = None,
+    ) -> list[dict[str, Any]]:
         if not self.available or self._client is None:
             return []
         out: list[dict[str, Any]] = []
+        options: dict[str, Any] = {"prefix": prefix}
+        if max_results is not None:
+            options["max_results"] = max(1, min(int(max_results), 1000))
         try:
-            for blob in self._client.list_blobs(self.bucket_name, prefix=prefix):
+            for blob in self._client.list_blobs(self.bucket_name, **options):
                 if blob.name.endswith("/"):
                     continue
                 if suffixes and not blob.name.lower().endswith(suffixes):
@@ -493,6 +501,41 @@ class GmailExtractor:
 
     def profile(self) -> dict[str, Any]:
         return self._get("profile", {})
+
+    def list_message_ids(
+        self, *, query: str = "", max_results: int = 100, page_token: str = ""
+    ) -> dict[str, Any]:
+        params: dict[str, Any] = {"maxResults": max(1, min(int(max_results), 500))}
+        if query.strip():
+            params["q"] = query.strip()
+        if page_token:
+            params["pageToken"] = page_token
+        return self._get("messages", params)
+
+    def history(
+        self, start_history_id: str, *, page_token: str = "", max_results: int = 100
+    ) -> dict[str, Any]:
+        params: dict[str, Any] = {
+            "startHistoryId": str(start_history_id),
+            "maxResults": max(1, min(int(max_results), 500)),
+        }
+        if page_token:
+            params["pageToken"] = page_token
+        return self._get("history", params)
+
+    def get_message(self, message_id: str) -> dict[str, Any]:
+        return self._get(f"messages/{message_id}", {"format": "full"})
+
+    def get_attachment(self, message_id: str, attachment_id: str) -> bytes:
+        payload = self._get(f"messages/{message_id}/attachments/{attachment_id}", {})
+        data = str(payload.get("data", ""))
+        if not data:
+            return b""
+        try:
+            padding = "=" * (-len(data) % 4)
+            return base64.urlsafe_b64decode(f"{data}{padding}")
+        except (binascii.Error, ValueError) as exc:
+            raise RuntimeError("Gmail attachment decode failed") from exc
 
     def fetch_emails(
         self,

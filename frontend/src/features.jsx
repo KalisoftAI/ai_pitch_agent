@@ -250,6 +250,75 @@ export function InstoreSummaryCard({ onNotice }) {
   );
 }
 
+export function GcsUiAssetsPanel({ enabled, onNotice }) {
+  const [data, setData] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => {
+    if (!enabled) return;
+    setBusy(true);
+    try {
+      setData(await request("/media/ui-assets"));
+    } catch (error) { onNotice({ type: "error", text: error.message }); }
+    finally { setBusy(false); }
+  };
+
+  useEffect(() => { load(); }, [enabled]);
+
+  if (!enabled) return null;
+
+  const kpis = data?.business_kpis?.business_kpis || {};
+  const rates = data?.daily_rate_template?.rates || kpis.daily_rate_updates || [];
+  const dashboards = data?.dashboards || [];
+
+  return (
+    <section className="panel gcs-ui-assets">
+      <div className="panel-heading">
+        <div><div className="section-kicker">GCS UI ASSETS</div><h3>Live rate + KUI board</h3></div>
+        <button className="icon-button" onClick={load} disabled={busy} aria-label="Reload GCS UI assets"><RefreshCw size={17} /></button>
+      </div>
+      {!data && busy && <div className="empty-state compact"><RefreshCw size={22} /><p>Loading UI assets...</p></div>}
+      {!data && !busy && <div className="empty-state compact"><Database size={22} /><p>No UI assets loaded.</p></div>}
+      {data?.error && <div className="empty-state compact"><Database size={22} /><p>{data.error}</p><small>{data.source}</small></div>}
+      {data && !data.error && (
+        <>
+          <div className="gcs-asset-tag"><span>PROMPT TAG</span><b>{data.prompt_tag}</b><small>{data.source}</small></div>
+          <div className="gcs-kpi-grid">
+            <div><small>Revenue MTD</small><b>{fmtMoney(kpis.revenue_mtd)}</b></div>
+            <div><small>Pending ASN dispatches</small><b>{fmtNum(kpis.pending_asn_dispatches)}</b></div>
+            <div><small>Active RFQ threads</small><b>{fmtNum(kpis.active_rfq_threads)}</b></div>
+          </div>
+          {rates.length > 0 && (
+            <div className="gcs-table-wrap">
+              <table className="gcs-rate-table">
+                <thead><tr><th>Product / material</th><th>Rate</th><th>Status</th></tr></thead>
+                <tbody>
+                  {rates.map((rate) => (
+                    <tr key={rate.product || rate.material}>
+                      <td><b>{rate.product || rate.material}</b><small>{rate.spec || rate.updated_from || ""}</small></td>
+                      <td><b>{fmtNum(rate.rate)}</b><small>per {rate.unit || "unit"}</small></td>
+                      <td><span className="status-pill approved">{rate.status_tag || "ERP live rate"}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {dashboards.length > 0 && (
+            <div className="gcs-dashboard-links">
+              {dashboards.map((dashboard) => (
+                <a key={dashboard.path} href={dashboard.url} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink size={14} /> {dashboard.name}
+                </a>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
 // ---------------------------------------------------------------- Sales BI
 export function SalesBi({ onNotice }) {
   const [data, setData] = useState(null);

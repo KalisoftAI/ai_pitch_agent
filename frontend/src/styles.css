@@ -2426,3 +2426,24 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   .so-form-grid { grid-template-columns:1fr; }
   .so-tabs .so-refresh { margin-left:0; }
 }
+.gcs-ui-assets { min-width:0; }
+.gcs-asset-tag { display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin:15px 0 12px; padding:9px 11px; border:1px solid #d5e6db; border-radius:8px; background:#eef7f0; }
+.gcs-asset-tag span { color:#476254; font-size:9px; font-weight:800; letter-spacing:.1em; }
+.gcs-asset-tag b { color:var(--deep); font-size:11px; }
+.gcs-asset-tag small { flex-basis:100%; color:var(--muted); font-size:10px; overflow-wrap:anywhere; }
+.gcs-kpi-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
+.gcs-kpi-grid > div { min-width:0; padding:11px 12px; border:1px solid var(--line); border-radius:8px; background:#fff; }
+.gcs-kpi-grid small { display:block; color:var(--muted); font-size:10px; }
+.gcs-kpi-grid b { display:block; margin-top:4px; color:var(--ink); font-size:17px; letter-spacing:-.04em; overflow-wrap:anywhere; }
+.gcs-table-wrap { margin-top:13px; overflow-x:auto; }
+.gcs-rate-table { width:100%; border-collapse:collapse; min-width:480px; font-size:12px; }
+.gcs-rate-table th, .gcs-rate-table td { padding:9px 8px; border-bottom:1px solid var(--line); text-align:left; vertical-align:middle; }
+.gcs-rate-table th { color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.06em; }
+.gcs-rate-table td b, .gcs-rate-table td small { display:block; overflow-wrap:anywhere; }
+.gcs-rate-table td small { margin-top:3px; color:var(--muted); font-size:10px; }
+.gcs-dashboard-links { display:flex; flex-wrap:wrap; gap:8px; margin-top:13px; }
+.gcs-dashboard-links a { display:inline-flex; align-items:center; gap:6px; max-width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:7px; background:#fff; color:var(--orange); font-size:11px; font-weight:700; overflow-wrap:anywhere; text-decoration:none; }
+.gcs-dashboard-links a:hover { border-color:var(--mint-strong); background:#f0f8f2; }
+@media (max-width: 768px) {
+  .gcs-kpi-grid { grid-template-columns:1fr; }
+}

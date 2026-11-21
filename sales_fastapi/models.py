@@ -140,6 +140,59 @@ class GoogleMailbox(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
+class GmailSyncState(Base):
+    """Incremental Gmail history checkpoint per connected mailbox."""
+
+    __tablename__ = "gmail_sync_states"
+    __table_args__ = (UniqueConstraint("mailbox_id", name="uq_gmail_sync_mailbox"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    mailbox_id: Mapped[int] = mapped_column(Integer, index=True)
+    history_id: Mapped[str] = mapped_column(String(64), default="")
+    message_ids: Mapped[list] = mapped_column(JSON, default=list)
+    stats: Mapped[dict] = mapped_column(JSON, default=dict)
+    last_status: Mapped[str] = mapped_column(String(32), default="")
+    last_error: Mapped[str] = mapped_column(String(512), default="")
+    last_sync_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class GmailMessage(Base):
+    """Normalized Gmail message for second-level conversation/attachment drilldown."""
+
+    __tablename__ = "gmail_messages"
+    __table_args__ = (UniqueConstraint("mailbox_id", "message_id", name="uq_gmail_mailbox_message"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    mailbox_id: Mapped[int] = mapped_column(Integer, index=True)
+    message_id: Mapped[str] = mapped_column(String(128), index=True)
+    thread_id: Mapped[str] = mapped_column(String(128), index=True, default="")
+    rfc822_message_id: Mapped[str] = mapped_column(String(320), default="")
+    subject: Mapped[str] = mapped_column(String(512), default="", index=True)
+    sender: Mapped[str] = mapped_column(String(320), default="")
+    sender_email: Mapped[str] = mapped_column(String(320), default="", index=True)
+    recipients: Mapped[str] = mapped_column(Text, default="")
+    date: Mapped[str] = mapped_column(String(128), default="")
+    internal_date: Mapped[str] = mapped_column(String(64), default="")
+    intent: Mapped[str] = mapped_column(String(64), default="", index=True)
+    client: Mapped[str] = mapped_column(String(255), default="", index=True)
+    context: Mapped[str] = mapped_column(Text, default="")
+    snippet: Mapped[str] = mapped_column(Text, default="")
+    body: Mapped[str] = mapped_column(Text, default="")
+    labels: Mapped[list] = mapped_column(JSON, default=list)
+    attachments: Mapped[list] = mapped_column(JSON, default=list)
+    gcs_processed_path: Mapped[str] = mapped_column(String(512), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
 class LinkedInProfile(Base):
     __tablename__ = "linkedin_profiles"
 
@@ -582,6 +635,10 @@ class ProductRate(Base):
     status: Mapped[str] = mapped_column(String(16), index=True, default="pending")
     submitted_by: Mapped[str] = mapped_column(String(255), default="")
     approved_by: Mapped[str] = mapped_column(String(255), default="")
+    source: Mapped[str] = mapped_column(String(32), default="manual", index=True)
+    source_key: Mapped[str] = mapped_column(String(255), default="", index=True)
+    gcs_path: Mapped[str] = mapped_column(String(512), default="")
+    gcs_updated: Mapped[str] = mapped_column(String(64), default="")
     notes: Mapped[str] = mapped_column(Text, default="")
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
