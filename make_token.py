@@ -5,7 +5,7 @@ from sales_fastapi.models import User
 from sales_fastapi.security import create_access_token
 
 db = SessionLocal()
-user = db.query(User).filter(User.email == "ai.solutions@kalisoftai.in").first()
+user = db.query(User).filter(User.email.in_(["ai.solutions@kalisoftiai.in", "ai.solutions@kalisoftai.in"])).first()
 token, _ = create_access_token(user)
 print(token)
 db.close()

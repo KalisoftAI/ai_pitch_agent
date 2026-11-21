@@ -82,7 +82,7 @@ class Settings(BaseSettings):
     # Strict sign-in allowlist. When set, ONLY these emails may sign in with
     # Google (domain check is skipped). Comma-separated.
     GOOGLE_ALLOWED_EMAILS: str = Field(
-        default="ai.solutions@kalisoftai.in,kalikaenterprises@gmail.com",
+        default="ai.solutions@kalisoftiai.in,ai.solutions@kalisoftai.in,kalikaenterprises@gmail.com",
         alias="GOOGLE_ALLOWED_EMAILS",
     )
     # Authorized redirect URI for the Google sign-in flow (GIS). The Gmail
@@ -168,7 +168,10 @@ class Settings(BaseSettings):
     TALLY_UPLOAD_DIR: str = Field(default="gcs_data/tally_uploads", alias="TALLY_UPLOAD_DIR")
     TALLY_MAX_UPLOAD_BYTES: int = Field(default=5_000_000, alias="TALLY_MAX_UPLOAD_BYTES")
 
-    ADMIN_EMAILS: str = Field(default="ai.solutions@kalisoftai.in", alias="ADMIN_EMAILS")
+    ADMIN_EMAILS: str = Field(
+        default="ai.solutions@kalisoftiai.in,ai.solutions@kalisoftai.in",
+        alias="ADMIN_EMAILS",
+    )
 
     # --- Deployment phases: preprod / stage / uat / prod ---
     DEPLOY_ENV: str = Field(default="preprod", alias="DEPLOY_ENV")

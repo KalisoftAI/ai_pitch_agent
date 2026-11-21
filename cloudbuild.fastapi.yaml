@@ -79,7 +79,7 @@ substitutions:
   # can log in (config validation rejects AUTH_DEV_MODE=true without the
   # allow-list).
   _AUTH_DEV_MODE: "true"
-  _AUTH_DEV_ALLOWED_EMAILS: "ai.solutions@kalisoftai.in"
+  _AUTH_DEV_ALLOWED_EMAILS: "ai.solutions@kalisoftiai.in,ai.solutions@kalisoftai.in"
   # WhatsApp sending stays off until the Wechaty gateway exists; queueing works
   # regardless, and /messages/send-due returns 503 while disabled.
   _WHATSAPP_ENABLED: "false"

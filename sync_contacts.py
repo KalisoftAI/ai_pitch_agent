@@ -24,7 +24,7 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(BASE, "gcs_data")
 REPORT = os.path.join(BASE, "contacts_sync_report.json")
 
-USER_EMAIL = "ai.solutions@kalisoftai.in"
+USER_EMAIL = "ai.solutions@kalisoftiai.in"
 
 # files (GCS path -> local copy) and the sheets that carry contact rows
 FILES = {

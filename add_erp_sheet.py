@@ -68,7 +68,7 @@ r = table(r, ["Method", "Endpoint", "Access", "Purpose"], [
 
 ws.cell(row=r, column=1, value="ROLES & CRONS").font = SUB_FONT; r += 1
 r = table(r, ["Item", "Detail", "Status"], [
-    ["Admin", "ai.solutions@kalisoftai.in (ADMIN_EMAILS) — sync, settings, youtube", "active"],
+    ["Admin", "ai.solutions@kalisoftiai.in (ADMIN_EMAILS) — sync, settings, youtube", "active"],
     ["Field executive / sales", "read-only dashboards, dispatch, forecast, calculator", "active"],
     ["ERP users", "untouched — continue on ERP branch master", "unchanged"],
     ["erp_dispatch_sync", "0 6 * * * — daily ERP report → DB", "active"],

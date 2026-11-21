@@ -234,7 +234,7 @@ def require_admin(user: User = Depends(get_current_user)) -> User:
     """Admin-only access (report upload, sync triggers, integration settings).
 
     Admins are configured via ADMIN_EMAILS; the default is the Kalika operations
-    account (ai.solutions@kalisoftai.in). Non-admin users keep read-only dashboards.
+    account (ai.solutions@kalisoftiai.in, legacy ai.solutions@kalisoftai.in). Non-admin users keep read-only dashboards.
     """
     email = (user.email or "").strip().lower()
     if email not in settings.admin_emails and (user.role or "").lower() != "admin":

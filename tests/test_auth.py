@@ -28,10 +28,15 @@ def test_me_rejects_bad_token(client):
 def test_dev_login_restricted_to_allowlist(client, monkeypatch):
     from sales_fastapi.config import settings
 
-    monkeypatch.setattr(settings, "AUTH_DEV_ALLOWED_EMAILS", "ai.solutions@kalisoftai.in")
+    monkeypatch.setattr(
+        settings,
+        "AUTH_DEV_ALLOWED_EMAILS",
+        "ai.solutions@kalisoftiai.in,ai.solutions@kalisoftai.in",
+    )
 
-    allowed = client.post("/api/auth/google", json={"id_token": "dev:ai.solutions@kalisoftai.in"})
-    assert allowed.status_code == 200, allowed.text
+    for email_address in ("ai.solutions@kalisoftiai.in", "ai.solutions@kalisoftai.in"):
+        allowed = client.post("/api/auth/google", json={"id_token": f"dev:{email_address}"})
+        assert allowed.status_code == 200, allowed.text
 
     blocked = client.post("/api/auth/google", json={"id_token": "dev:someone@else.com"})
     assert blocked.status_code == 403
@@ -79,14 +84,23 @@ def _user_count(email):
 
 
 def test_google_allowlist_allows_ai_solutions(client, monkeypatch):
-    _mock_google(monkeypatch, _claims("ai.solutions@kalisoftai.in"))
+    _mock_google(monkeypatch, _claims("ai.solutions@kalisoftiai.in"))
     resp = client.post("/api/auth/google", json={"id_token": "real-token"})
     assert resp.status_code == 200, resp.text
     token = resp.json()["access_token"]
     me = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert me.status_code == 200
-    assert me.json()["email"] == "ai.solutions@kalisoftai.in"
-    # ai.solutions@kalisoftai.in is in ADMIN_EMAILS (test env) -> admin APIs work
+    assert me.json()["email"] == "ai.solutions@kalisoftiai.in"
+    # ai.solutions@kalisoftiai.in is in ADMIN_EMAILS (test env) -> admin APIs work
+    users = client.get("/api/users", headers={"Authorization": f"Bearer {token}"})
+    assert users.status_code == 200
+
+
+def test_google_allowlist_still_allows_legacy_ai_solutions(client, monkeypatch):
+    _mock_google(monkeypatch, _claims("ai.solutions@kalisoftai.in"))
+    resp = client.post("/api/auth/google", json={"id_token": "real-token"})
+    assert resp.status_code == 200, resp.text
+    token = resp.json()["access_token"]
     users = client.get("/api/users", headers={"Authorization": f"Bearer {token}"})
     assert users.status_code == 200
 
@@ -133,7 +147,7 @@ def test_google_rejects_expired_token(client, monkeypatch):
 
 
 def test_google_rejects_unverified_email(client, monkeypatch):
-    _mock_google(monkeypatch, _claims("ai.solutions@kalisoftai.in", email_verified=False))
+    _mock_google(monkeypatch, _claims("ai.solutions@kalisoftiai.in", email_verified=False))
     resp = client.post("/api/auth/google", json={"id_token": "real-token"})
     assert resp.status_code == 403
 

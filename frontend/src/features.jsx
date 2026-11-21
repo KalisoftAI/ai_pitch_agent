@@ -3568,7 +3568,7 @@ export function KnowledgeGraphReview({ onNotice, user, config }) {
   const [correction, setCorrection] = useState("");
   const [rating, setRating] = useState(3);
   const [busy, setBusy] = useState(false);
-  const isAdmin = (user?.email || "").toLowerCase() === "ai.solutions@kalisoftai.in" || (user?.role || "").toLowerCase() === "admin";
+  const isAdmin = ["ai.solutions@kalisoftiai.in", "ai.solutions@kalisoftai.in"].includes((user?.email || "").toLowerCase()) || (user?.role || "").toLowerCase() === "admin";
 
   const load = async () => {
     try {
@@ -3729,7 +3729,7 @@ export function KnowledgeGraphReview({ onNotice, user, config }) {
 // Human-review console (ai.solutions admin): sync-all + 2h refresh status,
 // subtask approvals with model confidence, and the issues log.
 export function ReviewHub({ onNotice, user }) {
-  const isAdmin = (user?.email || "").toLowerCase() === "ai.solutions@kalisoftai.in" || (user?.role || "").toLowerCase() === "admin";
+  const isAdmin = ["ai.solutions@kalisoftiai.in", "ai.solutions@kalisoftai.in"].includes((user?.email || "").toLowerCase()) || (user?.role || "").toLowerCase() === "admin";
   const [syncStatus, setSyncStatus] = useState(null);
   const [approvals, setApprovals] = useState({ pending: 0, items: [] });
   const [issues, setIssues] = useState(null);

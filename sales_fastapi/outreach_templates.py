@@ -12,7 +12,7 @@ FUNNEL_STAGES = ["awareness", "interest", "consideration", "decision", "retentio
 
 SENDER = {
     "sender_name": "Kalisoft AI",
-    "sender_email": "ai.solutions@kalisoftai.in",
+    "sender_email": "ai.solutions@kalisoftiai.in",
     "product": "Kalisoft AI Sales Automation",
     "calendar_link": "https://kalisoftai.in/demo",
 }

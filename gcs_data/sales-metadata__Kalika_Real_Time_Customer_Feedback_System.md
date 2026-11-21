@@ -1111,7 +1111,7 @@ First sync (2026-10-30): **117 dispatch rows** (73 Completed, 44 Partially Dispa
 
 ### 18.2 Access model
 
-- **Admin** `ai.solutions@kalisoftai.in` (`ADMIN_EMAILS`): sync, YouTube keys, all reads.
+- **Admin** `ai.solutions@kalisoftiai.in` (`ADMIN_EMAILS`; legacy `ai.solutions@kalisoftai.in` allowlisted during transition): sync, YouTube keys, all reads.
 - **Field executive / sales**: read-only dashboards (verified: sync → 403, reads → 200 with `is_admin:false`).
 - **ERP users**: unchanged, strictly on the ERP app branch `master`.
 

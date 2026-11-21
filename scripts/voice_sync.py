@@ -24,7 +24,7 @@ from sales_fastapi.routers.voice import _audio_blobs, _process_blob  # noqa: E40
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--force", action="store_true", help="reprocess already-done files")
-    parser.add_argument("--email", default="ai.solutions@kalisoftai.in")
+    parser.add_argument("--email", default="ai.solutions@kalisoftiai.in")
     args = parser.parse_args()
 
     init_db()

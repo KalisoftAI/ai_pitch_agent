@@ -132,7 +132,7 @@ async function requestPublicConfig() { const response = await fetch(`${API}/conf
 function LoadingScreen() { return <div className="loading-screen"><img src={KALISOFT_LOGO} alt="Kalisoft AI" className="brand-logo" /><span>Preparing your workspace...</span></div>; }
 
 function Login({ config, onLogin, onNotice }) {
-  const [email, setEmail] = useState("ai.solutions@kalisoftai.in");
+  const [email, setEmail] = useState("ai.solutions@kalisoftiai.in");
   const [busy, setBusy] = useState(false);
   const [pwForm, setPwForm] = useState({ username: "", password: "" });
   const [pwBusy, setPwBusy] = useState(false);

@@ -33,7 +33,7 @@ for row in ws.iter_rows(min_col=1, max_col=3):
 r = ws.max_row + 2
 ws.cell(row=r, column=1, value="CONTACTS IN APP DB (after GCS sync)").font = Font(bold=True)
 ws.cell(row=r, column=2, value=report["db_total_contacts"]).font = OK_FONT
-ws.cell(row=r, column=3, value="user ai.solutions@kalisoftai.in | synced from sales-contacts/ via app importer pipeline (normalise_record), 30-Oct-2026")
+ws.cell(row=r, column=3, value="user ai.solutions@kalisoftiai.in | synced from sales-contacts/ via app importer pipeline (normalise_record), 30-Oct-2026")
 
 # ---- Sheet 2: append per-sheet sync report
 ws = wb["2_Contacts_Summary"]

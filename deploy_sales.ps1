@@ -1,5 +1,5 @@
 # Cloud Run deployment (PowerShell) for the FastAPI sales pipeline.
-# Usage:  ./deploy_sales.ps1 -ProjectId my-proj -CloudSqlInstance my-proj:asia-south1:sales-db -GmailAddressKalisoftAI ai.solutions@kalisoftai.in -GmailAddressKalika kalikaenterprises@gmail.com
+# Usage:  ./deploy_sales.ps1 -ProjectId my-proj -CloudSqlInstance my-proj:asia-south1:sales-db -GmailAddressKalisoftAI ai.solutions@kalisoftiai.in -GmailAddressKalika kalikaenterprises@gmail.com
 param(
   [string]$ProjectId = "",
   [string]$Region = "asia-south1",

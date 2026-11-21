@@ -75,7 +75,7 @@ for j, v in enumerate(["TOTAL", tot_parsed, tot_db, f"+871 new contacts this syn
     c.font = Font(bold=True); c.border = THIN
 r += 2
 for n in [
-    f"App DB total contacts after sync: {db_total} (7,924 before -> +871 new from the 3 GCS contact files; user: ai.solutions@kalisoftai.in).",
+    f"App DB total contacts after sync: {db_total} (7,924 before -> +871 new from the 3 GCS contact files; user: ai.solutions@kalisoftiai.in).",
     "Nothing added/removed: the app's standard field mapping (normalise_record) was used; every unmapped source column (Call status, Requirements, Industry/Category, Rates remarks, Videos sent, etc.) is preserved verbatim in the contact's notes.",
     "Duplicates follow the app rule (user + email); rows with no contact identity at all (orphan attribute fragments, follow-up report lines) are not contacts and were skipped.",
     "Blank-header sheets (packvision contacts, Sheet3, Sheet4, out-off-state) were understood with positional header repair — values unchanged.",

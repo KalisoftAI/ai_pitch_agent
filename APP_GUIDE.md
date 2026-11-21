@@ -377,7 +377,7 @@ Topbar ka "Kalika AI" button ya bottom-right FAB se khulta hai (right drawer).
 | **sales** | Dashboard, catalogue approval, team review, reports — admin actions blocked |
 | **field** | Field updates, visits, voice capture — approvals nahi kar sakta (server-side block) |
 
-Admin rights do sources se aate hain: `ADMIN_EMAILS` env (default `ai.solutions@kalisoftai.in`)
+Admin rights do sources se aate hain: `ADMIN_EMAILS` env (default `ai.solutions@kalisoftiai.in`, legacy `ai.solutions@kalisoftai.in` bhi allowlisted hai)
 ya user ka `role="admin"`. Frontend pe tabs sabko dikhte hain; enforcement server pe hoti hai.
 
 ---

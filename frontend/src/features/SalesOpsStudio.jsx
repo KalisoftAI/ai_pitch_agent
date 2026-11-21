@@ -74,7 +74,7 @@ function ToggleRow({ label, hint, checked, disabled, onChange }) {
 }
 
 export function SalesOpsStudio({ onNotice, user }) {
-  const isAdmin = (user?.email || "").toLowerCase() === "ai.solutions@kalisoftai.in" || (user?.role || "").toLowerCase() === "admin";
+  const isAdmin = ["ai.solutions@kalisoftiai.in", "ai.solutions@kalisoftai.in"].includes((user?.email || "").toLowerCase()) || (user?.role || "").toLowerCase() === "admin";
   const [tab, setTab] = useState("controls");
   const [toggles, setToggles] = useState(DEFAULT_TOGGLES);
   const [counters, setCounters] = useState({ date: "", whatsapp_sent: 0, yt_quota_used: 0 });

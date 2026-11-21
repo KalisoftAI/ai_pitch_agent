@@ -3,7 +3,7 @@ Google-Analytics-style metrics and YouTube Data API settings/sync.
 
 Access model:
 - read endpoints: any authenticated Kalika user (field executive, sales, admin)
-- sync + settings + youtube sync: admin only (ADMIN_EMAILS, default ai.solutions@kalisoftai.in)
+- sync + settings + youtube sync: admin only (ADMIN_EMAILS, default ai.solutions@kalisoftiai.in, legacy ai.solutions@kalisoftai.in)
 """
 
 from __future__ import annotations
