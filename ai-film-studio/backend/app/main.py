@@ -19,6 +19,7 @@ from app.api.routes import (
 )
 from app.core.config import get_settings
 from app.core.database import init_db
+from app.routers import sales_prompts
 from app.seed import seed_all
 from app.services.ai.providers import ProviderError, ProviderUnavailable
 from app.services.media.render_service import RenderError
@@ -109,3 +110,4 @@ app.include_router(rendering.router, prefix=settings.api_prefix)
 app.include_router(assets.router, prefix=settings.api_prefix)
 app.include_router(storage.router, prefix=settings.api_prefix)
 app.include_router(dashboard.router, prefix=settings.api_prefix)
+app.include_router(sales_prompts.router, prefix=settings.api_prefix)

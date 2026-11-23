@@ -1,0 +1,115 @@
+{
+  "version": "2026-10-30.1",
+  "schedule": {
+    "timezone": "Asia/Kolkata",
+    "window": "20:00-22:00 IST",
+    "utc_crons": {
+      "daily_guardrail_checks": "30 14 * * *",
+      "daily_llm_prompt_refine": "30 15 * * *",
+      "daily_uat_report": "30 16 * * *"
+    }
+  },
+  "models": {
+    "default": "gemini-2.5-flash",
+    "gemma": "gemma-4-27b-it",
+    "fallback_chain": ["gemma-4-27b-it", "gemini-2.5-flash", "gemini-2.0-flash"]
+  },
+  "human_review_required": true,
+  "prompts": [
+    {
+      "id": "PR-01",
+      "task": "customer_feedback_summary",
+      "model": "gemma-4-27b-it",
+      "tier": "medium",
+      "json_mode": true,
+      "human_review": true,
+      "template": "Summarise this Kalika Enterprises customer interaction in 2 sentences. Return JSON: {\"summary\":str,\"sentiment\":\"positive|neutral|negative\",\"intent\":\"order|rate|complaint|feedback|other\",\"next_action\":str}. Interaction: {text}",
+      "variables": ["text"],
+      "sample_input": {
+        "text": "Customer asked for 500 kg VCI bags at Rs.182/kg, wants delivery before Diwali, and mentioned last shipment was 2 days late."
+      },
+      "expected_output": {
+        "summary": "Customer needs 500 kg VCI bags at Rs.182/kg before Diwali and flagged a 2-day late delivery last time.",
+        "sentiment": "negative",
+        "intent": "order",
+        "next_action": "Send quote with delivery date and apologise for last delay"
+      }
+    },
+    {
+      "id": "PR-02",
+      "task": "journey_next_step",
+      "model": "gemini-2.5-flash",
+      "tier": "medium",
+      "json_mode": true,
+      "human_review": true,
+      "template": "Given customer type '{customer_type}', current stage '{stage}', and recent events {events}, choose the single best next action from the allowed templates {allowed_templates}. Return JSON: {\"template_id\":str,\"reason\":str,\"send_in_hours\":int}.",
+      "variables": ["customer_type", "stage", "events", "allowed_templates"],
+      "sample_input": {
+        "customer_type": "new_customer",
+        "stage": "interest",
+        "events": ["welcome_message", "catalogue_shared", "rate_requested"],
+        "allowed_templates": ["WA-NEW-02", "WA-FU-01", "WA-RT-01"]
+      },
+      "expected_output": {
+        "template_id": "WA-RT-01",
+        "reason": "Customer asked for rates at the interest stage; rate share converts fastest.",
+        "send_in_hours": 1
+      }
+    },
+    {
+      "id": "PR-03",
+      "task": "behaviour_pattern_extract",
+      "model": "gemini-2.5-flash",
+      "tier": "medium",
+      "json_mode": true,
+      "human_review": false,
+      "template": "Extract behaviour patterns from this customer journey log. Return JSON: {\"patterns\":[{\"name\":str,\"evidence\":str,\"confidence\":float}],\"dropout_risk\":\"low|medium|high\"}. Journey: {log}",
+      "variables": ["log"],
+      "sample_input": {
+        "log": "new customer -> welcome sent -> catalogue opened twice -> rate asked -> no reply for 9 days"
+      },
+      "expected_output": {
+        "patterns": [
+          {"name": "price_sensitive_prospect", "evidence": "asked rates then went silent", "confidence": 0.72}
+        ],
+        "dropout_risk": "high"
+      }
+    },
+    {
+      "id": "PR-04",
+      "task": "weekly_prompt_refinement",
+      "model": "gemini-2.5-flash",
+      "tier": "medium",
+      "json_mode": true,
+      "human_review": true,
+      "template": "Review last week's prompt outcomes: {outcomes}. Propose at most 3 minimal edits to improve reply rate. Return JSON: {\"edits\":[{\"prompt_id\":str,\"change\":str,\"reason\":str}],\"confidence\":float}.",
+      "variables": ["outcomes"],
+      "sample_input": {
+        "outcomes": "PR-01 summary 92% accepted; PR-02 next-step 61% reply; PR-03 unused"
+      },
+      "expected_output": {
+        "edits": [
+          {"prompt_id": "PR-02", "change": "Add explicit deadline phrasing", "reason": "reply rate below 70%"}
+        ],
+        "confidence": 0.64
+      }
+    },
+    {
+      "id": "PR-05",
+      "task": "dispatch_followup_draft",
+      "model": "gemma-4-27b-it",
+      "tier": "medium",
+      "json_mode": false,
+      "human_review": true,
+      "template": "Write a 2-line WhatsApp follow-up for Kalika customer {customer} whose order {order_no} is {pct}% dispatched (balance {balance} qty). Polite, no emojis, include reply instruction.",
+      "variables": ["customer", "order_no", "pct", "balance"],
+      "sample_input": {
+        "customer": "WHITE POLLY",
+        "order_no": "LOC-20261030-014",
+        "pct": 66.7,
+        "balance": 7473
+      },
+      "expected_output": "Namaste WHITE POLLY ji, your order LOC-20261030-014 is 66.7% dispatched with 7,473 qty balance planned next. Reply here for any change in quantity or delivery schedule."
+    }
+  ]
+}
