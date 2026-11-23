@@ -62,16 +62,20 @@ class Settings(BaseSettings):
     GCS_MEDIA_INVENTORY_LIMIT: int = Field(default=500, alias="GCS_MEDIA_INVENTORY_LIMIT")
     # --- GCS-backed UI assets (non-breaking dashboard enhancement) ---
     UI_ASSETS_ENABLED: bool = Field(default=True, alias="UI_ASSETS_ENABLED")
-    UI_ASSETS_PROMPT_TAG: str = Field(default="ui-assets-from-gcs-v1", alias="UI_ASSETS_PROMPT_TAG")
+    UI_ASSETS_PROMPT_TAG: str = Field(default="ui-assets-from-gcs-v2", alias="UI_ASSETS_PROMPT_TAG")
     UI_ASSETS_PROMPT_TEXT: str = Field(
         default=(
-            "Use only UI assets under gs://sales-crm/assets/UI. Check the daily-rate template JSON, "
-            "business-KPI JSON, and dashboard HTML before editing UI. Add a non-breaking overview panel "
-            "through /api/media/ui-assets, keep React layout and mobile behavior intact, gate with "
-            "ui_assets_enabled, and show ui_assets_prompt_tag. Never hardcode public GCS URLs, replace "
-            "the ai-film-studio renderer template, or remove existing dashboard sections."
+            "Use only UI assets under gs://sales-crm/assets/UI and the vendored update kit. Inspect the "
+            "daily-rate JSON, dashboard JSON, palette, docs and HTML references before editing UI. Keep "
+            "the existing React layout and mobile behavior intact, gate with ui_assets_enabled, show "
+            "ui_assets_prompt_tag, label sample values as samples, and flag the BOPP unit discrepancy. "
+            "Never hardcode public GCS URLs, replace the ai-film-studio renderer template, or remove "
+            "existing dashboard sections."
         ),
         alias="UI_ASSETS_PROMPT_TEXT",
+    )
+    UI_ASSETS_KIT_PATH: str = Field(
+        default="sales-crm/assets/UI/update-kit", alias="UI_ASSETS_KIT_PATH"
     )
     UI_ASSETS_GCS_BUCKET: str = Field(default="sales-crm", alias="UI_ASSETS_GCS_BUCKET")
     UI_ASSETS_GCS_PREFIX: str = Field(default="assets/UI/", alias="UI_ASSETS_GCS_PREFIX")

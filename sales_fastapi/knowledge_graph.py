@@ -24,8 +24,15 @@ def _company_id(name: str) -> str:
     return f"company:{_key(_normal(name))}"
 
 
-def _edge(source: str, target: str, relation: str, *, confidence: float = 1.0,
-          evidence: str = "", needs_review: bool = False) -> dict[str, Any]:
+def _edge(
+    source: str,
+    target: str,
+    relation: str,
+    *,
+    confidence: float = 1.0,
+    evidence: str = "",
+    needs_review: bool = False,
+) -> dict[str, Any]:
     edge_key = _key(f"{source}|{relation}|{target}")
     return {
         "id": edge_key,
@@ -306,8 +313,13 @@ def build_snapshot(
         )
         edges[edge["id"]] = edge
 
-    edge_items = sorted(edges.values(), key=lambda item: (item["review_status"] != "pending", item["relation"], item["id"]))
-    node_items = sorted(nodes.values(), key=lambda item: (item["kind"], item["label"].casefold(), item["id"]))
+    edge_items = sorted(
+        edges.values(),
+        key=lambda item: (item["review_status"] != "pending", item["relation"], item["id"]),
+    )
+    node_items = sorted(
+        nodes.values(), key=lambda item: (item["kind"], item["label"].casefold(), item["id"])
+    )
     kind_counts: dict[str, int] = {}
     for node in node_items:
         kind_counts[node["kind"]] = kind_counts.get(node["kind"], 0) + 1
@@ -329,7 +341,9 @@ def build_snapshot(
                 "contacts": len(contacts),
                 "marketing_companies": len(marketing_companies),
                 "company_visits": len(visits),
-                "linked_mails": len([mail for mail in mails if int(mail.get("contact_id") or 0) in contact_ids]),
+                "linked_mails": len(
+                    [mail for mail in mails if int(mail.get("contact_id") or 0) in contact_ids]
+                ),
                 "erp_orders": len(orders),
                 "erp_dispatches": len(dispatches),
                 "tally_sales": len(tally_sales),

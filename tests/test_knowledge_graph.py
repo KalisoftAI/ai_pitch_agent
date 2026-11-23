@@ -20,8 +20,13 @@ def _add_marketing_company():
         db.close()
 
 
-def test_graph_build_review_chat_feedback_and_user_isolation(client, auth_headers, monkeypatch, tmp_path):
-    monkeypatch.setattr("sales_fastapi.routers.knowledge_graph.GCSStorage", lambda **kwargs: type("GCS", (), {"available": False})())
+def test_graph_build_review_chat_feedback_and_user_isolation(
+    client, auth_headers, monkeypatch, tmp_path
+):
+    monkeypatch.setattr(
+        "sales_fastapi.routers.knowledge_graph.GCSStorage",
+        lambda **kwargs: type("GCS", (), {"available": False})(),
+    )
     monkeypatch.setattr(
         "sales_fastapi.routers.knowledge_graph._local_path",
         lambda user_id, filename="current.json": tmp_path / f"{user_id}-{filename}",
@@ -29,7 +34,12 @@ def test_graph_build_review_chat_feedback_and_user_isolation(client, auth_header
     created = client.post(
         "/api/contacts",
         headers=auth_headers,
-        json={"email": "buyer@acme.example", "company": "Acme Packaging", "name": "Buyer", "intent": "procurement"},
+        json={
+            "email": "buyer@acme.example",
+            "company": "Acme Packaging",
+            "name": "Buyer",
+            "intent": "procurement",
+        },
     )
     assert created.status_code == 201, created.text
     marketing_id = _add_marketing_company()
@@ -68,12 +78,20 @@ def test_graph_build_review_chat_feedback_and_user_isolation(client, auth_header
     feedback = client.post(
         "/api/knowledge-graph/feedback",
         headers=auth_headers,
-        json={"graph_version": version, "question": "Which company is this?", "answer": chat.json()["reply"], "correction": "Acme is the account", "rating": 4},
+        json={
+            "graph_version": version,
+            "question": "Which company is this?",
+            "answer": chat.json()["reply"],
+            "correction": "Acme is the account",
+            "rating": 4,
+        },
     )
     assert feedback.status_code == 201, feedback.text
     assert feedback.json()["status"] == "pending_evaluation"
 
-    other_token = client.post("/api/auth/google", json={"id_token": "dev:other@kalisoftai.com"}).json()["access_token"]
+    other_token = client.post(
+        "/api/auth/google", json={"id_token": "dev:other@kalisoftai.com"}
+    ).json()["access_token"]
     other_headers = {"Authorization": f"Bearer {other_token}"}
     other_graph = client.get("/api/knowledge-graph", headers=other_headers).json()
     assert other_graph["nodes"] == []

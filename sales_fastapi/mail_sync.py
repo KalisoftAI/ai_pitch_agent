@@ -36,7 +36,12 @@ def _today() -> str:
 
 def _mail_date(value: str) -> str:
     text = (value or "").strip()
-    for fmt in ("%a, %d %b %Y %H:%M:%S %z", "%a, %d %b %Y %H:%M:%S", "%a, %d %b %Y %H:%M %z", "%Y-%m-%d"):
+    for fmt in (
+        "%a, %d %b %Y %H:%M:%S %z",
+        "%a, %d %b %Y %H:%M:%S",
+        "%a, %d %b %Y %H:%M %z",
+        "%Y-%m-%d",
+    ):
         try:
             return datetime.strptime(text[:31], fmt).strftime("%Y-%m-%d")
         except ValueError:
@@ -47,7 +52,7 @@ def _mail_date(value: str) -> str:
 
 def _safe_name(value: str) -> str:
     cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", (value or "attachment")).strip("-")
-    return (cleaned[:80] or "attachment")
+    return cleaned[:80] or "attachment"
 
 
 def get_state(db, connection_id: int, user_id: int) -> MailSyncState:
@@ -85,8 +90,12 @@ def sync_connection(
     password = decrypt_secret(conn.secret_encrypted)
     extractor = EmailExtractor(conn.imap_host, conn.imap_port, conn.email_address, password)
     counters = {
-        "fetched": 0, "new": 0, "duplicates_skipped": 0,
-        "raw_uploaded": 0, "processed_uploaded": 0, "attachments_uploaded": 0,
+        "fetched": 0,
+        "new": 0,
+        "duplicates_skipped": 0,
+        "raw_uploaded": 0,
+        "processed_uploaded": 0,
+        "attachments_uploaded": 0,
         "errors": [],
     }
     try:
@@ -98,7 +107,9 @@ def sync_connection(
             state.uidvalidity = uidvalidity
             state.last_uid = 0
             state.message_ids = []
-            counters["errors"].append("UIDVALIDITY changed - checkpoint reset (no data loss, mail re-synced once)")
+            counters["errors"].append(
+                "UIDVALIDITY changed - checkpoint reset (no data loss, mail re-synced once)"
+            )
             reset = True
         if uidvalidity and not state.uidvalidity:
             state.uidvalidity = uidvalidity
@@ -147,7 +158,11 @@ def sync_connection(
                     counters["raw_uploaded"] += 1
             for index, attachment in enumerate(attach_data):
                 blob = f"{base}attachments/{mail_day}/uid{uid}-{index + 1}-{_safe_name(attachment['name'])}"
-                if gcs.available and gcs.upload_bytes(blob, attachment["data"], attachment.get("mime_type") or "application/octet-stream"):
+                if gcs.available and gcs.upload_bytes(
+                    blob,
+                    attachment["data"],
+                    attachment.get("mime_type") or "application/octet-stream",
+                ):
                     counters["attachments_uploaded"] += 1
             record = normalize_mail(
                 {
@@ -166,12 +181,22 @@ def sync_connection(
             record["connection_id"] = conn.id
             record["message_id"] = msg_id
             record["attachment_count"] = len(attach_data)
-            processed.append({**{k: v for k, v in record.items() if k != "body"}, "body_preview": record.get("body", "")[:1500]})
+            processed.append(
+                {
+                    **{k: v for k, v in record.items() if k != "body"},
+                    "body_preview": record.get("body", "")[:1500],
+                }
+            )
 
         counters["new_records"] = processed  # caller may trim before responding
         if processed and gcs.available:
             batch_name = f"{base}processed/{_today()}/sync-{started.strftime('%H%M%S')}.json"
-            payload = {"connection_id": conn.id, "email": conn.email_address, "generated_at": started.isoformat(), "mails": processed}
+            payload = {
+                "connection_id": conn.id,
+                "email": conn.email_address,
+                "generated_at": started.isoformat(),
+                "mails": processed,
+            }
             if gcs.upload_json(batch_name, payload):
                 counters["processed_uploaded"] = len(processed)
                 state.gcs_last_prefix = batch_name
@@ -183,7 +208,9 @@ def sync_connection(
         day_stats["fetched"] = int(day_stats.get("fetched", 0)) + counters["fetched"]
         day_stats["new"] = int(day_stats.get("new", 0)) + counters["new"]
         day_stats["processed"] = int(day_stats.get("processed", 0)) + counters["new"]
-        day_stats["duplicates_skipped"] = int(day_stats.get("duplicates_skipped", 0)) + counters["duplicates_skipped"]
+        day_stats["duplicates_skipped"] = (
+            int(day_stats.get("duplicates_skipped", 0)) + counters["duplicates_skipped"]
+        )
         daily["daily"] = {**(daily.get("daily") or {}), _today(): day_stats}
         state.stats = daily
         state.last_sync_at = datetime.now(timezone.utc)
@@ -206,15 +233,35 @@ def sync_connection(
         db.commit()
 
     result = {k: v for k, v in counters.items() if k != "new_records"}
-    result["sample"] = [
-        {k: v for k, v in item.items() if k in ("id", "subject", "from_email", "date", "intent", "company", "client_name", "outcome")}
-        for item in processed[:10]
-    ] if processed else []
+    result["sample"] = (
+        [
+            {
+                k: v
+                for k, v in item.items()
+                if k
+                in (
+                    "id",
+                    "subject",
+                    "from_email",
+                    "date",
+                    "intent",
+                    "company",
+                    "client_name",
+                    "outcome",
+                )
+            }
+            for item in processed[:10]
+        ]
+        if processed
+        else []
+    )
     result["checkpoint"] = {
         "last_uid": int(state.last_uid or 0),
         "uidvalidity": int(state.uidvalidity or 0),
         "dedup_ids": len(state.message_ids or []),
-        "next_before_uid": min([int(m.get("uid") or 0) for m in messages], default=0) if messages else 0,
+        "next_before_uid": min([int(m.get("uid") or 0) for m in messages], default=0)
+        if messages
+        else 0,
     }
     result["gcs_available"] = GCSStorage(bucket_name=settings.GCS_BUCKET_MAIL).available
     result["status"] = state.last_status
@@ -233,7 +280,6 @@ def cleanup_retention(db) -> dict[str, Any]:
         ("attachments", settings.MAIL_RETENTION_ATTACHMENTS_DAYS),
     ]
     if gcs.available and gcs._client is not None:
-
         client: Any = gcs._client
         bucket = client.bucket(gcs.bucket_name)
         now = datetime.now(timezone.utc).date()
@@ -241,7 +287,7 @@ def cleanup_retention(db) -> dict[str, Any]:
             cutoff = now - timedelta(days=int(days))
             try:
                 for blob in client.list_blobs(gcs.bucket_name, prefix=f"{base}{folder}/"):
-                    match = _DATE_FOLDER.search("/" + blob.name[len(base):])
+                    match = _DATE_FOLDER.search("/" + blob.name[len(base) :])
                     if not match:
                         continue
                     try:
@@ -260,10 +306,18 @@ def cleanup_retention(db) -> dict[str, Any]:
         errors.append("GCS unavailable - retention skipped")
     # DB sync-log rows older than retention (audit history kept via AuditLog separately)
     cutoff = datetime.now(timezone.utc) - timedelta(days=int(settings.MAIL_RETENTION_LOGS_DAYS))
-    deleted = db.query(SyncRun).filter(SyncRun.job.in_(("email_sync", "mail_retention")), SyncRun.started_at < cutoff).delete()
+    deleted = (
+        db.query(SyncRun)
+        .filter(SyncRun.job.in_(("email_sync", "mail_retention")), SyncRun.started_at < cutoff)
+        .delete()
+    )
     removed["logs"] = int(deleted or 0)
     db.commit()
-    run = SyncRun(job="mail_retention", status="ok" if not errors else "error", detail=json.dumps({"removed": removed, "errors": errors[:5]}))
+    run = SyncRun(
+        job="mail_retention",
+        status="ok" if not errors else "error",
+        detail=json.dumps({"removed": removed, "errors": errors[:5]}),
+    )
     db.add(run)
     db.commit()
     return {"removed": removed, "errors": errors[:5], "mail_touched": False}

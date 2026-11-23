@@ -252,9 +252,7 @@ def mailbox_sync_state(
     if state is None:
         return {"mailbox_id": mailbox_id, "status": "never", "messages_stored": 0}
     stored = (
-        db.query(func.count(GmailMessage.id))
-        .filter(GmailMessage.mailbox_id == mailbox_id)
-        .scalar()
+        db.query(func.count(GmailMessage.id)).filter(GmailMessage.mailbox_id == mailbox_id).scalar()
         or 0
     )
     return {
@@ -298,7 +296,12 @@ def list_mailbox_messages(
     if client:
         query = query.filter(GmailMessage.client.ilike(f"%{client.strip()}%"))
     total = query.count()
-    rows = query.order_by(GmailMessage.internal_date.desc(), GmailMessage.id.desc()).offset(offset).limit(limit).all()
+    rows = (
+        query.order_by(GmailMessage.internal_date.desc(), GmailMessage.id.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
     return {
         "total": total,
         "offset": offset,

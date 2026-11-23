@@ -126,14 +126,18 @@ class SendMailIn(BaseModel):
 
 
 class EmailSyncIn(BaseModel):
-    batch: Optional[int] = Field(default=None, ge=20, le=50, description="Mails per sync batch (20-50)")
+    batch: Optional[int] = Field(
+        default=None, ge=20, le=50, description="Mails per sync batch (20-50)"
+    )
     full: bool = False  # false -> incremental (checkpoint) / today only on first run
     query: str = Field(default="", max_length=256)
     sender: str = Field(default="", max_length=320)
     since: Optional[datetime] = None
     until: Optional[datetime] = None
     unread_only: bool = False
-    before_uid: Optional[int] = Field(default=None, ge=1, description="Pagination cursor (older mails)")
+    before_uid: Optional[int] = Field(
+        default=None, ge=1, description="Pagination cursor (older mails)"
+    )
 
 
 class EmailTestSendIn(BaseModel):
@@ -143,7 +147,9 @@ class EmailTestSendIn(BaseModel):
     html: bool = True
     template_id: Optional[int] = None
     contact_id: Optional[int] = None
-    contact_type: str = Field(default="marketing_companies", pattern="^(contacts|marketing_companies)$")
+    contact_type: str = Field(
+        default="marketing_companies", pattern="^(contacts|marketing_companies)$"
+    )
 
 
 class SchedulerRunIn(BaseModel):

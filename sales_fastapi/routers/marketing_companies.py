@@ -481,7 +481,9 @@ def list_marketing_companies(
         channel=channel,
     )
     if channel:
-        rows = [row for row in query.order_by(_order_for(sort)).all() if _channel_match(row, channel)]
+        rows = [
+            row for row in query.order_by(_order_for(sort)).all() if _channel_match(row, channel)
+        ]
         return rows[offset : offset + limit]
     return query.order_by(_order_for(sort)).offset(offset).limit(limit).all()
 

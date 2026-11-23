@@ -68,13 +68,19 @@ def _ensure_review_environment() -> None:
     environment = _environment()
     allowed = {"dev", "development", "preprod", "stage", "staging", "uat", "test"}
     if settings.ENV.lower() in {"prod", "production"} or environment not in allowed:
-        raise HTTPException(status_code=404, detail="Graph review is available only in DEV/UAT environments")
+        raise HTTPException(
+            status_code=404, detail="Graph review is available only in DEV/UAT environments"
+        )
     if environment in {"stage", "staging", "uat"}:
         try:
             active_until = datetime.fromisoformat(settings.UAT_ENABLED_UNTIL).date()
         except ValueError:
             active_until = None
-        if not settings.UAT_ENABLED or active_until is None or active_until < datetime.now(timezone.utc).date():
+        if (
+            not settings.UAT_ENABLED
+            or active_until is None
+            or active_until < datetime.now(timezone.utc).date()
+        ):
             raise HTTPException(status_code=404, detail="UAT graph review window is closed")
 
 
@@ -86,7 +92,13 @@ def _blob_path(user_id: int, filename: str = "current.json") -> str:
 
 
 def _local_path(user_id: int, filename: str = "current.json") -> Path:
-    return Path(tempfile.gettempdir()) / "ai_pitch_agent" / "knowledge_graph" / f"user_{user_id}" / filename
+    return (
+        Path(tempfile.gettempdir())
+        / "ai_pitch_agent"
+        / "knowledge_graph"
+        / f"user_{user_id}"
+        / filename
+    )
 
 
 def _store_user_json(user_id: int, filename: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -95,7 +107,9 @@ def _store_user_json(user_id: int, filename: str, payload: dict[str, Any]) -> di
     path = _local_path(user_id, filename)
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(".tmp")
-    temporary.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    temporary.write_text(
+        json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
+    )
     temporary.replace(path)
 
     uploaded = gcs.upload_json(blob_path, payload) if gcs.available else False
@@ -113,14 +127,22 @@ def _store_graph(user_id: int, payload: dict[str, Any]) -> dict[str, Any]:
     path = _local_path(user_id, "current.json")
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(".tmp")
-    temporary.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    temporary.write_text(
+        json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
+    )
     temporary.replace(path)
     uploaded = gcs.upload_json(blob_path, payload) if gcs.available else False
     if gcs.available and not uploaded:
         payload["storage"] = "local-cache"
-        temporary.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        temporary.write_text(
+            json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
+        )
         temporary.replace(path)
-    return {"stored": "gcs+local" if uploaded else "local-cache", "gcs_uploaded": bool(uploaded), "path": blob_path if uploaded else ""}
+    return {
+        "stored": "gcs+local" if uploaded else "local-cache",
+        "gcs_uploaded": bool(uploaded),
+        "path": blob_path if uploaded else "",
+    }
 
 
 def _load_user_json(user_id: int, filename: str, default: Any) -> Any:
@@ -142,15 +164,26 @@ def _load_user_json(user_id: int, filename: str, default: Any) -> Any:
 
 
 def _load_graph(user_id: int) -> dict[str, Any]:
-    return _load_user_json(user_id, "current.json", {
-        "schema_version": 1,
-        "environment": _environment(),
-        "version": "",
-        "generated_at": "",
-        "nodes": [],
-        "edges": [],
-        "stats": {"nodes": 0, "edges": 0, "pending_edges": 0, "nodes_by_kind": {}, "edges_by_relation": {}, "sources": {}},
-    })
+    return _load_user_json(
+        user_id,
+        "current.json",
+        {
+            "schema_version": 1,
+            "environment": _environment(),
+            "version": "",
+            "generated_at": "",
+            "nodes": [],
+            "edges": [],
+            "stats": {
+                "nodes": 0,
+                "edges": 0,
+                "pending_edges": 0,
+                "nodes_by_kind": {},
+                "edges_by_relation": {},
+                "sources": {},
+            },
+        },
+    )
 
 
 def _feedback_items(user_id: int) -> list[dict[str, Any]]:
@@ -167,7 +200,11 @@ def _user_sources(user: User, db: Session) -> tuple[list[dict], ...]:
             "intent": row.intent,
             "source": row.source,
         }
-        for row in db.query(Contact).filter(Contact.user_id == user.id).order_by(Contact.id.desc()).limit(5000).all()
+        for row in db.query(Contact)
+        .filter(Contact.user_id == user.id)
+        .order_by(Contact.id.desc())
+        .limit(5000)
+        .all()
     ]
     marketing = [
         {
@@ -180,7 +217,11 @@ def _user_sources(user: User, db: Session) -> tuple[list[dict], ...]:
             "next_action": row.next_action,
             "follow_up_date": row.follow_up_date,
         }
-        for row in db.query(MarketingCompany).filter(MarketingCompany.user_id == user.id).order_by(MarketingCompany.id.desc()).limit(5000).all()
+        for row in db.query(MarketingCompany)
+        .filter(MarketingCompany.user_id == user.id)
+        .order_by(MarketingCompany.id.desc())
+        .limit(5000)
+        .all()
     ]
     visits = [
         {
@@ -191,40 +232,74 @@ def _user_sources(user: User, db: Session) -> tuple[list[dict], ...]:
             "next_action": row.next_action,
             "follow_up_date": row.follow_up_date,
         }
-        for row in db.query(CompanyVisit).filter(CompanyVisit.user_id == user.id).order_by(CompanyVisit.id.desc()).limit(2000).all()
+        for row in db.query(CompanyVisit)
+        .filter(CompanyVisit.user_id == user.id)
+        .order_by(CompanyVisit.id.desc())
+        .limit(2000)
+        .all()
     ]
     contact_ids = {row["id"] for row in contacts}
     try:
         snapshot = load_insights()
         mails = [
-            mail for mail in snapshot.get("mails", [])[:5000]
+            mail
+            for mail in snapshot.get("mails", [])[:5000]
             if int(mail.get("contact_id") or 0) in contact_ids
         ]
     except Exception:  # noqa: BLE001 - optional mail source must not block graph refresh
         mails = []
     orders = [
-        {"order_no": row.order_no, "customer": row.customer, "order_date": row.order_date,
-         "report_date": row.report_date, "status": row.status, "total_value": row.total_value}
+        {
+            "order_no": row.order_no,
+            "customer": row.customer,
+            "order_date": row.order_date,
+            "report_date": row.report_date,
+            "status": row.status,
+            "total_value": row.total_value,
+        }
         for row in db.query(ErpOrder).order_by(ErpOrder.id.desc()).limit(1000).all()
     ]
     dispatches = [
-        {"dispatch_no": row.dispatch_no, "customer": row.customer, "plant": row.plant,
-         "report_date": row.report_date, "status": row.status,
-         "schedule_qty": row.schedule_qty, "dispatched_qty": row.dispatched_qty}
+        {
+            "dispatch_no": row.dispatch_no,
+            "customer": row.customer,
+            "plant": row.plant,
+            "report_date": row.report_date,
+            "status": row.status,
+            "schedule_qty": row.schedule_qty,
+            "dispatched_qty": row.dispatched_qty,
+        }
         for row in db.query(ErpDispatch).order_by(ErpDispatch.id.desc()).limit(1000).all()
     ]
     tally_sales = [
-        {"source_file": row.source_file, "source_row": row.source_row, "sale_date": row.sale_date,
-         "period": row.period, "buyer": row.buyer, "voucher_no": row.voucher_no,
-         "item_name": row.item_name, "quantity": row.quantity, "value": row.value}
+        {
+            "source_file": row.source_file,
+            "source_row": row.source_row,
+            "sale_date": row.sale_date,
+            "period": row.period,
+            "buyer": row.buyer,
+            "voucher_no": row.voucher_no,
+            "item_name": row.item_name,
+            "quantity": row.quantity,
+            "value": row.value,
+        }
         for row in db.query(TallySale).order_by(TallySale.id.desc()).limit(5000).all()
     ]
     templates = [
-        {"id": row.id, "name": row.name, "channel": row.channel, "strategy": row.strategy,
-         "funnel_stage": row.funnel_stage, "variables": row.variables, "is_active": row.is_active}
-        for row in db.query(MessageTemplate).filter(
-            MessageTemplate.user_id.in_([0, user.id]), MessageTemplate.is_active.is_(True)
-        ).order_by(MessageTemplate.id.asc()).limit(250).all()
+        {
+            "id": row.id,
+            "name": row.name,
+            "channel": row.channel,
+            "strategy": row.strategy,
+            "funnel_stage": row.funnel_stage,
+            "variables": row.variables,
+            "is_active": row.is_active,
+        }
+        for row in db.query(MessageTemplate)
+        .filter(MessageTemplate.user_id.in_([0, user.id]), MessageTemplate.is_active.is_(True))
+        .order_by(MessageTemplate.id.asc())
+        .limit(250)
+        .all()
     ]
     return contacts, marketing, visits, mails, orders, dispatches, tally_sales, templates
 
@@ -254,7 +329,9 @@ def read_graph(user: User = Depends(get_current_user), db: Session = Depends(get
 @router.post("/build")
 def build_user_graph(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     _ensure_review_environment()
-    contacts, marketing, visits, mails, orders, dispatches, tally_sales, templates = _user_sources(user, db)
+    contacts, marketing, visits, mails, orders, dispatches, tally_sales, templates = _user_sources(
+        user, db
+    )
     graph = build_snapshot(
         contacts=contacts,
         marketing_companies=marketing,
@@ -293,7 +370,9 @@ def build_user_graph(user: User = Depends(get_current_user), db: Session = Depen
         else:
             edge["review_status"] = "pending"
         edge["graph_owner_id"] = user.id
-    graph["stats"]["pending_edges"] = sum(edge.get("review_status") == "pending" for edge in graph["edges"])
+    graph["stats"]["pending_edges"] = sum(
+        edge.get("review_status") == "pending" for edge in graph["edges"]
+    )
     storage = _store_graph(user.id, graph)
     log_event(
         db,
@@ -302,10 +381,20 @@ def build_user_graph(user: User = Depends(get_current_user), db: Session = Depen
         resource_type="knowledge_graph",
         resource_id=version,
         tenant_id=user.domain,
-        detail={"nodes": graph["stats"]["nodes"], "edges": graph["stats"]["edges"], "pending": graph["stats"]["pending_edges"]},
+        detail={
+            "nodes": graph["stats"]["nodes"],
+            "edges": graph["stats"]["edges"],
+            "pending": graph["stats"]["pending_edges"],
+        },
     )
     db.commit()
-    return {"ok": True, "version": version, "storage": storage, "stats": graph["stats"], "generated_at": now}
+    return {
+        "ok": True,
+        "version": version,
+        "storage": storage,
+        "stats": graph["stats"],
+        "generated_at": now,
+    }
 
 
 @router.get("/reviews")
@@ -319,7 +408,9 @@ def list_graph_reviews(
     graph_sources: list[tuple[int, dict[str, Any]]] = [(user.id, _load_graph(user.id))]
     if team:
         if not is_admin_user(user):
-            raise HTTPException(status_code=403, detail="Admin access required for team review queue")
+            raise HTTPException(
+                status_code=403, detail="Admin access required for team review queue"
+            )
         gcs = GCSStorage(bucket_name=settings.GCS_BUCKET_CONTACTS)
         if gcs.available:
             prefix = f"{settings.KNOWLEDGE_GRAPH_GCS_PREFIX.strip('/')}/users/"
@@ -329,7 +420,7 @@ def list_graph_reviews(
                 name = str(blob.get("name", ""))
                 if not name.endswith("/current.json"):
                     continue
-                remainder = name[len(prefix):]
+                remainder = name[len(prefix) :]
                 owner_text = remainder.split("/", 1)[0]
                 if owner_text.isdigit():
                     owner_ids.add(int(owner_text))
@@ -338,7 +429,9 @@ def list_graph_reviews(
                     graph_sources.append((owner_id, _load_graph(owner_id)))
     items = []
     for owner_id, graph in graph_sources:
-        labels = {node.get("id"): node.get("label", node.get("id")) for node in graph.get("nodes", [])}
+        labels = {
+            node.get("id"): node.get("label", node.get("id")) for node in graph.get("nodes", [])
+        }
         for edge in graph.get("edges", []):
             if not edge.get("needs_review"):
                 continue
@@ -362,7 +455,14 @@ def list_graph_reviews(
                     "reviewed_at": edge.get("reviewed_at", ""),
                 }
             )
-    items.sort(key=lambda item: (item["status"] != "pending", item["graph_owner_id"], item["relation"], item["edge_key"]))
+    items.sort(
+        key=lambda item: (
+            item["status"] != "pending",
+            item["graph_owner_id"],
+            item["relation"],
+            item["edge_key"],
+        )
+    )
     items = items[:limit]
     return {
         "items": items,
@@ -384,11 +484,15 @@ def decide_graph_review(
     if owner_id != user.id and not is_admin_user(user):
         raise HTTPException(status_code=403, detail="Admin access required for team review")
     graph = _load_graph(owner_id)
-    edge = next((item for item in graph.get("edges", []) if item.get("edge_key") == review_id), None)
+    edge = next(
+        (item for item in graph.get("edges", []) if item.get("edge_key") == review_id), None
+    )
     if edge is None or not edge.get("needs_review"):
         raise HTTPException(status_code=404, detail="Graph review not found")
     if edge.get("review_status") != "pending":
-        raise HTTPException(status_code=409, detail=f"Relationship already reviewed as {edge.get('review_status')}")
+        raise HTTPException(
+            status_code=409, detail=f"Relationship already reviewed as {edge.get('review_status')}"
+        )
     edge["review_status"] = "accepted" if payload.action == "accept" else "rejected"
     edge["review_note"] = payload.note.strip()
     edge["reviewed_by"] = user.email
@@ -405,10 +509,20 @@ def decide_graph_review(
         resource_type="graph_edge",
         resource_id=review_id,
         tenant_id=user.domain,
-        detail={"relation": edge.get("relation"), "graph_version": graph.get("version"), "note_present": bool(payload.note.strip()), "storage": storage["stored"]},
+        detail={
+            "relation": edge.get("relation"),
+            "graph_version": graph.get("version"),
+            "note_present": bool(payload.note.strip()),
+            "storage": storage["stored"],
+        },
     )
     db.commit()
-    return {"id": review_id, "status": edge["review_status"], "reviewed_at": edge["reviewed_at"], "storage": storage["stored"]}
+    return {
+        "id": review_id,
+        "status": edge["review_status"],
+        "reviewed_at": edge["reviewed_at"],
+        "storage": storage["stored"],
+    }
 
 
 def _graph_context(graph: dict[str, Any], selected_node: str = "") -> str:
@@ -418,9 +532,14 @@ def _graph_context(graph: dict[str, Any], selected_node: str = "") -> str:
         nodes = [node for node in nodes if node.get("id") == selected_node]
     selected_ids = {node.get("id") for node in nodes}
     edges = [
-        edge for edge in graph.get("edges", [])
+        edge
+        for edge in graph.get("edges", [])
         if edge.get("review_status") == "accepted"
-        and (not selected_ids or edge.get("source") in selected_ids or edge.get("target") in selected_ids)
+        and (
+            not selected_ids
+            or edge.get("source") in selected_ids
+            or edge.get("target") in selected_ids
+        )
     ][:40]
     lines = [
         f"Environment: {graph.get('environment', 'unknown')}; graph version: {graph.get('version', 'none')}",
@@ -465,13 +584,18 @@ def graph_chat(
     _ensure_review_environment()
     graph = _load_graph(user.id)
     if not graph.get("version"):
-        raise HTTPException(status_code=409, detail="Build a graph snapshot after syncing source data first")
+        raise HTTPException(
+            status_code=409, detail="Build a graph snapshot after syncing source data first"
+        )
     context = _graph_context(graph, payload.selected_node)
     reviewed_examples = _reviewed_feedback_examples(user.id)
-    examples_context = "\n".join(
-        f"- Question: {item['question']}\n  Human-validated answer: {item['human_answer']}"
-        for item in reviewed_examples
-    ) or "No human-reviewed examples are available."
+    examples_context = (
+        "\n".join(
+            f"- Question: {item['question']}\n  Human-validated answer: {item['human_answer']}"
+            for item in reviewed_examples
+        )
+        or "No human-reviewed examples are available."
+    )
     prompt = (
         "Answer using only this graph snapshot and its human-accepted relationships. "
         "Do not infer facts from pending or rejected edges. If no accepted relationship answers the question, say so.\n\n"
@@ -534,13 +658,15 @@ def _fallback_graph_answer(graph: dict[str, Any], question: str, selected_node: 
     lookup = {node["id"]: node for node in nodes}
     query_tokens = {word for word in question.lower().split() if len(word) > 2}
     matches = [
-        node for node in nodes
+        node
+        for node in nodes
         if (selected_node and node.get("id") == selected_node)
         or any(word in str(node.get("label", "")).lower() for word in query_tokens)
     ][:8]
     selected_ids = {node.get("id") for node in matches}
     edges = [
-        edge for edge in graph.get("edges", [])
+        edge
+        for edge in graph.get("edges", [])
         if edge.get("review_status") == "accepted"
         and (edge.get("source") in selected_ids or edge.get("target") in selected_ids)
     ][:12]
@@ -549,15 +675,23 @@ def _fallback_graph_answer(graph: dict[str, Any], question: str, selected_node: 
         f"{graph.get('stats', {}).get('nodes', 0)} nodes and {graph.get('stats', {}).get('edges', 0)} relationships."
     ]
     if matches:
-        lines.append("Matching records: " + "; ".join(f"{node.get('kind')}: {node.get('label')}" for node in matches))
+        lines.append(
+            "Matching records: "
+            + "; ".join(f"{node.get('kind')}: {node.get('label')}" for node in matches)
+        )
     if edges:
-        lines.append("Related edges: " + "; ".join(
-            f"{lookup.get(edge['source'], {}).get('label', edge['source'])} {edge['relation']} "
-            f"{lookup.get(edge['target'], {}).get('label', edge['target'])} ({edge.get('review_status')})"
-            for edge in edges
-        ))
+        lines.append(
+            "Related edges: "
+            + "; ".join(
+                f"{lookup.get(edge['source'], {}).get('label', edge['source'])} {edge['relation']} "
+                f"{lookup.get(edge['target'], {}).get('label', edge['target'])} ({edge.get('review_status')})"
+                for edge in edges
+            )
+        )
     pending = graph.get("stats", {}).get("pending_edges", 0)
-    lines.append(f"{pending} relationship(s) still need human validation. Pending links are suggestions, not confirmed facts.")
+    lines.append(
+        f"{pending} relationship(s) still need human validation. Pending links are suggestions, not confirmed facts."
+    )
     return "\n".join(lines)
 
 
@@ -590,10 +724,19 @@ def graph_feedback(
         resource_type="knowledge_graph",
         resource_id=payload.graph_version,
         tenant_id=user.domain,
-        detail={"rating": payload.rating, "correction_provided": bool(payload.correction.strip()), "storage": storage["stored"]},
+        detail={
+            "rating": payload.rating,
+            "correction_provided": bool(payload.correction.strip()),
+            "storage": storage["stored"],
+        },
     )
     db.commit()
-    return {"id": row["id"], "status": row["status"], "rating": row["rating"], "storage": storage["stored"]}
+    return {
+        "id": row["id"],
+        "status": row["status"],
+        "rating": row["rating"],
+        "storage": storage["stored"],
+    }
 
 
 @router.get("/feedback")
@@ -613,7 +756,7 @@ def list_graph_feedback(
     items = []
     for blob in gcs.list_blobs(prefix=prefix, suffixes=("feedback.json",))[:100]:
         name = str(blob.get("name", ""))
-        remainder = name[len(prefix):]
+        remainder = name[len(prefix) :]
         owner = remainder.split("/", 1)[0]
         if not owner.isdigit():
             continue
@@ -632,7 +775,9 @@ def review_graph_feedback(
 ):
     _ensure_review_environment()
     if not is_admin_user(user):
-        raise HTTPException(status_code=403, detail="Admin access required to validate feedback samples")
+        raise HTTPException(
+            status_code=403, detail="Admin access required to validate feedback samples"
+        )
     owner_id = graph_owner_id or user.id
     items = _feedback_items(owner_id)
     item = next((entry for entry in items if entry.get("id") == feedback_id), None)

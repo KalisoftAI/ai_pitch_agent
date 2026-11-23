@@ -114,7 +114,7 @@ def test_public_config_exposes_ui_assets_prompt_tag(client):
     body = client.get("/api/config").json()
 
     assert body["ui_assets_enabled"] is True
-    assert body["ui_assets_prompt_tag"] == "ui-assets-from-gcs-v1"
+    assert body["ui_assets_prompt_tag"] == "ui-assets-from-gcs-v2"
 
 
 def test_ui_assets_endpoint_respects_disabled_flag(client, auth_headers, monkeypatch):
@@ -125,5 +125,7 @@ def test_ui_assets_endpoint_respects_disabled_flag(client, auth_headers, monkeyp
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["enabled"] is False
-    assert body["prompt_tag"] == "ui-assets-from-gcs-v1"
+    assert body["prompt_tag"] == "ui-assets-from-gcs-v2"
     assert body["source"] == "gs://sales-crm/assets/UI/"
+    assert body["kit"]["palette"]["brand"]["navy"] == "#1F3A8A"
+    assert "daily_rate_video_template_v2.html" in body["kit"]["templates"]

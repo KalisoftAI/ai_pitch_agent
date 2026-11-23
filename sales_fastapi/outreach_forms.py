@@ -87,12 +87,7 @@ def with_contact_context(url: str, context: dict[str, Any]) -> str:
 
 
 def _owner_user_id(db: Session) -> int:
-    user = (
-        db.query(User)
-        .filter(User.role == "admin")
-        .order_by(User.id.asc())
-        .first()
-    )
+    user = db.query(User).filter(User.role == "admin").order_by(User.id.asc()).first()
     if user is None:
         user = db.query(User).order_by(User.id.asc()).first()
     return int(user.id) if user is not None else 0

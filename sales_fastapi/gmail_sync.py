@@ -100,7 +100,9 @@ def _collect_history_ids(
         for entry in page.get("history", []) or []:
             for key in ("messagesAdded", "messages"):
                 for item in entry.get(key, []) or []:
-                    message_id = str((item.get("message") or {}).get("id", "") or item.get("id", ""))
+                    message_id = str(
+                        (item.get("message") or {}).get("id", "") or item.get("id", "")
+                    )
                     if message_id:
                         ids.append(message_id)
         history_id = str(page.get("historyId", "") or history_id)
@@ -190,7 +192,9 @@ def sync_gmail_mailbox(db: Session, mailbox: GoogleMailbox, user: User | None = 
         db.flush()
 
     extractor = GmailExtractor(token)
-    message_ids, history_id = _collect_history_ids(extractor, state, bootstrap=not bool(state.history_id))
+    message_ids, history_id = _collect_history_ids(
+        extractor, state, bootstrap=not bool(state.history_id)
+    )
     batch = max(1, min(int(settings.GMAIL_SYNC_BATCH), 100))
     message_ids = [item for item in message_ids if item not in set(state.message_ids or [])][:batch]
 
@@ -205,7 +209,9 @@ def sync_gmail_mailbox(db: Session, mailbox: GoogleMailbox, user: User | None = 
         stored: list[dict[str, Any]] = []
         for item in attachments:
             attachment_id = str(item.get("attachment_id", "") or "")
-            if attachment_id and int(item.get("size") or 0) <= int(settings.GMAIL_ATTACHMENT_MAX_BYTES):
+            if attachment_id and int(item.get("size") or 0) <= int(
+                settings.GMAIL_ATTACHMENT_MAX_BYTES
+            ):
                 try:
                     raw = extractor.get_attachment(message_id, attachment_id)
                     if raw:
@@ -258,7 +264,9 @@ def sync_gmail_mailbox(db: Session, mailbox: GoogleMailbox, user: User | None = 
     }
     stats["daily"] = daily
     state.history_id = history_id or state.history_id
-    state.message_ids = list(dict.fromkeys([*message_ids, *(state.message_ids or [])]))[:_MAX_DEDUP_IDS]
+    state.message_ids = list(dict.fromkeys([*message_ids, *(state.message_ids or [])]))[
+        :_MAX_DEDUP_IDS
+    ]
     state.stats = stats
     state.last_status = "ok"
     state.last_error = ""

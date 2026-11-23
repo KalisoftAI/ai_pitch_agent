@@ -124,19 +124,23 @@ def _ensure_columns() -> None:
         ):
             if column not in cols:
                 with engine.begin() as conn:
-                    conn.execute(
-                        text(f"ALTER TABLE marketing_companies ADD COLUMN {column} {ddl}")
-                    )
+                    conn.execute(text(f"ALTER TABLE marketing_companies ADD COLUMN {column} {ddl}"))
     if "message_templates" in insp.get_table_names():
         cols = {c["name"] for c in insp.get_columns("message_templates")}
         if "category" not in cols:
             with engine.begin() as conn:
-                conn.execute(text("ALTER TABLE message_templates ADD COLUMN category VARCHAR(128) DEFAULT ''"))
+                conn.execute(
+                    text(
+                        "ALTER TABLE message_templates ADD COLUMN category VARCHAR(128) DEFAULT ''"
+                    )
+                )
     if "campaigns" in insp.get_table_names():
         cols = {c["name"] for c in insp.get_columns("campaigns")}
         if "image_url" not in cols:
             with engine.begin() as conn:
-                conn.execute(text("ALTER TABLE campaigns ADD COLUMN image_url VARCHAR(1024) DEFAULT ''"))
+                conn.execute(
+                    text("ALTER TABLE campaigns ADD COLUMN image_url VARCHAR(1024) DEFAULT ''")
+                )
     if "campaign_messages" in insp.get_table_names():
         # Older campaign_messages predate contact_name/opened_at tracking.
         cols = {c["name"] for c in insp.get_columns("campaign_messages")}
@@ -152,7 +156,11 @@ def _ensure_columns() -> None:
                     conn.execute(text(f"ALTER TABLE campaign_messages ADD COLUMN {column} {ddl}"))
         if "status" not in cols:
             with engine.begin() as conn:
-                conn.execute(text("ALTER TABLE campaign_messages ADD COLUMN status VARCHAR(32) DEFAULT 'pending_review'"))
+                conn.execute(
+                    text(
+                        "ALTER TABLE campaign_messages ADD COLUMN status VARCHAR(32) DEFAULT 'pending_review'"
+                    )
+                )
     if "product_rates" in insp.get_table_names():
         cols = {c["name"] for c in insp.get_columns("product_rates")}
         for column, ddl in (

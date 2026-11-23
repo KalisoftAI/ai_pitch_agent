@@ -194,9 +194,7 @@ def create_campaign(
     if payload.connection_id is not None:
         selected = (
             db.query(EmailConnection)
-            .filter(
-                EmailConnection.id == payload.connection_id, EmailConnection.user_id == user.id
-            )
+            .filter(EmailConnection.id == payload.connection_id, EmailConnection.user_id == user.id)
             .first()
         )
         if selected is None:
@@ -527,9 +525,7 @@ def _opened_counts(db: Session, campaign_ids: list[int]) -> dict[int, int]:
         return {}
     rows = (
         db.query(CampaignMessage.campaign_id, func.count(CampaignMessage.id))
-        .filter(
-            CampaignMessage.campaign_id.in_(campaign_ids), CampaignMessage.status == "opened"
-        )
+        .filter(CampaignMessage.campaign_id.in_(campaign_ids), CampaignMessage.status == "opened")
         .group_by(CampaignMessage.campaign_id)
         .all()
     )
@@ -892,9 +888,7 @@ def _resolve_email_connection(
     if connection_id is not None:
         conn = query.filter(EmailConnection.id == connection_id).first()
     else:
-        conn = query.order_by(
-            EmailConnection.is_connected.desc(), EmailConnection.id.asc()
-        ).first()
+        conn = query.order_by(EmailConnection.is_connected.desc(), EmailConnection.id.asc()).first()
     if conn is None:
         raise HTTPException(status_code=400, detail="No email connection configured for this user")
 
@@ -1213,7 +1207,10 @@ def preview_message(
     for c in contacts[:50]:
         to_addr = (c.phone if phone_channel else c.email) or ""
 
-        ctx = {**SENDER_CONTEXT, **outreach_context(db, c, cache=order_cache, form_links=form_links)}
+        ctx = {
+            **SENDER_CONTEXT,
+            **outreach_context(db, c, cache=order_cache, form_links=form_links),
+        }
 
         subj = render_resolved(subject_src, ctx)
 
@@ -1238,9 +1235,7 @@ def preview_message(
 
 
 @router.api_route("/{campaign_id}/open/{message_id}", methods=["GET", "HEAD"])
-def mark_opened(
-    campaign_id: int, message_id: int, request: Request, db: Session = Depends(get_db)
-):
+def mark_opened(campaign_id: int, message_id: int, request: Request, db: Session = Depends(get_db)):
     if request.method == "GET":
         _mark_message_opened(db, campaign_id, message_id)
     return _pixel_response()

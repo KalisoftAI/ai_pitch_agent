@@ -198,19 +198,25 @@ class EmailExtractor:
         try:  # most IMAP servers stash it from the SELECT untagged response
             data = getattr(self.connection, "untagged_responses", {}) or {}
             for value in data.get("UIDVALIDITY", []) or []:
-                candidates.append(value.decode(errors="ignore") if isinstance(value, bytes) else str(value))
+                candidates.append(
+                    value.decode(errors="ignore") if isinstance(value, bytes) else str(value)
+                )
         except Exception:  # noqa: BLE001
             pass
         try:
             _status, data = self.connection.response("UIDVALIDITY")
             if data and data[0]:
-                candidates.append(data[0].decode(errors="ignore") if isinstance(data[0], bytes) else str(data[0]))
+                candidates.append(
+                    data[0].decode(errors="ignore") if isinstance(data[0], bytes) else str(data[0])
+                )
         except Exception:  # noqa: BLE001
             pass
         try:
             _status, data = self.connection.status("INBOX", "(UIDVALIDITY)")
             if data and data[0]:
-                candidates.append(data[0].decode(errors="ignore") if isinstance(data[0], bytes) else str(data[0]))
+                candidates.append(
+                    data[0].decode(errors="ignore") if isinstance(data[0], bytes) else str(data[0])
+                )
         except Exception:  # noqa: BLE001
             pass
         for value in candidates:
@@ -248,7 +254,9 @@ class EmailExtractor:
             if last_uid > 0:
                 criteria.extend(["UID", f"{int(last_uid) + 1}:*"])
             else:
-                criteria.extend(["SINCE", (since or datetime.now(timezone.utc)).strftime("%d-%b-%Y")])
+                criteria.extend(
+                    ["SINCE", (since or datetime.now(timezone.utc)).strftime("%d-%b-%Y")]
+                )
         elif since is not None:
             criteria.extend(["SINCE", since.strftime("%d-%b-%Y")])
         if until is not None and (full or since is not None):
@@ -822,6 +830,7 @@ class RedditScraper:
                 )
         return out
 
+
 class AppDataStore:
     """JSON side-cache in ``kalika_enterprises/sales-metadata/sales-app-data/``.
 
@@ -879,4 +888,3 @@ class AppDataStore:
                 self._gcs._client.bucket(self.BUCKET).blob(self._path(key)).delete()
         except Exception:
             pass
-

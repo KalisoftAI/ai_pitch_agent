@@ -268,11 +268,7 @@ def issues_log(
 ):
     """ai.solutions-only activity/issues log: sync failures + audit errors."""
     sync_failures = (
-        db.query(SyncRun)
-        .filter(SyncRun.status != "ok")
-        .order_by(SyncRun.id.desc())
-        .limit(30)
-        .all()
+        db.query(SyncRun).filter(SyncRun.status != "ok").order_by(SyncRun.id.desc()).limit(30).all()
     )
     audit_errors = (
         db.query(AuditLog)

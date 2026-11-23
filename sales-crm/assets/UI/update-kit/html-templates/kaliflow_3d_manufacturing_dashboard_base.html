@@ -1,0 +1,1910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kaliflow — Kalika Enterprises, MIDC Ahmednagar | 3D Stretch Film Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Brand Palette */
+      --navy: #1F3A8A;
+      --deep-navy: #14265C;
+      --teal: #3CC4CC;
+      --light-teal: #A8E6EA;
+
+      /* Environment Palette */
+      --floor-concrete: #E9E4DA;
+      --safety-yellow: #FFC727;
+      --teal-walkway: #3CC4CC;
+      --wall-offwhite: #F6F2EA;
+      --roof-cutaway: #D8D2C4;
+      --yard-asphalt: #5B6270;
+      --grass: #9CCB7A;
+      --tree-dark: #5FA55A;
+      --tree-light: #7CBF6A;
+      --sky-day-top: #BFE6F7;
+      --sky-day-bottom: #FFF3E0;
+      --sky-night-top: #0B1330;
+      --sky-night-bottom: #1B2A5E;
+
+      /* Machinery Palette */
+      --machine-orange: #F26A1B;
+      --machine-white: #FFFFFF;
+      --machine-dark: #3A404B;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(180deg, var(--sky-day-top) 0%, var(--sky-day-bottom) 100%);
+    }
+
+    #canvas-container {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      cursor: grab;
+    }
+    #canvas-container:active {
+      cursor: grabbing;
+    }
+
+    .font-display {
+      font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+    }
+
+    /* Clay-inspired tactile UI cards */
+    .clay-panel {
+      background: rgba(255, 255, 255, 0.86);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1.5px solid rgba(255, 255, 255, 0.9);
+      box-shadow:
+        0 12px 30px -6px rgba(20, 38, 92, 0.14),
+        0 4px 10px -2px rgba(20, 38, 92, 0.06),
+        inset 0 2px 3px rgba(255, 255, 255, 0.95);
+      transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .night-mode .clay-panel {
+      background: rgba(16, 26, 62, 0.82);
+      border-color: rgba(60, 196, 204, 0.28);
+      color: #F8FAFC;
+      box-shadow:
+        0 14px 34px -6px rgba(4, 9, 26, 0.55),
+        inset 0 1px 1px rgba(168, 230, 234, 0.15);
+    }
+
+    .clay-btn {
+      transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.16s ease, background-color 0.2s ease;
+      box-shadow: 0 3px 0 rgba(20, 38, 92, 0.12);
+    }
+    .clay-btn:hover {
+      transform: translateY(-1px);
+    }
+    .clay-btn:active {
+      transform: translateY(1.5px);
+      box-shadow: 0 1px 0 rgba(20, 38, 92, 0.12);
+    }
+
+    .brand-pill {
+      background: linear-gradient(135deg, var(--navy) 0%, var(--deep-navy) 100%);
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(31, 58, 138, 0.28);
+    }
+
+    .teal-pill {
+      background: linear-gradient(135deg, var(--teal) 0%, #27A8B0 100%);
+      color: #0F2347;
+      box-shadow: 0 4px 12px rgba(60, 196, 204, 0.3);
+    }
+
+    /* Floating Tycoon Popups */
+    .tycoon-toast {
+      position: fixed;
+      pointer-events: none;
+      z-index: 30;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 800;
+      font-size: 0.82rem;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.94);
+      color: var(--deep-navy);
+      border: 2px solid var(--teal);
+      box-shadow: 0 8px 20px rgba(20, 38, 92, 0.18);
+      animation: floatUpFade 2.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      white-space: nowrap;
+    }
+
+    @keyframes floatUpFade {
+      0% { opacity: 0; transform: translate(-50%, 8px) scale(0.85); }
+      18% { opacity: 1; transform: translate(-50%, -6px) scale(1.03); }
+      80% { opacity: 1; transform: translate(-50%, -34px) scale(1); }
+      100% { opacity: 0; transform: translate(-50%, -48px) scale(0.95); }
+    }
+
+    /* Custom Scrollbar for Palette Drawer */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(31, 58, 138, 0.25); border-radius: 999px; }
+
+    /* Custom color input styling */
+    input[type="color"] {
+      -webkit-appearance: none;
+      border: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      cursor: pointer;
+      padding: 0;
+      background: none;
+    }
+    input[type="color"]::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+    input[type="color"]::-webkit-color-swatch {
+      border: 2px solid rgba(255,255,255,0.9);
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    }
+
+    .hud-hidden .hud-element {
+      opacity: 0 !important;
+      pointer-events: none !important;
+      transform: translateY(-8px);
+    }
+    .hud-hidden .hud-bottom {
+      opacity: 0 !important;
+      pointer-events: none !important;
+      transform: translateY(12px);
+    }
+  </style>
+</head>
+<body>
+  <!-- 3D Viewport -->
+  <div id="canvas-container"></div>
+
+  <!-- Floating Popups Container -->
+  <div id="toast-layer"></div>
+
+  <!-- Zen / Record Mode Restore Button (Visible only when HUD hidden) -->
+  <button id="restore-hud-btn" onclick="toggleZenMode()"
+    class="fixed top-4 right-4 z-50 hidden items-center gap-2 px-3.5 py-2 rounded-2xl clay-panel text-xs font-bold text-[#14265C] hover:scale-105 cursor-pointer">
+    <span class="w-2 h-2 rounded-full bg-[#3CC4CC] animate-ping"></span>
+    Show HUD (H)
+  </button>
+
+  <!-- TOP COMMAND BAR -->
+  <header class="hud-element fixed top-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+    <!-- Brand & Facility Identity -->
+    <div class="clay-panel pointer-events-auto rounded-2xl px-3.5 py-2 flex items-center gap-3.5">
+      <div class="bg-white rounded-xl px-2.5 py-1.5 shadow-sm border border-slate-100 flex items-center">
+        <img id="brand-logo-img" alt="Kalika Industrial E-Commerce" class="h-8 md:h-9 w-auto object-contain" />
+      </div>
+      <div class="h-8 w-[1.5px] bg-slate-200/80 hidden sm:block"></div>
+      <div class="flex flex-col">
+        <div class="flex items-center gap-2">
+          <span class="font-display font-extrabold text-sm md:text-base tracking-tight" style="color: var(--navy);">KALIFLOW</span>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-700 border border-emerald-500/25">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            Live Plant
+          </span>
+        </div>
+        <span class="text-[11px] font-medium opacity-75">Kalika Enterprises • MIDC Ahmednagar</span>
+      </div>
+    </div>
+
+    <!-- Live Factory Tycoon KPI Tickers -->
+    <div class="clay-panel pointer-events-auto rounded-2xl px-3 py-2 hidden xl:flex items-center gap-4">
+      <div class="flex flex-col px-2">
+        <span class="text-[10px] uppercase tracking-wider font-semibold opacity-60">Stretch Film Output</span>
+        <div class="flex items-baseline gap-1">
+          <span id="kpi-output" class="font-display font-extrabold text-base" style="color: var(--navy);">18.42</span>
+          <span class="text-[11px] font-semibold opacity-70">MT / day</span>
+        </div>
+      </div>
+      <div class="h-7 w-[1px] bg-slate-300/60"></div>
+      <div class="flex flex-col px-2">
+        <span class="text-[10px] uppercase tracking-wider font-semibold opacity-60">Extrusion Speed</span>
+        <div class="flex items-baseline gap-1">
+          <span id="kpi-speed" class="font-display font-extrabold text-base text-[#F26A1B]">420</span>
+          <span class="text-[11px] font-semibold opacity-70">m/min</span>
+        </div>
+      </div>
+      <div class="h-7 w-[1px] bg-slate-300/60"></div>
+      <div class="flex flex-col px-2">
+        <span class="text-[10px] uppercase tracking-wider font-semibold opacity-60">Plant OEE</span>
+        <div class="flex items-baseline gap-1">
+          <span id="kpi-oee" class="font-display font-extrabold text-base text-emerald-600">94.8%</span>
+          <span class="text-[10px] font-bold text-emerald-600">+1.2%</span>
+        </div>
+      </div>
+      <div class="h-7 w-[1px] bg-slate-300/60"></div>
+      <div class="flex flex-col px-2">
+        <span class="text-[10px] uppercase tracking-wider font-semibold opacity-60">Pallets Dispatched</span>
+        <div class="flex items-baseline gap-1">
+          <span id="kpi-dispatched" class="font-display font-extrabold text-base" style="color: var(--teal);">46</span>
+          <span class="text-[11px] font-semibold opacity-70">loads</span>
+        </div>
+      </div>
+      <div class="h-7 w-[1px] bg-slate-300/60"></div>
+      <div class="flex flex-col px-2">
+        <span class="text-[10px] uppercase tracking-wider font-semibold opacity-60">LLDPE Resin Silos</span>
+        <div class="flex items-center gap-2 mt-0.5">
+          <div class="w-16 h-2 rounded-full bg-slate-200 overflow-hidden">
+            <div id="kpi-resin-bar" class="h-full rounded-full transition-all duration-500" style="width: 82%; background: var(--teal);"></div>
+          </div>
+          <span id="kpi-resin" class="font-display font-bold text-xs">82%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Controls: Day/Night, Palette Customizer, Record/Zen Mode -->
+    <div class="clay-panel pointer-events-auto rounded-2xl p-1.5 flex items-center gap-1.5">
+      <button id="btn-day-night" onclick="toggleDayNight()" title="Switch Day / Night Shift"
+        class="clay-btn px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-amber-100/90 text-amber-900 border border-amber-300/60 cursor-pointer">
+        <span id="day-night-icon">☀️</span>
+        <span id="day-night-label" class="hidden sm:inline">Day Shift</span>
+      </button>
+
+      <button id="btn-palette" onclick="togglePaletteDrawer()" title="Customize Hex Palette & Refresh Look"
+        class="clay-btn px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 text-white cursor-pointer"
+        style="background: var(--navy);">
+        <span>🎨</span>
+        <span class="hidden sm:inline">Palette & Look</span>
+      </button>
+
+      <button onclick="toggleZenMode()" title="Hide UI for Clean Screen Recording (Hotkey: H)"
+        class="clay-btn px-2.5 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 cursor-pointer">
+        🎥 <span class="hidden md:inline">Clean Rec</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- MOBILE/TABLET COMPACT KPI RIBBON -->
+  <div class="hud-element fixed top-[74px] left-3 right-3 z-20 flex xl:hidden justify-center pointer-events-none">
+    <div class="clay-panel pointer-events-auto rounded-xl px-3 py-1.5 flex items-center gap-3 text-xs overflow-x-auto max-w-full">
+      <span class="font-bold whitespace-nowrap" style="color: var(--navy);">Output: <b id="kpi-output-sm">18.42</b> MT</span>
+      <span class="opacity-30">|</span>
+      <span class="font-bold text-[#F26A1B] whitespace-nowrap">Speed: <b id="kpi-speed-sm">420</b> m/m</span>
+      <span class="opacity-30">|</span>
+      <span class="font-bold text-emerald-600 whitespace-nowrap">OEE: <b id="kpi-oee-sm">94.8%</b></span>
+      <span class="opacity-30">|</span>
+      <span class="font-bold whitespace-nowrap" style="color: var(--teal);">Dispatched: <b id="kpi-dispatched-sm">46</b></span>
+    </div>
+  </div>
+
+  <!-- PALETTE & LOOK CUSTOMIZER DRAWER -->
+  <aside id="palette-drawer"
+    class="hud-element fixed top-20 right-3 z-30 w-80 max-w-[calc(100vw-24px)] clay-panel rounded-3xl p-4 hidden flex-col gap-3.5 max-h-[calc(100vh-160px)] overflow-y-auto">
+    <div class="flex items-center justify-between">
+      <div>
+        <h3 class="font-display font-extrabold text-sm" style="color: var(--navy);">Colour System & Look</h3>
+        <p class="text-[11px] opacity-70">Exact hex palette + live refresh themes</p>
+      </div>
+      <button onclick="togglePaletteDrawer()" class="w-7 h-7 rounded-full bg-slate-200/70 hover:bg-slate-300/70 flex items-center justify-center text-xs font-bold text-slate-700 cursor-pointer">✕</button>
+    </div>
+
+    <!-- One-Click Refreshing Look Presets -->
+    <div>
+      <span class="text-[10px] font-bold uppercase tracking-wider opacity-60 block mb-1.5">Refreshing Look Presets</span>
+      <div class="grid grid-cols-2 gap-1.5">
+        <button onclick="applyThemePreset('kalika')" class="clay-btn px-2.5 py-2 rounded-xl text-[11px] font-bold text-left border border-slate-200 bg-white/90 text-[#14265C] flex items-center gap-1.5 cursor-pointer">
+          <span class="w-3 h-3 rounded-full shrink-0" style="background:#1F3A8A; box-shadow: 4px 0 0 #3CC4CC;"></span>
+          <span class="truncate">Kalika Official</span>
+        </button>
+        <button onclick="applyThemePreset('mintClay')" class="clay-btn px-2.5 py-2 rounded-xl text-[11px] font-bold text-left border border-slate-200 bg-white/90 text-slate-800 flex items-center gap-1.5 cursor-pointer">
+          <span class="w-3 h-3 rounded-full shrink-0" style="background:#0F766E; box-shadow: 4px 0 0 #F59E0B;"></span>
+          <span class="truncate">Mint & Amber</span>
+        </button>
+        <button onclick="applyThemePreset('royalCoral')" class="clay-btn px-2.5 py-2 rounded-xl text-[11px] font-bold text-left border border-slate-200 bg-white/90 text-slate-800 flex items-center gap-1.5 cursor-pointer">
+          <span class="w-3 h-3 rounded-full shrink-0" style="background:#2563EB; box-shadow: 4px 0 0 #FB7185;"></span>
+          <span class="truncate">Azure & Coral</span>
+        </button>
+        <button onclick="applyThemePreset('emeraldGold')" class="clay-btn px-2.5 py-2 rounded-xl text-[11px] font-bold text-left border border-slate-200 bg-white/90 text-slate-800 flex items-center gap-1.5 cursor-pointer">
+          <span class="w-3 h-3 rounded-full shrink-0" style="background:#1E3A8A; box-shadow: 4px 0 0 #10B981;"></span>
+          <span class="truncate">MIDC Cleanroom</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Live Hex Swatch Pickers -->
+    <div class="flex flex-col gap-2">
+      <span class="text-[10px] font-bold uppercase tracking-wider opacity-60">Live Hex Tweaker</span>
+
+      <div class="flex items-center justify-between bg-slate-500/10 rounded-xl px-2.5 py-1.5">
+        <div>
+          <div class="text-xs font-bold">Brand Navy</div>
+          <div id="hex-label-navy" class="text-[10px] font-mono opacity-75">#1F3A8A</div>
+        </div>
+        <input type="color" id="picker-navy" value="#1F3A8A" oninput="updateCustomColor('navy', this.value)" />
+      </div>
+
+      <div class="flex items-center justify-between bg-slate-500/10 rounded-xl px-2.5 py-1.5">
+        <div>
+          <div class="text-xs font-bold">Teal Accent & Walkway</div>
+          <div id="hex-label-teal" class="text-[10px] font-mono opacity-75">#3CC4CC</div>
+        </div>
+        <input type="color" id="picker-teal" value="#3CC4CC" oninput="updateCustomColor('teal', this.value)" />
+      </div>
+
+      <div class="flex items-center justify-between bg-slate-500/10 rounded-xl px-2.5 py-1.5">
+        <div>
+          <div class="text-xs font-bold">Extrusion Line Orange</div>
+          <div id="hex-label-machineOrange" class="text-[10px] font-mono opacity-75">#F26A1B</div>
+        </div>
+        <input type="color" id="picker-machineOrange" value="#F26A1B" oninput="updateCustomColor('machineOrange', this.value)" />
+      </div>
+
+      <div class="flex items-center justify-between bg-slate-500/10 rounded-xl px-2.5 py-1.5">
+        <div>
+          <div class="text-xs font-bold">Epoxy Floor Concrete</div>
+          <div id="hex-label-floorConcrete" class="text-[10px] font-mono opacity-75">#E9E4DA</div>
+        </div>
+        <input type="color" id="picker-floorConcrete" value="#E9E4DA" oninput="updateCustomColor('floorConcrete', this.value)" />
+      </div>
+
+      <div class="flex items-center justify-between bg-slate-500/10 rounded-xl px-2.5 py-1.5">
+        <div>
+          <div class="text-xs font-bold">Safety Lane Yellow</div>
+          <div id="hex-label-safetyYellow" class="text-[10px] font-mono opacity-75">#FFC727</div>
+        </div>
+        <input type="color" id="picker-safetyYellow" value="#FFC727" oninput="updateCustomColor('safetyYellow', this.value)" />
+      </div>
+
+      <div class="flex items-center justify-between bg-slate-500/10 rounded-xl px-2.5 py-1.5">
+        <div>
+          <div class="text-xs font-bold">Grass & Landscaping</div>
+          <div id="hex-label-grass" class="text-[10px] font-mono opacity-75">#9CCB7A</div>
+        </div>
+        <input type="color" id="picker-grass" value="#9CCB7A" oninput="updateCustomColor('grass', this.value)" />
+      </div>
+    </div>
+
+    <button onclick="applyThemePreset('kalika')"
+      class="clay-btn w-full py-2 rounded-xl text-xs font-bold text-white cursor-pointer"
+      style="background: var(--deep-navy);">
+      ↺ Reset to Exact Kalika Hexes
+    </button>
+  </aside>
+
+  <!-- MACHINE INSPECTOR CARD (Opens when clicking any 3D machine/station) -->
+  <aside id="machine-inspector"
+    class="hud-element fixed bottom-24 left-3 z-30 w-80 max-w-[calc(100vw-24px)] clay-panel rounded-3xl p-4 hidden flex-col gap-3">
+    <div class="flex items-start justify-between gap-2">
+      <div>
+        <span id="insp-badge" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#3CC4CC]/20 text-[#14265C]">STAGE 02</span>
+        <h3 id="insp-title" class="font-display font-extrabold text-base mt-1" style="color: var(--navy);">Cast Extrusion Line A</h3>
+        <p id="insp-sub" class="text-[11px] opacity-75">5-Layer LLDPE Stretch Film • 23 Micron</p>
+      </div>
+      <button onclick="closeInspector()" class="w-7 h-7 rounded-full bg-slate-200/70 hover:bg-slate-300/70 flex items-center justify-center text-xs font-bold text-slate-700 cursor-pointer">✕</button>
+    </div>
+
+    <div id="insp-metrics" class="grid grid-cols-2 gap-2">
+      <!-- Dynamically populated metrics -->
+    </div>
+
+    <div class="flex items-center gap-2 pt-1">
+      <button id="insp-boost-btn" onclick="toggleMachineBoost()"
+        class="clay-btn flex-1 py-2 px-3 rounded-xl text-xs font-bold text-white cursor-pointer"
+        style="background: var(--machine-orange);">
+        ⚡ Overdrive Boost
+      </button>
+      <button onclick="focusCamera('overview')"
+        class="clay-btn py-2 px-3 rounded-xl text-xs font-bold bg-slate-200/80 text-slate-800 cursor-pointer">
+        Reset View
+      </button>
+    </div>
+  </aside>
+
+  <!-- BOTTOM CAMERA & SIMULATION SPEED DOCK -->
+  <footer class="hud-bottom fixed bottom-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+    <!-- Camera Views -->
+    <div class="clay-panel pointer-events-auto rounded-2xl p-1.5 flex items-center gap-1 overflow-x-auto max-w-full">
+      <button onclick="focusCamera('overview')" data-cam="overview"
+        class="cam-btn clay-btn px-3 py-1.5 rounded-xl text-xs font-bold text-white cursor-pointer whitespace-nowrap"
+        style="background: var(--navy);">
+        🏭 Isometric Plant
+      </button>
+      <button onclick="focusCamera('extrusion')" data-cam="extrusion"
+        class="cam-btn clay-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-white/70 hover:bg-white text-slate-800 cursor-pointer whitespace-nowrap">
+        🔥 Extrusion Lines
+      </button>
+      <button onclick="focusCamera('winder')" data-cam="winder"
+        class="cam-btn clay-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-white/70 hover:bg-white text-slate-800 cursor-pointer whitespace-nowrap">
+        🎞️ Winder & QC
+      </button>
+      <button onclick="focusCamera('loading')" data-cam="loading"
+        class="cam-btn clay-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-white/70 hover:bg-white text-slate-800 cursor-pointer whitespace-nowrap">
+        🚛 Dispatch Bay
+      </button>
+      <button id="btn-orbit" onclick="toggleAutoOrbit()"
+        class="clay-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-teal-500/20 text-[#14265C] border border-[#3CC4CC]/50 cursor-pointer whitespace-nowrap">
+        🎬 Cinema Orbit: OFF
+      </button>
+    </div>
+
+    <!-- Tycoon Sim Speed Controls -->
+    <div class="clay-panel pointer-events-auto rounded-2xl p-1.5 flex items-center gap-1.5 ml-auto">
+      <span class="text-[10px] font-extrabold uppercase tracking-wider opacity-60 pl-2 hidden sm:inline">Line Speed</span>
+      <button onclick="setSimSpeed(0)" data-spd="0" class="spd-btn clay-btn px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white/70 text-slate-700 cursor-pointer">⏸</button>
+      <button onclick="setSimSpeed(1)" data-spd="1" class="spd-btn clay-btn px-2.5 py-1.5 rounded-xl text-xs font-bold text-white cursor-pointer" style="background: var(--teal); color: #0F2347;">1× Live</button>
+      <button onclick="setSimSpeed(2)" data-spd="2" class="spd-btn clay-btn px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white/70 text-slate-700 cursor-pointer">2× Fast</button>
+      <button onclick="setSimSpeed(4)" data-spd="4" class="spd-btn clay-btn px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white/70 text-slate-700 cursor-pointer">4× Tycoon</button>
+    </div>
+  </footer>
+
+  <script>
+    // =========================================================================
+    // 1. EXACT COLOUR SYSTEM (CSS + JS PALETTE) & LOGO BASE64 DATA URI
+    // =========================================================================
+    const DEFAULT_PALETTE = {
+      // Brand
+      navy: '#1F3A8A',
+      deepNavy: '#14265C',
+      teal: '#3CC4CC',
+      lightTeal: '#A8E6EA',
+
+      // Environment
+      floorConcrete: '#E9E4DA',
+      safetyYellow: '#FFC727',
+      tealWalkway: '#3CC4CC',
+      wallOffwhite: '#F6F2EA',
+      roofCutaway: '#D8D2C4',
+      yardAsphalt: '#5B6270',
+      grass: '#9CCB7A',
+      treeDark: '#5FA55A',
+      treeLight: '#7CBF6A',
+      skyDayTop: '#BFE6F7',
+      skyDayBottom: '#FFF3E0',
+      skyNightTop: '#0B1330',
+      skyNightBottom: '#1B2A5E',
+
+      // Machinery
+      machineOrange: '#F26A1B',
+      machineWhite: '#FFFFFF',
+      machineDark: '#3A404B'
+    };
+
+    const PALETTE = { ...DEFAULT_PALETTE };
+
+    const THEME_PRESETS = {
+      kalika: { ...DEFAULT_PALETTE },
+      mintClay: {
+        ...DEFAULT_PALETTE,
+        navy: '#0F766E',
+        deepNavy: '#115E59',
+        teal: '#F59E0B',
+        tealWalkway: '#14B8A6',
+        lightTeal: '#FDE68A',
+        machineOrange: '#EA580C',
+        floorConcrete: '#ECEAE4',
+        safetyYellow: '#FBBF24',
+        grass: '#86EFAC'
+      },
+      royalCoral: {
+        ...DEFAULT_PALETTE,
+        navy: '#1D4ED8',
+        deepNavy: '#1E3A8A',
+        teal: '#FB7185',
+        tealWalkway: '#38BDF8',
+        lightTeal: '#FECDD3',
+        machineOrange: '#F97316',
+        floorConcrete: '#F1EFEA',
+        safetyYellow: '#FACC15',
+        grass: '#A3E635'
+      },
+      emeraldGold: {
+        ...DEFAULT_PALETTE,
+        navy: '#1E3A8A',
+        deepNavy: '#0F172A',
+        teal: '#10B981',
+        tealWalkway: '#10B981',
+        lightTeal: '#A7F3D0',
+        machineOrange: '#E11D48',
+        floorConcrete: '#E5E7EB',
+        safetyYellow: '#F59E0B',
+        grass: '#6EE7B7'
+      }
+    };
+
+    /**
+     * Generates a crisp vector recreation of the attached Kalika logo
+     * (split-tone navy wordmark "Kalika", geometric navy & teal K mark,
+     * "Industrial E-Commerce" tagline, and TM) encoded as a Base64 SVG Data URI.
+     */
+    function createKalikaLogoDataURI(navy = PALETTE.navy, deepNavy = PALETTE.deepNavy, teal = PALETTE.teal) {
+      const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 165" width="540" height="165">
+        <defs>
+          <clipPath id="topHalf">
+            <rect x="0" y="0" width="540" height="72" />
+          </clipPath>
+          <clipPath id="botHalf">
+            <rect x="0" y="72" width="540" height="60" />
+          </clipPath>
+        </defs>
+        <!-- Crisp white backing optional when transparent -->
+        <g font-family="Plus Jakarta Sans, Inter, Arial, sans-serif" font-weight="700" font-size="96" letter-spacing="-2">
+          <!-- Upper lighter navy half of "Kalika" -->
+          <text x="12" y="108" fill="${navy}" clip-path="url(#topHalf)">Kalika</text>
+          <!-- Lower deep navy half of "Kalika" -->
+          <text x="12" y="108" fill="${deepNavy}" clip-path="url(#botHalf)">Kalika</text>
+        </g>
+
+        <!-- Geometric Kalika K Mark -->
+        <!-- Left vertical triangle split horizontally -->
+        <polygon points="355,22 414,72 355,72" fill="${navy}" />
+        <polygon points="355,72 414,72 355,122" fill="${deepNavy}" />
+
+        <!-- Upper Teal Arm -->
+        <polygon points="416,58 468,12 504,12 436,72" fill="${teal}" />
+        <!-- Lower Teal Arm -->
+        <polygon points="436,72 504,132 468,132 416,86" fill="${teal}" />
+
+        <!-- TM Superscript -->
+        <text x="506" y="25" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="600" fill="#64748B">TM</text>
+
+        <!-- Tagline: Industrial E-Commerce -->
+        <text x="16" y="148" font-family="Inter, Arial, sans-serif" font-size="27.5" font-weight="400" letter-spacing="0.4" fill="#64748B">Industrial E-Commerce</text>
+      </svg>`;
+      return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+    }
+
+    // =========================================================================
+    // 2. SIMULATION STATE & MACHINE TELEMETRY
+    // =========================================================================
+    const SIM = {
+      speed: 1,
+      isNight: false,
+      nightFactor: 0, // 0 = day, 1 = night
+      autoOrbit: false,
+      zenMode: false,
+      outputTons: 18.42,
+      dispatchedPallets: 46,
+      resinLevel: 82.0,
+      selectedMachine: null,
+      boosted: {
+        extruderA: false,
+        extruderB: false
+      },
+      machines: {
+        silos: {
+          id: 'silos',
+          stage: 'STAGE 01 • RAW MATERIAL',
+          title: 'LLDPE Granule Silos & Vacuum Feed',
+          sub: 'Linear Low-Density Polyethylene (C6/C8 Octene)',
+          metrics: () => [
+            { label: 'Silo A (Prime LLDPE)', value: SIM.resinLevel.toFixed(1) + '%', accent: PALETTE.teal },
+            { label: 'Silo B (Metallocene)', value: Math.min(99, (SIM.resinLevel + 6.4)).toFixed(1) + '%', accent: PALETTE.navy },
+            { label: 'Pneumatic Feed Rate', value: Math.round(385 * Math.max(0.2, SIM.speed)) + ' kg/hr', accent: '#10B981' },
+            { label: 'Moisture Dew Point', value: '-42 °C', accent: '#64748B' }
+          ]
+        },
+        extruderA: {
+          id: 'extruderA',
+          stage: 'STAGE 02A • CAST EXTRUSION',
+          title: 'Cast Stretch Line A (Primary)',
+          sub: '5-Layer Co-Extrusion • 2000mm T-Die • 23 µm',
+          metrics: () => {
+            const mult = SIM.boosted.extruderA ? 1.25 : 1.0;
+            return [
+              { label: 'Melt Zone Temp', value: (SIM.boosted.extruderA ? '248 °C' : '236 °C'), accent: PALETTE.machineOrange },
+              { label: 'Line Web Speed', value: Math.round(420 * mult) + ' m/min', accent: PALETTE.navy },
+              { label: 'Film Gauge', value: '23.0 µm ±0.3', accent: PALETTE.teal },
+              { label: 'Chill Roll Temp', value: '21.5 °C', accent: '#0284C7' }
+            ];
+          }
+        },
+        extruderB: {
+          id: 'extruderB',
+          stage: 'STAGE 02B • CAST EXTRUSION',
+          title: 'Cast Stretch Line B (High-Cling)',
+          sub: '3-Layer Cling Stretch Film • 1500mm T-Die • 17 µm',
+          metrics: () => {
+            const mult = SIM.boosted.extruderB ? 1.25 : 1.0;
+            return [
+              { label: 'Melt Zone Temp', value: (SIM.boosted.extruderB ? '244 °C' : '232 °C'), accent: PALETTE.machineOrange },
+              { label: 'Line Web Speed', value: Math.round(395 * mult) + ' m/min', accent: PALETTE.navy },
+              { label: 'Film Gauge', value: '17.0 µm ±0.2', accent: PALETTE.teal },
+              { label: 'Pre-Stretch Rating', value: '300%', accent: '#10B981' }
+            ];
+          }
+        },
+        winder: {
+          id: 'winder',
+          stage: 'STAGE 03 • WINDING & VISION QC',
+          title: 'High-Speed Turret Winder & Laser QC',
+          sub: 'Auto-Core Loader, Optical Gauge Scanner & Conveyor',
+          metrics: () => [
+            { label: 'Turret Tension', value: '48.5 N', accent: PALETTE.navy },
+            { label: 'Roll Weight Target', value: '16.50 kg', accent: PALETTE.machineOrange },
+            { label: 'Optical Defect Rate', value: '0.02%', accent: '#10B981' },
+            { label: 'Rolls Wound / Hr', value: Math.round(92 * Math.max(0.5, SIM.speed)) + ' rolls', accent: PALETTE.teal }
+          ]
+        },
+        loading: {
+          id: 'loading',
+          stage: 'STAGE 04 • LOGISTICS & DISPATCH',
+          title: 'Kalika Industrial E-Commerce Dispatch',
+          sub: 'MIDC Ahmednagar Outbound Loading Bay 01',
+          metrics: () => [
+            { label: 'Loads Dispatched', value: SIM.dispatchedPallets + ' Pallets', accent: PALETTE.navy },
+            { label: 'AGV / Forklift Cycle', value: '42 sec', accent: PALETTE.machineOrange },
+            { label: 'Active Order Destination', value: 'Pune & Mumbai Hub', accent: PALETTE.teal },
+            { label: 'On-Time Fulfillment', value: '99.4%', accent: '#10B981' }
+          ]
+        }
+      }
+    };
+
+    // =========================================================================
+    // 3. THREE.JS SCENE, RENDERER, CAMERA & CLAY LIGHTING SETUP
+    // =========================================================================
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(PALETTE.skyDayBottom, 0.0085);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.06;
+    container.appendChild(renderer.domElement);
+
+    // Camera with low-poly isometric feel (35mm lens from elevated isometric angle)
+    const camera = new THREE.PerspectiveCamera(34, window.innerWidth / window.innerHeight, 1, 260);
+    const camState = {
+      currentPos: new THREE.Vector3(38, 32, 40),
+      currentTarget: new THREE.Vector3(0, 2.2, 0),
+      desiredPos: new THREE.Vector3(38, 32, 40),
+      desiredTarget: new THREE.Vector3(0, 2.2, 0),
+      spherical: { radius: 58, theta: Math.PI * 0.24, phi: Math.PI * 0.31 },
+      isDragging: false,
+      prevMouse: { x: 0, y: 0 },
+      userControlled: false
+    };
+
+    // Lighting: One warm directional sun/key light + one cool hemisphere fill
+    const hemiLight = new THREE.HemisphereLight(0xdff4ff, 0x9b8c7a, 0.72);
+    hemiLight.position.set(0, 40, 0);
+    scene.add(hemiLight);
+
+    const keyLight = new THREE.DirectionalLight(0xfff1dc, 1.05);
+    keyLight.position.set(28, 42, 24);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.width = 2048;
+    keyLight.shadow.mapSize.height = 2048;
+    keyLight.shadow.camera.near = 10;
+    keyLight.shadow.camera.far = 115;
+    const d = 34;
+    keyLight.shadow.camera.left = -d;
+    keyLight.shadow.camera.right = d;
+    keyLight.shadow.camera.top = d;
+    keyLight.shadow.camera.bottom = -d;
+    keyLight.shadow.bias = -0.0005;
+    keyLight.shadow.normalBias = 0.035;
+    scene.add(keyLight);
+
+    // Night interior warm factory point lights (fade in during night shift)
+    const factoryLights = [];
+    const lightPositions = [
+      [-8, 9.5, -4],
+      [4, 9.5, -4],
+      [-2, 9.5, 6],
+      [18, 7.5, 4] // Yard loading bay floodlight
+    ];
+    lightPositions.forEach((pos, idx) => {
+      const pt = new THREE.PointLight(idx === 3 ? 0xa8e6ea : 0xffdfaa, 0, 28, 1.6);
+      pt.position.set(...pos);
+      scene.add(pt);
+      factoryLights.push(pt);
+    });
+
+    // =========================================================================
+    // 4. PROCEDURAL CLAY GEOMETRY & TEXTURE HELPERS
+    // =========================================================================
+    const sharedMaterials = {};
+    const glowSprites = [];
+    const clickableGroups = [];
+
+    function makeClayMat(key, hex, roughness = 0.62, metalness = 0.04, extra = {}) {
+      const mat = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(hex),
+        roughness,
+        metalness,
+        ...extra
+      });
+      sharedMaterials[key] = mat;
+      return mat;
+    }
+
+    // Core Materials bound to PALETTE
+    const mats = {
+      navy: makeClayMat('navy', PALETTE.navy, 0.52, 0.08),
+      deepNavy: makeClayMat('deepNavy', PALETTE.deepNavy, 0.55, 0.08),
+      teal: makeClayMat('teal', PALETTE.teal, 0.45, 0.06),
+      lightTeal: makeClayMat('lightTeal', PALETTE.lightTeal, 0.48, 0.05),
+      floorConcrete: makeClayMat('floorConcrete', PALETTE.floorConcrete, 0.82, 0.02),
+      safetyYellow: makeClayMat('safetyYellow', PALETTE.safetyYellow, 0.55, 0.04),
+      tealWalkway: makeClayMat('tealWalkway', PALETTE.tealWalkway, 0.58, 0.04),
+      wallOffwhite: makeClayMat('wallOffwhite', PALETTE.wallOffwhite, 0.78, 0.02),
+      roofCutaway: makeClayMat('roofCutaway', PALETTE.roofCutaway, 0.75, 0.03),
+      yardAsphalt: makeClayMat('yardAsphalt', PALETTE.yardAsphalt, 0.88, 0.02),
+      grass: makeClayMat('grass', PALETTE.grass, 0.85, 0.01),
+      treeDark: makeClayMat('treeDark', PALETTE.treeDark, 0.78, 0.01),
+      treeLight: makeClayMat('treeLight', PALETTE.treeLight, 0.76, 0.01),
+      machineOrange: makeClayMat('machineOrange', PALETTE.machineOrange, 0.46, 0.08),
+      machineWhite: makeClayMat('machineWhite', PALETTE.machineWhite, 0.48, 0.04),
+      machineDark: makeClayMat('machineDark', PALETTE.machineDark, 0.52, 0.22),
+      chrome: new THREE.MeshStandardMaterial({ color: 0xd8e0ea, roughness: 0.22, metalness: 0.78 }),
+      cardboard: new THREE.MeshStandardMaterial({ color: 0xc99e67, roughness: 0.82, metalness: 0.02 }),
+      stretchFilm: new THREE.MeshStandardMaterial({
+        color: 0xeef9fc,
+        roughness: 0.16,
+        metalness: 0.05,
+        transparent: true,
+        opacity: 0.78
+      }),
+      stretchFilmRoll: new THREE.MeshStandardMaterial({
+        color: 0xd9f2f7,
+        roughness: 0.24,
+        metalness: 0.06
+      }),
+      windowGlass: new THREE.MeshStandardMaterial({
+        color: 0xbae6fd,
+        emissive: 0x38bdf8,
+        emissiveIntensity: 0.12,
+        roughness: 0.15,
+        metalness: 0.1,
+        transparent: true,
+        opacity: 0.55
+      }),
+      heaterGlow: new THREE.MeshStandardMaterial({
+        color: 0xff6b2b,
+        emissive: 0xff4d00,
+        emissiveIntensity: 0.85,
+        roughness: 0.35
+      }),
+      statusGreen: new THREE.MeshStandardMaterial({
+        color: 0x22c55e,
+        emissive: 0x22c55e,
+        emissiveIntensity: 0.9,
+        roughness: 0.25
+      }),
+      statusTeal: new THREE.MeshStandardMaterial({
+        color: 0x3cc4cc,
+        emissive: 0x3cc4cc,
+        emissiveIntensity: 0.95,
+        roughness: 0.25
+      })
+    };
+
+    /**
+     * Creates a smooth bevelled clay-like box using ExtrudeGeometry
+     */
+    function createRoundedBox(w, h, d, radius = 0.16, bevelSize = 0.07) {
+      const shape = new THREE.Shape();
+      const hw = Math.max(0.01, w / 2 - bevelSize);
+      const hh = Math.max(0.01, h / 2 - bevelSize);
+      const r = Math.min(radius, hw * 0.9, hh * 0.9);
+
+      shape.moveTo(-hw + r, -hh);
+      shape.lineTo(hw - r, -hh);
+      shape.quadraticCurveTo(hw, -hh, hw, -hh + r);
+      shape.lineTo(hw, hh - r);
+      shape.quadraticCurveTo(hw, hh, hw - r, hh);
+      shape.lineTo(-hw + r, hh);
+      shape.quadraticCurveTo(-hw, hh, -hw, hh - r);
+      shape.lineTo(-hw, -hh + r);
+      shape.quadraticCurveTo(-hw, -hh, -hw + r, -hh);
+
+      const extrudeSettings = {
+        depth: Math.max(0.01, d - bevelSize * 2),
+        bevelEnabled: true,
+        bevelSegments: 3,
+        steps: 1,
+        bevelSize: bevelSize,
+        bevelThickness: bevelSize
+      };
+      const geom = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+      geom.center();
+      return geom;
+    }
+
+    function addClayBox(parent, w, h, d, mat, x = 0, y = 0, z = 0, r = 0.16, b = 0.06, cast = true, receive = true) {
+      const mesh = new THREE.Mesh(createRoundedBox(w, h, d, r, b), mat);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = cast;
+      mesh.receiveShadow = receive;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    // Soft dark contact shadow texture for fake Ambient Occlusion under objects
+    const contactShadowTex = (() => {
+      const c = document.createElement('canvas');
+      c.width = 128;
+      c.height = 128;
+      const ctx = c.getContext('2d');
+      const g = ctx.createRadialGradient(64, 64, 8, 64, 64, 60);
+      g.addColorStop(0, 'rgba(20, 28, 48, 0.36)');
+      g.addColorStop(0.55, 'rgba(20, 28, 48, 0.16)');
+      g.addColorStop(1, 'rgba(20, 28, 48, 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, 128, 128);
+      return new THREE.CanvasTexture(c);
+    })();
+
+    function addContactShadow(parent, w, d, x = 0, y = 0.02, z = 0, opacity = 0.85) {
+      const mat = new THREE.MeshBasicMaterial({
+        map: contactShadowTex,
+        transparent: true,
+        opacity,
+        depthWrite: false
+      });
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(x, y, z);
+      parent.add(mesh);
+      return mesh;
+    }
+
+    // Soft radial glow sprite texture (fake bloom without post-processing overhead)
+    const glowTex = (() => {
+      const c = document.createElement('canvas');
+      c.width = 128;
+      c.height = 128;
+      const ctx = c.getContext('2d');
+      const g = ctx.createRadialGradient(64, 64, 2, 64, 64, 62);
+      g.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+      g.addColorStop(0.3, 'rgba(255, 255, 255, 0.42)');
+      g.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, 128, 128);
+      return new THREE.CanvasTexture(c);
+    })();
+
+    function addGlowHalo(parent, colorHex, scale = 1.6, x = 0, y = 0, z = 0, baseOpacity = 0.65) {
+      const mat = new THREE.SpriteMaterial({
+        map: glowTex,
+        color: new THREE.Color(colorHex),
+        transparent: true,
+        opacity: baseOpacity,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      const sp = new THREE.Sprite(mat);
+      sp.scale.set(scale, scale, 1);
+      sp.position.set(x, y, z);
+      parent.add(sp);
+      glowSprites.push({ sprite: sp, baseOpacity });
+      return sp;
+    }
+
+    // =========================================================================
+    // 5. BUILD DIORAMA ENVIRONMENT (FLOOR, EPOXY LANES, WALLS, YARD, SIGNBOARD)
+    // =========================================================================
+    const worldGroup = new THREE.Group();
+    scene.add(worldGroup);
+
+    // Diorama plinth base
+    addClayBox(worldGroup, 58, 1.4, 44, mats.roofCutaway, 2, -0.85, 0, 0.5, 0.18, false, true);
+
+    // Grass perimeter (#9CCB7A)
+    addClayBox(worldGroup, 56.5, 0.4, 42.5, mats.grass, 2, -0.18, 0, 0.35, 0.08, false, true);
+
+    // Factory Interior Concrete Floor (#E9E4DA)
+    const factoryFloor = addClayBox(worldGroup, 33, 0.45, 28, mats.floorConcrete, -4.5, -0.05, -1, 0.25, 0.06, false, true);
+
+    // Exterior Asphalt Loading Yard (#5B6270)
+    addClayBox(worldGroup, 18.5, 0.42, 34, mats.yardAsphalt, 20.5, -0.08, 1.5, 0.25, 0.06, false, true);
+
+    // Yard parking & bay striping (safety yellow)
+    [-5, 2.5, 10].forEach((zPos) => {
+      addClayBox(worldGroup, 9.5, 0.04, 0.22, mats.safetyYellow, 20.5, 0.14, zPos, 0.02, 0.01, false, true);
+    });
+
+    // Interior Epoxy Floor Markings: Teal Walkways (#3CC4CC) & Safety Yellow Zone Lines (#FFC727)
+    // Main horizontal pedestrian walkway
+    addClayBox(worldGroup, 31.5, 0.04, 2.1, mats.tealWalkway, -4.5, 0.19, 4.4, 0.05, 0.01, false, true);
+    // Cross walkway to loading bay
+    addClayBox(worldGroup, 2.1, 0.04, 15.5, mats.tealWalkway, 7.2, 0.19, -2.5, 0.05, 0.01, false, true);
+
+    // Safety yellow border frames around Extrusion Lines A & B
+    function addSafetyZoneFrame(cx, cz, w, d) {
+      const t = 0.18;
+      addClayBox(worldGroup, w, 0.045, t, mats.safetyYellow, cx, 0.195, cz - d / 2, 0.02, 0.005, false, true);
+      addClayBox(worldGroup, w, 0.045, t, mats.safetyYellow, cx, 0.195, cz + d / 2, 0.02, 0.005, false, true);
+      addClayBox(worldGroup, t, 0.045, d, mats.safetyYellow, cx - w / 2, 0.195, cz, 0.02, 0.005, false, true);
+      addClayBox(worldGroup, t, 0.045, d, mats.safetyYellow, cx + w / 2, 0.195, cz, 0.02, 0.005, false, true);
+    }
+    addSafetyZoneFrame(-6.2, -7.8, 19.5, 5.2); // Line A zone
+    addSafetyZoneFrame(-6.2, -1.2, 19.5, 5.2); // Line B zone
+    addSafetyZoneFrame(-5.5, 9.2, 18.0, 5.4);  // Winder & Palletizing zone
+
+    // Cutaway Walls (#F6F2EA) with Roof Cutaway Trim (#D8D2C4)
+    const wallsGroup = new THREE.Group();
+    worldGroup.add(wallsGroup);
+
+    // Back North Wall (Z = -15)
+    addClayBox(wallsGroup, 33.4, 10.2, 0.85, mats.wallOffwhite, -4.5, 5.1, -15, 0.12, 0.06);
+    addClayBox(wallsGroup, 33.7, 0.42, 1.15, mats.roofCutaway, -4.5, 10.35, -15, 0.08, 0.05);
+
+    // Left West Wall (X = -21)
+    addClayBox(wallsGroup, 0.85, 10.2, 28.4, mats.wallOffwhite, -21, 5.1, -1, 0.12, 0.06);
+    addClayBox(wallsGroup, 1.15, 0.42, 28.7, mats.roofCutaway, -21, 10.35, -1, 0.08, 0.05);
+
+    // East Wall facing Loading Yard (X = 12) with large roll-up dock opening
+    addClayBox(wallsGroup, 0.85, 10.2, 12.2, mats.wallOffwhite, 12, 5.1, -8.9, 0.12, 0.06);
+    addClayBox(wallsGroup, 0.85, 10.2, 7.6, mats.wallOffwhite, 12, 5.1, 9.2, 0.12, 0.06);
+    // Header lintel above loading dock bay door
+    addClayBox(wallsGroup, 0.85, 3.4, 8.6, mats.wallOffwhite, 12, 8.5, 1.3, 0.12, 0.06);
+    addClayBox(wallsGroup, 1.15, 0.42, 28.7, mats.roofCutaway, 12, 10.35, -1, 0.08, 0.05);
+    // Navy & Teal Loading Dock Door Frame
+    addClayBox(wallsGroup, 1.05, 0.45, 8.4, mats.navy, 12, 6.75, 1.3, 0.08, 0.04);
+    addClayBox(wallsGroup, 1.05, 6.7, 0.4, mats.teal, 12, 3.4, -2.8, 0.06, 0.03);
+    addClayBox(wallsGroup, 1.05, 6.7, 0.4, mats.teal, 12, 3.4, 5.4, 0.06, 0.03);
+
+    // Industrial Clerestory Windows on North & West Walls
+    [-13.5, -5.5, 2.5].forEach((wx) => {
+      addClayBox(wallsGroup, 5.2, 2.8, 0.96, mats.navy, wx, 6.5, -15, 0.12, 0.04);
+      addClayBox(wallsGroup, 4.8, 2.4, 1.02, mats.windowGlass, wx, 6.5, -15, 0.08, 0.02, false, false);
+    });
+    [-8.5, 0.5, 8.0].forEach((wz) => {
+      addClayBox(wallsGroup, 0.96, 2.8, 5.2, mats.navy, -21, 6.5, wz, 0.12, 0.04);
+      addClayBox(wallsGroup, 1.02, 2.4, 4.8, mats.windowGlass, -21, 6.5, wz, 0.08, 0.02, false, false);
+    });
+
+    // =========================================================================
+    // 6. LARGE 3D FACTORY SIGNBOARD WITH EMBEDDED BASE64 KALIKA LOGO
+    // =========================================================================
+    // Initialize material synchronously so Three.js never receives a null material on first render
+    const signMeshMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.35,
+      metalness: 0.05
+    });
+
+    function updateSignboardTexture() {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024;
+        canvas.height = 360;
+        const ctx = canvas.getContext('2d');
+
+        // Crisp white clay signboard background
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Top navy & teal accent bar
+        ctx.fillStyle = PALETTE.navy;
+        ctx.fillRect(0, 0, canvas.width, 18);
+        ctx.fillStyle = PALETTE.teal;
+        ctx.fillRect(0, 18, canvas.width, 10);
+
+        // Draw the embedded Base64 Kalika Logo
+        ctx.drawImage(img, 140, 46, 744, 226);
+
+        // Location strip at bottom
+        ctx.fillStyle = PALETTE.deepNavy;
+        ctx.fillRect(0, 296, canvas.width, 64);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '700 26px Inter, Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('KALIFLOW  •  MIDC AHMEDNAGAR PLANT', canvas.width / 2, 337);
+
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.encoding = THREE.sRGBEncoding;
+        tex.anisotropy = 8;
+
+        signMeshMat.map = tex;
+        signMeshMat.needsUpdate = true;
+      };
+      img.src = createKalikaLogoDataURI();
+    }
+    updateSignboardTexture();
+
+    // Mount Roofline Signboard on North-East Corner facing Isometric Camera
+    const signGroup = new THREE.Group();
+    signGroup.position.set(-2.5, 12.6, -14.8);
+    worldGroup.add(signGroup);
+
+    // Steel support struts
+    addClayBox(signGroup, 0.35, 2.6, 0.35, mats.navy, -5.2, -1.2, 0, 0.06, 0.02);
+    addClayBox(signGroup, 0.35, 2.6, 0.35, mats.navy, 5.2, -1.2, 0, 0.06, 0.02);
+    // Bevelled Signboard Frame
+    addClayBox(signGroup, 13.2, 4.7, 0.55, mats.navy, 0, 0.4, 0, 0.22, 0.08);
+    addClayBox(signGroup, 12.7, 4.2, 0.62, mats.teal, 0, 0.4, 0.02, 0.18, 0.06);
+
+    const signFace = new THREE.Mesh(new THREE.PlaneGeometry(12.2, 3.85), signMeshMat);
+    signFace.position.set(0, 0.4, 0.35);
+    signGroup.add(signFace);
+
+    // =========================================================================
+    // 7. STAGE 1: LLDPE RAW MATERIAL SILOS & PNEUMATIC PIPES
+    // =========================================================================
+    const silosGroup = new THREE.Group();
+    silosGroup.position.set(-16.5, 0.2, -9.5);
+    silosGroup.userData = { machineId: 'silos' };
+    worldGroup.add(silosGroup);
+    clickableGroups.push(silosGroup);
+
+    [-2.3, 2.3].forEach((zOff, idx) => {
+      const silo = new THREE.Group();
+      silo.position.set(0, 0, zOff);
+      silosGroup.add(silo);
+      addContactShadow(silo, 4.4, 4.4, 0, 0.02, 0, 0.9);
+
+      // Legs
+      [[-1.1, -1.1], [1.1, -1.1], [-1.1, 1.1], [1.1, 1.1]].forEach(([lx, lz]) => {
+        addClayBox(silo, 0.32, 2.6, 0.32, mats.machineDark, lx, 1.3, lz, 0.06, 0.02);
+      });
+
+      // Cone bottom
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(1.75, 1.8, 24), mats.navy);
+      cone.rotation.x = Math.PI;
+      cone.position.y = 2.6;
+      cone.castShadow = true;
+      silo.add(cone);
+
+      // Main cylindrical body
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(1.75, 1.75, 6.2, 28), mats.wallOffwhite);
+      body.position.y = 6.6;
+      body.castShadow = true;
+      body.receiveShadow = true;
+      silo.add(body);
+
+      // Decorative Navy & Teal stripes
+      const band1 = new THREE.Mesh(new THREE.CylinderGeometry(1.79, 1.79, 0.65, 28), mats.navy);
+      band1.position.y = 8.4;
+      silo.add(band1);
+
+      const band2 = new THREE.Mesh(new THREE.CylinderGeometry(1.79, 1.79, 0.35, 28), mats.teal);
+      band2.position.y = 7.75;
+      silo.add(band2);
+
+      // Dome cap
+      const dome = new THREE.Mesh(new THREE.SphereGeometry(1.75, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2), mats.navy);
+      dome.position.y = 9.7;
+      dome.castShadow = true;
+      silo.add(dome);
+    });
+
+    // Overhead pneumatic resin feed pipes to Extrusion Lines A & B
+    addClayBox(silosGroup, 6.5, 0.24, 0.24, mats.chrome, 3.2, 7.6, -2.3, 0.08, 0.02);
+    addClayBox(silosGroup, 0.24, 2.6, 0.24, mats.chrome, 6.3, 6.4, -2.3, 0.08, 0.02);
+    addClayBox(silosGroup, 6.5, 0.24, 0.24, mats.chrome, 3.2, 7.6, 2.3, 0.08, 0.02);
+    addClayBox(silosGroup, 0.24, 2.6, 0.24, mats.chrome, 6.3, 6.4, 2.3, 0.08, 0.02);
+
+    // =========================================================================
+    // 8. STAGE 2: TWO PARALLEL CAST STRETCH FILM EXTRUSION LINES (LINE A & B)
+    // =========================================================================
+    const animatedRollers = [];
+    const filmWebMeshes = [];
+    const heaterMeshes = [];
+
+    function buildExtrusionLine(id, zCenter, scaleWidth = 1.0) {
+      const line = new THREE.Group();
+      line.position.set(-6.2, 0.2, zCenter);
+      line.userData = { machineId: id };
+      worldGroup.add(line);
+      clickableGroups.push(line);
+
+      addContactShadow(line, 18.5, 4.4 * scaleWidth, 0, 0.02, 0, 0.85);
+
+      // Heavy machine base chassis (#3A404B)
+      addClayBox(line, 17.6, 0.75, 2.6 * scaleWidth, mats.machineDark, 0, 0.38, 0, 0.14, 0.05);
+
+      // Hopper tower at west end (-7.2)
+      addClayBox(line, 2.1, 2.4, 2.1 * scaleWidth, mats.machineOrange, -7.0, 1.85, 0, 0.18, 0.07);
+      const hopperCone = new THREE.Mesh(new THREE.ConeGeometry(1.05, 1.4, 4), mats.navy);
+      hopperCone.rotation.x = Math.PI;
+      hopperCone.rotation.y = Math.PI / 4;
+      hopperCone.position.set(-7.0, 3.7, 0);
+      hopperCone.castShadow = true;
+      line.add(hopperCone);
+
+      // Drive motor gearbox
+      addClayBox(line, 2.0, 1.5, 1.6 * scaleWidth, mats.navy, -4.8, 1.45, 0, 0.2, 0.07);
+
+      // Extruder Barrel Housing (Orange #F26A1B with White #FFFFFF access panels)
+      addClayBox(line, 5.2, 1.75, 1.9 * scaleWidth, mats.machineOrange, -1.2, 1.6, 0, 0.2, 0.08);
+      addClayBox(line, 2.0, 1.25, 2.02 * scaleWidth, mats.machineWhite, -2.3, 1.62, 0, 0.12, 0.04);
+      addClayBox(line, 2.0, 1.25, 2.02 * scaleWidth, mats.machineWhite, -0.1, 1.62, 0, 0.12, 0.04);
+
+      // Glowing Thermal Heater Bands along top of extruder
+      [-2.5, -1.3, -0.1].forEach((hx) => {
+        const heater = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.65, 16), mats.heaterGlow);
+        heater.rotation.z = Math.PI / 2;
+        heater.position.set(hx, 2.55, 0);
+        line.add(heater);
+        heaterMeshes.push({ mesh: heater, lineId: id });
+        addGlowHalo(line, '#FF6A1A', 1.35, hx, 2.65, 0, 0.45);
+      });
+
+      // Cast T-Die Head
+      addClayBox(line, 1.1, 1.3, 2.8 * scaleWidth, mats.machineDark, 2.0, 2.35, 0, 0.12, 0.05);
+
+      // Chill Roll & Guide Roller Tower (Orange side frames)
+      addClayBox(line, 4.8, 2.8, 0.28, mats.machineOrange, 4.8, 2.1, -1.25 * scaleWidth, 0.12, 0.04);
+      addClayBox(line, 4.8, 2.8, 0.28, mats.machineOrange, 4.8, 2.1, 1.25 * scaleWidth, 0.12, 0.04);
+
+      // Rotating Chrome Chill Rollers & Tension Rollers
+      const rollerSpecs = [
+        { x: 3.3, y: 1.75, r: 0.56, spd: 1.0 },
+        { x: 4.5, y: 2.55, r: 0.44, spd: -1.25 },
+        { x: 5.6, y: 1.85, r: 0.34, spd: 1.55 },
+        { x: 6.6, y: 2.65, r: 0.30, spd: -1.75 },
+        { x: 7.7, y: 2.15, r: 0.48, spd: 1.15 } // Master haul-off roll
+      ];
+      rollerSpecs.forEach((rs) => {
+        const grp = new THREE.Group();
+        grp.position.set(rs.x, rs.y, 0);
+        const cyl = new THREE.Mesh(new THREE.CylinderGeometry(rs.r, rs.r, 2.35 * scaleWidth, 24), mats.chrome);
+        cyl.rotation.x = Math.PI / 2;
+        cyl.castShadow = true;
+        grp.add(cyl);
+
+        // Teal end-cap indicator stripe so rotation is clearly visible in video
+        const cap = new THREE.Mesh(new THREE.BoxGeometry(rs.r * 1.6, 0.12, 2.4 * scaleWidth), mats.teal);
+        grp.add(cap);
+
+        line.add(grp);
+        animatedRollers.push({ mesh: grp, speedMult: rs.spd, lineId: id });
+      });
+
+      // Translucent Glossy Cast Stretch Film Web flowing across rollers!
+      const webPts = [
+        new THREE.Vector3(2.1, 2.15, 0),
+        new THREE.Vector3(3.3, 2.32, 0),
+        new THREE.Vector3(4.5, 2.10, 0),
+        new THREE.Vector3(5.6, 2.20, 0),
+        new THREE.Vector3(6.6, 2.35, 0),
+        new THREE.Vector3(8.1, 2.15, 0)
+      ];
+      for (let i = 0; i < webPts.length - 1; i++) {
+        const p1 = webPts[i];
+        const p2 = webPts[i + 1];
+        const len = p1.distanceTo(p2);
+        const mid = p1.clone().add(p2).multiplyScalar(0.5);
+        const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+
+        const sheet = new THREE.Mesh(new THREE.BoxGeometry(len, 0.035, 2.15 * scaleWidth), mats.stretchFilm);
+        sheet.position.copy(mid);
+        sheet.rotation.z = angle;
+        line.add(sheet);
+        filmWebMeshes.push({ mesh: sheet, baseY: mid.y, phase: i * 1.1 });
+      }
+
+      // HMI Operator Control Pedestal + Status Light Tower
+      const hmi = new THREE.Group();
+      hmi.position.set(1.4, 0, 1.95 * scaleWidth);
+      line.add(hmi);
+
+      addClayBox(hmi, 0.55, 2.2, 0.45, mats.machineWhite, 0, 1.1, 0, 0.08, 0.03);
+      const screen = addClayBox(hmi, 0.78, 0.58, 0.14, mats.navy, 0, 2.35, 0.05, 0.08, 0.02);
+      screen.rotation.x = -0.35;
+      const glowScreen = new THREE.Mesh(new THREE.PlaneGeometry(0.64, 0.44), mats.statusTeal);
+      glowScreen.position.set(0, 2.38, 0.13);
+      glowScreen.rotation.x = -0.35;
+      hmi.add(glowScreen);
+      addGlowHalo(hmi, PALETTE.teal, 1.4, 0, 2.4, 0.25, 0.55);
+
+      // Status Stack Tower Light
+      addClayBox(hmi, 0.12, 1.2, 0.12, mats.chrome, 0.35, 2.7, -0.1, 0.02, 0.01);
+      const beacon = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.28, 16), mats.statusGreen);
+      beacon.position.set(0.35, 3.35, -0.1);
+      hmi.add(beacon);
+      addGlowHalo(hmi, '#22C55E', 1.1, 0.35, 3.35, -0.1, 0.6);
+
+      return line;
+    }
+
+    buildExtrusionLine('extruderA', -7.8, 1.0);
+    buildExtrusionLine('extruderB', -1.2, 0.88);
+
+    // =========================================================================
+    // 9. STAGE 3: HIGH-SPEED TURRET WINDER, LASER QC SCANNER & CONVEYOR
+    // =========================================================================
+    const winderGroup = new THREE.Group();
+    winderGroup.position.set(-5.5, 0.2, 9.2);
+    winderGroup.userData = { machineId: 'winder' };
+    worldGroup.add(winderGroup);
+    clickableGroups.push(winderGroup);
+
+    addContactShadow(winderGroup, 17.5, 4.6, 0, 0.02, 0, 0.85);
+
+    // Turret Winder Station (left side of Stage 3)
+    addClayBox(winderGroup, 4.2, 3.3, 3.2, mats.navy, -6.2, 1.65, 0, 0.22, 0.08);
+    addClayBox(winderGroup, 3.4, 2.4, 3.32, mats.machineWhite, -6.2, 1.75, 0, 0.16, 0.04);
+
+    // Growing Jumbo Stretch Film Roll on Winder Spindle
+    const windingRollGroup = new THREE.Group();
+    windingRollGroup.position.set(-3.8, 1.85, 0);
+    winderGroup.add(windingRollGroup);
+
+    const coreCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 2.6, 20), mats.cardboard);
+    coreCyl.rotation.x = Math.PI / 2;
+    windingRollGroup.add(coreCyl);
+
+    const growingFilmCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.65, 2.35, 28), mats.stretchFilmRoll);
+    growingFilmCyl.rotation.x = Math.PI / 2;
+    growingFilmCyl.castShadow = true;
+    windingRollGroup.add(growingFilmCyl);
+
+    // Conveyor Belt running from Winder to Palletizing Cell
+    addClayBox(winderGroup, 11.4, 0.85, 2.1, mats.machineDark, 2.4, 0.45, 0, 0.12, 0.04);
+    addClayBox(winderGroup, 11.1, 0.14, 1.75, mats.navy, 2.4, 0.92, 0, 0.05, 0.02);
+
+    // Optical Laser / Vision QC Archway over Conveyor
+    addClayBox(winderGroup, 0.55, 2.6, 0.35, mats.machineOrange, 1.2, 1.8, -1.05, 0.08, 0.03);
+    addClayBox(winderGroup, 0.55, 2.6, 0.35, mats.machineOrange, 1.2, 1.8, 1.05, 0.08, 0.03);
+    addClayBox(winderGroup, 0.75, 0.5, 2.5, mats.teal, 1.2, 3.05, 0, 0.1, 0.04);
+    // Teal laser scan sheet
+    const laserBeam = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.65, 1.8),
+      new THREE.MeshBasicMaterial({
+        color: PALETTE.teal,
+        transparent: true,
+        opacity: 0.28,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending
+      })
+    );
+    laserBeam.rotation.y = Math.PI / 2;
+    laserBeam.position.set(1.2, 1.9, 0);
+    winderGroup.add(laserBeam);
+    addGlowHalo(winderGroup, PALETTE.teal, 2.1, 1.2, 2.8, 0, 0.5);
+
+    // Animated Stretch Film Rolls travelling down the Conveyor
+    const conveyorRolls = [];
+    for (let i = 0; i < 4; i++) {
+      const rGrp = new THREE.Group();
+      const roll = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 1.15, 20), mats.stretchFilmRoll);
+      roll.castShadow = true;
+      const core = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 1.2, 14), mats.cardboard);
+      const label = new THREE.Mesh(new THREE.CylinderGeometry(0.368, 0.368, 0.22, 20), mats.teal);
+      rGrp.add(roll, core, label);
+      rGrp.position.set(-2.4 + i * 2.6, 1.56, 0);
+      winderGroup.add(rGrp);
+      conveyorRolls.push(rGrp);
+    }
+
+    // Palletizing Staging Deck at end of conveyor (X = 8.4 in winderGroup)
+    function createStackedPallet(numRolls = 6) {
+      const pGrp = new THREE.Group();
+      // Wooden/Composite Pallet Base
+      addClayBox(pGrp, 1.85, 0.18, 1.85, mats.cardboard, 0, 0.09, 0, 0.04, 0.01);
+      addClayBox(pGrp, 1.85, 0.1, 0.25, mats.cardboard, 0, 0.22, -0.7, 0.02, 0.01);
+      addClayBox(pGrp, 1.85, 0.1, 0.25, mats.cardboard, 0, 0.22, 0.7, 0.02, 0.01);
+
+      const offsets = [
+        [-0.45, 0.75, -0.45], [0.45, 0.75, -0.45],
+        [-0.45, 0.75, 0.45], [0.45, 0.75, 0.45],
+        [-0.45, 1.72, -0.45], [0.45, 1.72, -0.45],
+        [-0.45, 1.72, 0.45], [0.45, 1.72, 0.45]
+      ];
+      for (let i = 0; i < Math.min(numRolls, offsets.length); i++) {
+        const [ox, oy, oz] = offsets[i];
+        const r = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.92, 18), mats.stretchFilmRoll);
+        r.position.set(ox, oy, oz);
+        r.castShadow = true;
+        const c = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.96, 12), mats.cardboard);
+        c.position.set(ox, oy, oz);
+        pGrp.add(r, c);
+      }
+      return pGrp;
+    }
+
+    const stagingPallet = createStackedPallet(8);
+    stagingPallet.position.set(8.6, 0.0, 0);
+    winderGroup.add(stagingPallet);
+
+    // =========================================================================
+    // 10. STAGE 4: AUTONOMOUS ELECTRIC FORKLIFT & KALIKA DELIVERY TRUCK
+    // =========================================================================
+    const loadingGroup = new THREE.Group();
+    loadingGroup.userData = { machineId: 'loading' };
+    worldGroup.add(loadingGroup);
+    clickableGroups.push(loadingGroup);
+
+    // Cute Clay-Style Electric Forklift
+    const forklift = new THREE.Group();
+    forklift.position.set(4.5, 0.2, 8.8);
+    loadingGroup.add(forklift);
+    addContactShadow(forklift, 2.8, 2.0, 0, 0.02, 0, 0.85);
+
+    // Forklift body
+    addClayBox(forklift, 1.85, 0.95, 1.25, mats.machineOrange, -0.2, 0.65, 0, 0.2, 0.06);
+    addClayBox(forklift, 0.75, 0.85, 1.15, mats.navy, -0.78, 0.72, 0, 0.16, 0.05);
+    // Roll cage
+    addClayBox(forklift, 0.12, 1.35, 0.12, mats.machineDark, 0.35, 1.7, -0.48, 0.03, 0.01);
+    addClayBox(forklift, 0.12, 1.35, 0.12, mats.machineDark, 0.35, 1.7, 0.48, 0.03, 0.01);
+    addClayBox(forklift, 0.12, 1.35, 0.12, mats.machineDark, -0.65, 1.7, -0.48, 0.03, 0.01);
+    addClayBox(forklift, 0.12, 1.35, 0.12, mats.machineDark, -0.65, 1.7, 0.48, 0.03, 0.01);
+    addClayBox(forklift, 1.25, 0.14, 1.15, mats.machineDark, -0.15, 2.38, 0, 0.06, 0.02);
+    // Mast & Forks
+    addClayBox(forklift, 0.18, 2.3, 0.16, mats.machineDark, 0.85, 1.25, -0.35, 0.04, 0.01);
+    addClayBox(forklift, 0.18, 2.3, 0.16, mats.machineDark, 0.85, 1.25, 0.35, 0.04, 0.01);
+    addClayBox(forklift, 1.1, 0.08, 0.14, mats.chrome, 1.4, 0.28, -0.32, 0.02, 0.01);
+    addClayBox(forklift, 1.1, 0.08, 0.14, mats.chrome, 1.4, 0.28, 0.32, 0.02, 0.01);
+    // Wheels
+    [[-0.65, -0.64], [-0.65, 0.64], [0.45, -0.64], [0.45, 0.64]].forEach(([wx, wz]) => {
+      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.22, 18), mats.machineDark);
+      wheel.rotation.x = Math.PI / 2;
+      wheel.position.set(wx, 0.28, wz);
+      forklift.add(wheel);
+    });
+    // Beacon on roof
+    const flBeacon = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 12), mats.safetyYellow);
+    flBeacon.position.set(-0.2, 2.52, 0);
+    forklift.add(flBeacon);
+    addGlowHalo(forklift, PALETTE.safetyYellow, 1.1, -0.2, 2.55, 0, 0.55);
+
+    // Carried Pallet on Forklift
+    const forkliftCargo = createStackedPallet(6);
+    forkliftCargo.scale.set(0.78, 0.78, 0.78);
+    forkliftCargo.position.set(1.55, 0.32, 0);
+    forklift.add(forkliftCargo);
+
+    // Kalika Enterprises Delivery Box Truck at Loading Bay
+    const truck = new THREE.Group();
+    truck.position.set(18.5, 0.15, 1.3);
+    loadingGroup.add(truck);
+    addContactShadow(truck, 8.8, 3.6, 0, 0.02, 0, 0.9);
+
+    // Truck Chassis
+    addClayBox(truck, 7.6, 0.45, 2.35, mats.machineDark, 0, 0.78, 0, 0.1, 0.03);
+    // Cargo Box (Clean white with Navy & Teal brand stripes)
+    addClayBox(truck, 5.2, 2.85, 2.65, mats.machineWhite, -1.0, 2.42, 0, 0.18, 0.06);
+    addClayBox(truck, 5.24, 0.55, 2.7, mats.navy, -1.0, 1.55, 0, 0.08, 0.03);
+    addClayBox(truck, 5.24, 0.26, 2.7, mats.teal, -1.0, 1.98, 0, 0.06, 0.02);
+    // Cab (Navy)
+    addClayBox(truck, 2.1, 2.35, 2.45, mats.navy, 2.75, 2.15, 0, 0.24, 0.08);
+    addClayBox(truck, 0.2, 1.1, 2.15, mats.windowGlass, 3.76, 2.55, 0, 0.08, 0.02, false, false);
+    // Headlights
+    addGlowHalo(truck, '#FFF3B0', 1.2, 3.85, 1.15, -0.85, 0.6);
+    addGlowHalo(truck, '#FFF3B0', 1.2, 3.85, 1.15, 0.85, 0.6);
+    // Truck Wheels
+    [-2.4, -1.1, 2.6].forEach((tx) => {
+      [-1.25, 1.25].forEach((tz) => {
+        const w = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 0.34, 20), mats.machineDark);
+        w.rotation.x = Math.PI / 2;
+        w.position.set(tx, 0.48, tz);
+        truck.add(w);
+      });
+    });
+
+    // =========================================================================
+    // 11. STYLIZED LOW-POLY CLAY TREES & EXTERIOR LANDSCAPING
+    // =========================================================================
+    function createClayTree(x, z, scale = 1.0, useLight = false) {
+      const tree = new THREE.Group();
+      tree.position.set(x, 0.02, z);
+      tree.scale.setScalar(scale);
+      worldGroup.add(tree);
+
+      addContactShadow(tree, 3.2, 3.2, 0, 0.02, 0, 0.72);
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.34, 1.6, 12), mats.cardboard);
+      trunk.position.y = 0.8;
+      trunk.castShadow = true;
+      tree.add(trunk);
+
+      const foliageMat = useLight ? mats.treeLight : mats.treeDark;
+      const b1 = new THREE.Mesh(new THREE.IcosahedronGeometry(1.35, 1), foliageMat);
+      b1.position.y = 2.2;
+      b1.castShadow = true;
+      const b2 = new THREE.Mesh(new THREE.IcosahedronGeometry(1.0, 1), useLight ? mats.treeDark : mats.treeLight);
+      b2.position.set(0.45, 3.15, 0.25);
+      b2.castShadow = true;
+      tree.add(b1, b2);
+    }
+
+    createClayTree(-23.5, -15.5, 1.15, false);
+    createClayTree(-23.8, -5.0, 0.95, true);
+    createClayTree(-23.5, 7.5, 1.2, false);
+    createClayTree(-16.0, 17.5, 1.05, true);
+    createClayTree(-5.0, 17.8, 1.15, false);
+    createClayTree(6.5, 17.5, 0.9, true);
+    createClayTree(26.5, -15.0, 1.25, false);
+    createClayTree(27.0, 15.5, 1.1, true);
+
+    // =========================================================================
+    // 12. INTERACTIVITY: RAYCASTING, ORBIT CONTROLS & CAMERA PRESETS
+    // =========================================================================
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    let pointerDownPos = { x: 0, y: 0 };
+
+    const CAMERA_PRESETS = {
+      overview: { pos: new THREE.Vector3(38, 32, 40), target: new THREE.Vector3(0, 2.2, 0) },
+      extrusion: { pos: new THREE.Vector3(8, 15.5, 12), target: new THREE.Vector3(-6.2, 2.0, -4.5) },
+      winder: { pos: new THREE.Vector3(9.5, 14.5, 24), target: new THREE.Vector3(-4.0, 1.6, 9.2) },
+      loading: { pos: new THREE.Vector3(33, 16.5, 18), target: new THREE.Vector3(15.5, 1.8, 2.5) }
+    };
+
+    function focusCamera(presetKey) {
+      const preset = CAMERA_PRESETS[presetKey];
+      if (!preset) return;
+      camState.desiredPos.copy(preset.pos);
+      camState.desiredTarget.copy(preset.target);
+      camState.userControlled = false;
+
+      // Sync spherical coordinates to preset
+      const offset = preset.pos.clone().sub(preset.target);
+      camState.spherical.radius = offset.length();
+      camState.spherical.theta = Math.atan2(offset.x, offset.z);
+      camState.spherical.phi = Math.acos(THREE.MathUtils.clamp(offset.y / camState.spherical.radius, -1, 1));
+
+      // Update active pill styling
+      document.querySelectorAll('.cam-btn').forEach((btn) => {
+        const active = btn.dataset.cam === presetKey;
+        btn.style.background = active ? PALETTE.navy : 'rgba(255,255,255,0.75)';
+        btn.style.color = active ? '#FFFFFF' : '#1E293B';
+      });
+    }
+
+    function openInspector(machineId) {
+      const data = SIM.machines[machineId];
+      if (!data) return;
+      SIM.selectedMachine = machineId;
+
+      document.getElementById('insp-badge').textContent = data.stage;
+      document.getElementById('insp-title').textContent = data.title;
+      document.getElementById('insp-sub').textContent = data.sub;
+
+      const boostBtn = document.getElementById('insp-boost-btn');
+      if (machineId === 'extruderA' || machineId === 'extruderB') {
+        boostBtn.classList.remove('hidden');
+        const isBoosted = SIM.boosted[machineId];
+        boostBtn.textContent = isBoosted ? '🔥 Overdrive Active (1.25×)' : '⚡ Overdrive Boost';
+      } else {
+        boostBtn.classList.add('hidden');
+      }
+
+      refreshInspectorMetrics();
+      const card = document.getElementById('machine-inspector');
+      card.classList.remove('hidden');
+      card.classList.add('flex');
+
+      // Focus camera nicely on clicked stage
+      if (machineId === 'extruderA' || machineId === 'extruderB' || machineId === 'silos') focusCamera('extrusion');
+      if (machineId === 'winder') focusCamera('winder');
+      if (machineId === 'loading') focusCamera('loading');
+    }
+
+    function refreshInspectorMetrics() {
+      if (!SIM.selectedMachine) return;
+      const data = SIM.machines[SIM.selectedMachine];
+      const grid = document.getElementById('insp-metrics');
+      grid.innerHTML = data.metrics().map((m) => `
+        <div class="rounded-2xl p-2.5 bg-slate-500/10 border border-white/40">
+          <div class="text-[10px] font-semibold opacity-70">${m.label}</div>
+          <div class="font-display font-extrabold text-sm mt-0.5" style="color:${m.accent}">${m.value}</div>
+        </div>
+      `).join('');
+    }
+
+    function closeInspector() {
+      SIM.selectedMachine = null;
+      const card = document.getElementById('machine-inspector');
+      card.classList.add('hidden');
+      card.classList.remove('flex');
+    }
+
+    function toggleMachineBoost() {
+      if (SIM.selectedMachine === 'extruderA' || SIM.selectedMachine === 'extruderB') {
+        SIM.boosted[SIM.selectedMachine] = !SIM.boosted[SIM.selectedMachine];
+        const isOn = SIM.boosted[SIM.selectedMachine];
+        spawnTycoonToast(
+          isOn ? '⚡ Extruder Overdrive +25%!' : '✓ Standard Speed Restored',
+          window.innerWidth * 0.5,
+          window.innerHeight * 0.45
+        );
+        openInspector(SIM.selectedMachine);
+      }
+    }
+
+    // Pointer & Touch Orbit Controls + Click Detection
+    function onPointerDown(x, y) {
+      camState.isDragging = true;
+      pointerDownPos = { x, y };
+      camState.prevMouse = { x, y };
+    }
+
+    function onPointerMove(x, y) {
+      if (!camState.isDragging) return;
+      const dx = x - camState.prevMouse.x;
+      const dy = y - camState.prevMouse.y;
+      camState.prevMouse = { x, y };
+
+      if (Math.hypot(x - pointerDownPos.x, y - pointerDownPos.y) > 4) {
+        camState.userControlled = true;
+        SIM.autoOrbit = false;
+        document.getElementById('btn-orbit').textContent = '🎬 Cinema Orbit: OFF';
+      }
+
+      camState.spherical.theta -= dx * 0.0065;
+      camState.spherical.phi = THREE.MathUtils.clamp(camState.spherical.phi - dy * 0.0055, 0.25, 1.32);
+    }
+
+    function onPointerUp(x, y) {
+      camState.isDragging = false;
+      const dist = Math.hypot(x - pointerDownPos.x, y - pointerDownPos.y);
+      if (dist < 6) {
+        // Handle click selection on 3D machines
+        pointer.x = (x / window.innerWidth) * 2 - 1;
+        pointer.y = -(y / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(pointer, camera);
+        const hits = raycaster.intersectObjects(clickableGroups, true);
+        if (hits.length > 0) {
+          let obj = hits[0].object;
+          while (obj && !obj.userData?.machineId) {
+            obj = obj.parent;
+          }
+          if (obj && obj.userData?.machineId) {
+            openInspector(obj.userData.machineId);
+          }
+        }
+      }
+    }
+
+    renderer.domElement.addEventListener('mousedown', (e) => onPointerDown(e.clientX, e.clientY));
+    window.addEventListener('mousemove', (e) => onPointerMove(e.clientX, e.clientY));
+    window.addEventListener('mouseup', (e) => onPointerUp(e.clientX, e.clientY));
+
+    renderer.domElement.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      camState.userControlled = true;
+      camState.spherical.radius = THREE.MathUtils.clamp(camState.spherical.radius + e.deltaY * 0.025, 22, 85);
+    }, { passive: false });
+
+    // Touch events for mobile/tablet
+    renderer.domElement.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) onPointerDown(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+    renderer.domElement.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 1) onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+    renderer.domElement.addEventListener('touchend', (e) => {
+      if (e.changedTouches.length === 1) onPointerUp(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+    });
+
+    // =========================================================================
+    // 13. FLOATING TYCOON TOAST POPUPS (SCREEN-PROJECTED FROM 3D WORLD)
+    // =========================================================================
+    const toastLayer = document.getElementById('toast-layer');
+    function spawnTycoonToast(text, screenX, screenY) {
+      if (SIM.zenMode) return;
+      const el = document.createElement('div');
+      el.className = 'tycoon-toast';
+      el.textContent = text;
+      el.style.left = `${Math.max(90, Math.min(window.innerWidth - 90, screenX))}px`;
+      el.style.top = `${Math.max(80, Math.min(window.innerHeight - 90, screenY))}px`;
+      toastLayer.appendChild(el);
+      setTimeout(() => el.remove(), 2100);
+    }
+
+    function worldToScreen(vec3) {
+      const v = vec3.clone().project(camera);
+      return {
+        x: (v.x * 0.5 + 0.5) * window.innerWidth,
+        y: (-(v.y * 0.5) + 0.5) * window.innerHeight
+      };
+    }
+
+    // =========================================================================
+    // 14. UI CONTROLS: DAY/NIGHT, PALETTE TWEAKER, ZEN RECORD MODE
+    // =========================================================================
+    function toggleDayNight() {
+      SIM.isNight = !SIM.isNight;
+      document.body.classList.toggle('night-mode', SIM.isNight);
+      const btn = document.getElementById('btn-day-night');
+      const icon = document.getElementById('day-night-icon');
+      const label = document.getElementById('day-night-label');
+
+      if (SIM.isNight) {
+        icon.textContent = '🌙';
+        label.textContent = 'Night Shift';
+        btn.className = 'clay-btn px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-indigo-950 text-cyan-300 border border-cyan-400/40 cursor-pointer';
+      } else {
+        icon.textContent = '☀️';
+        label.textContent = 'Day Shift';
+        btn.className = 'clay-btn px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-amber-100/90 text-amber-900 border border-amber-300/60 cursor-pointer';
+      }
+    }
+
+    function togglePaletteDrawer() {
+      const drawer = document.getElementById('palette-drawer');
+      const isHidden = drawer.classList.contains('hidden');
+      drawer.classList.toggle('hidden', !isHidden);
+      drawer.classList.toggle('flex', isHidden);
+    }
+
+    function syncAllColorsToScene() {
+      // Update CSS variables
+      const root = document.documentElement.style;
+      root.setProperty('--navy', PALETTE.navy);
+      root.setProperty('--deep-navy', PALETTE.deepNavy);
+      root.setProperty('--teal', PALETTE.teal);
+      root.setProperty('--light-teal', PALETTE.lightTeal);
+      root.setProperty('--floor-concrete', PALETTE.floorConcrete);
+      root.setProperty('--safety-yellow', PALETTE.safetyYellow);
+      root.setProperty('--teal-walkway', PALETTE.tealWalkway);
+      root.setProperty('--machine-orange', PALETTE.machineOrange);
+      root.setProperty('--grass', PALETTE.grass);
+
+      // Update Three.js materials
+      Object.keys(sharedMaterials).forEach((k) => {
+        if (PALETTE[k]) {
+          sharedMaterials[k].color.set(PALETTE[k]);
+        }
+      });
+
+      // Regenerate Base64 Logo in top bar and 3D signboard
+      document.getElementById('brand-logo-img').src = createKalikaLogoDataURI();
+      updateSignboardTexture();
+
+      // Update sky gradient background
+      if (!SIM.isNight) {
+        document.body.style.background = `linear-gradient(180deg, ${PALETTE.skyDayTop} 0%, ${PALETTE.skyDayBottom} 100%)`;
+        scene.fog.color.set(PALETTE.skyDayBottom);
+      }
+
+      // Sync picker UI inputs & labels
+      ['navy', 'teal', 'machineOrange', 'floorConcrete', 'safetyYellow', 'grass'].forEach((key) => {
+        const inp = document.getElementById('picker-' + key);
+        const lbl = document.getElementById('hex-label-' + key);
+        if (inp) inp.value = PALETTE[key];
+        if (lbl) lbl.textContent = PALETTE[key].toUpperCase();
+      });
+    }
+
+    function updateCustomColor(key, hex) {
+      PALETTE[key] = hex;
+      if (key === 'teal') PALETTE.tealWalkway = hex;
+      syncAllColorsToScene();
+    }
+
+    function applyThemePreset(presetName) {
+      const preset = THEME_PRESETS[presetName];
+      if (!preset) return;
+      Object.assign(PALETTE, preset);
+      syncAllColorsToScene();
+    }
+
+    function toggleAutoOrbit() {
+      SIM.autoOrbit = !SIM.autoOrbit;
+      camState.userControlled = true;
+      document.getElementById('btn-orbit').textContent = SIM.autoOrbit
+        ? '🎬 Cinema Orbit: ON'
+        : '🎬 Cinema Orbit: OFF';
+    }
+
+    function setSimSpeed(spd) {
+      SIM.speed = spd;
+      document.querySelectorAll('.spd-btn').forEach((btn) => {
+        const active = Number(btn.dataset.spd) === spd;
+        btn.style.background = active ? PALETTE.teal : 'rgba(255,255,255,0.75)';
+        btn.style.color = active ? '#0F2347' : '#334155';
+      });
+    }
+
+    function toggleZenMode() {
+      SIM.zenMode = !SIM.zenMode;
+      document.body.classList.toggle('hud-hidden', SIM.zenMode);
+      const restoreBtn = document.getElementById('restore-hud-btn');
+      restoreBtn.classList.toggle('hidden', !SIM.zenMode);
+      restoreBtn.classList.toggle('flex', SIM.zenMode);
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key.toLowerCase() === 'h') toggleZenMode();
+    });
+
+    // =========================================================================
+    // 15. MAIN ANIMATION LOOP (60 FPS FACTORY SIMULATION)
+    // =========================================================================
+    const clock = new THREE.Clock();
+    let winderProgress = 0.35;
+    let forkliftTimer = 0;
+    let truckCycle = 0;
+    let kpiTickTimer = 0;
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = Math.min(clock.getDelta(), 0.05);
+      const simDt = dt * SIM.speed;
+
+      // 1. Smooth Day / Night Atmosphere Interpolation
+      const targetNight = SIM.isNight ? 1 : 0;
+      SIM.nightFactor += (targetNight - SIM.nightFactor) * Math.min(1, dt * 3.2);
+
+      const dayTop = new THREE.Color(PALETTE.skyDayTop);
+      const dayBot = new THREE.Color(PALETTE.skyDayBottom);
+      const nightTop = new THREE.Color(PALETTE.skyNightTop);
+      const nightBot = new THREE.Color(PALETTE.skyNightBottom);
+
+      const curTop = dayTop.clone().lerp(nightTop, SIM.nightFactor);
+      const curBot = dayBot.clone().lerp(nightBot, SIM.nightFactor);
+      document.body.style.background = `linear-gradient(180deg, #${curTop.getHexString()} 0%, #${curBot.getHexString()} 100%)`;
+      scene.fog.color.copy(curBot);
+
+      keyLight.intensity = THREE.MathUtils.lerp(1.08, 0.28, SIM.nightFactor);
+      keyLight.color.setHex(SIM.nightFactor > 0.5 ? 0x8ab4f8 : 0xfff1dc);
+      hemiLight.intensity = THREE.MathUtils.lerp(0.72, 0.34, SIM.nightFactor);
+
+      factoryLights.forEach((pt, i) => {
+        pt.intensity = SIM.nightFactor * (i === 3 ? 1.5 : 1.25);
+      });
+
+      // 2. Extruder Rollers & Stretch Film Web Animation
+      animatedRollers.forEach((r) => {
+        const boost = SIM.boosted[r.lineId] ? 1.35 : 1.0;
+        r.mesh.rotation.z -= simDt * 3.6 * r.speedMult * boost;
+      });
+
+      const elapsed = clock.getElapsedTime();
+      filmWebMeshes.forEach((fw) => {
+        fw.mesh.position.y = fw.baseY + Math.sin(elapsed * 8 * Math.max(0.2, SIM.speed) + fw.phase) * 0.012;
+      });
+
+      // 3. Winder Roll Growing & Conveyor Rolls Advancing
+      if (SIM.speed > 0) {
+        winderProgress += simDt * 0.24;
+        if (winderProgress >= 1.0) {
+          winderProgress = 0.25;
+          const pos = worldToScreen(new THREE.Vector3(-9.3, 3.0, 9.2));
+          spawnTycoonToast('+1 Jumbo Stretch Roll (16.5 kg)', pos.x, pos.y);
+        }
+        const rollScale = 0.45 + winderProgress * 0.65;
+        growingFilmCyl.scale.set(rollScale, 1, rollScale);
+        windingRollGroup.rotation.z -= simDt * 4.5;
+
+        conveyorRolls.forEach((rGrp) => {
+          rGrp.position.x += simDt * 1.45;
+          if (rGrp.position.x > 7.2) {
+            rGrp.position.x = -2.8;
+          }
+        });
+
+        laserBeam.material.opacity = 0.2 + Math.sin(elapsed * 10) * 0.12;
+      }
+
+      // 4. Autonomous Electric Forklift Loop (Palletizer -> Loading Bay -> Return)
+      if (SIM.speed > 0) {
+        forkliftTimer = (forkliftTimer + simDt * 0.14) % 1.0;
+        if (forkliftTimer < 0.42) {
+          // Moving East toward loading bay door with pallet
+          const t = forkliftTimer / 0.42;
+          forklift.position.x = THREE.MathUtils.lerp(4.6, 13.8, t);
+          forklift.position.z = THREE.MathUtils.lerp(8.8, 1.3, t);
+          forklift.rotation.y = Math.atan2(-(1.3 - 8.8), 13.8 - 4.6);
+          forkliftCargo.visible = true;
+        } else if (forkliftTimer < 0.55) {
+          // Dropping pallet into Kalika delivery truck
+          forklift.position.set(13.8, 0.2, 1.3);
+          forkliftCargo.visible = false;
+        } else {
+          // Returning empty to palletizer
+          const t = (forkliftTimer - 0.55) / 0.45;
+          forklift.position.x = THREE.MathUtils.lerp(13.8, 4.6, t);
+          forklift.position.z = THREE.MathUtils.lerp(1.3, 8.8, t);
+          forklift.rotation.y = Math.atan2(-(8.8 - 1.3), 4.6 - 13.8);
+          forkliftCargo.visible = false;
+        }
+      }
+
+      // 5. Kalika Delivery Truck Dispatch Animation
+      if (SIM.speed > 0) {
+        const prevTruckCycle = truckCycle;
+        truckCycle = (truckCycle + simDt * 0.055) % 1.0;
+        if (truckCycle < 0.72) {
+          // Docked at bay
+          truck.position.x = 18.5;
+        } else if (truckCycle < 0.86) {
+          // Dispatching East out of MIDC yard!
+          if (prevTruckCycle <= 0.72) {
+            SIM.dispatchedPallets += 1;
+            const pos = worldToScreen(new THREE.Vector3(19, 4.5, 1.3));
+            spawnTycoonToast('🚛 Kalika Dispatch Sent! (+1 Load)', pos.x, pos.y);
+          }
+          const t = (truckCycle - 0.72) / 0.14;
+          truck.position.x = THREE.MathUtils.lerp(18.5, 42.0, t * t);
+        } else {
+          // Next truck backing smoothly into bay
+          const t = (truckCycle - 0.86) / 0.14;
+          truck.position.x = THREE.MathUtils.lerp(36.0, 18.5, 1 - Math.pow(1 - t, 2));
+        }
+      }
+
+      // 6. Live Telemetry & KPI Updates
+      if (SIM.speed > 0) {
+        const boostFactor = (SIM.boosted.extruderA ? 1.12 : 1.0) * (SIM.boosted.extruderB ? 1.12 : 1.0);
+        SIM.outputTons += simDt * 0.018 * boostFactor;
+        SIM.resinLevel = Math.max(24, SIM.resinLevel - simDt * 0.025);
+        if (SIM.resinLevel <= 24.5) SIM.resinLevel = 88.0; // Auto-refill tanker
+
+        kpiTickTimer += dt;
+        if (kpiTickTimer > 0.35) {
+          kpiTickTimer = 0;
+          const outStr = SIM.outputTons.toFixed(2);
+          const spdStr = Math.round(420 * boostFactor);
+          const oeeStr = (94.8 + Math.sin(elapsed * 0.8) * 0.4).toFixed(1) + '%';
+
+          document.getElementById('kpi-output').textContent = outStr;
+          document.getElementById('kpi-output-sm').textContent = outStr;
+          document.getElementById('kpi-speed').textContent = spdStr;
+          document.getElementById('kpi-speed-sm').textContent = spdStr;
+          document.getElementById('kpi-oee').textContent = oeeStr;
+          document.getElementById('kpi-oee-sm').textContent = oeeStr;
+          document.getElementById('kpi-dispatched').textContent = SIM.dispatchedPallets;
+          document.getElementById('kpi-dispatched-sm').textContent = SIM.dispatchedPallets;
+          document.getElementById('kpi-resin').textContent = Math.round(SIM.resinLevel) + '%';
+          document.getElementById('kpi-resin-bar').style.width = SIM.resinLevel + '%';
+
+          if (SIM.selectedMachine) refreshInspectorMetrics();
+        }
+      }
+
+      // 7. Smooth Camera Movement & Cinema Orbit
+      if (SIM.autoOrbit) {
+        camState.spherical.theta += dt * 0.18;
+      }
+
+      if (camState.userControlled || SIM.autoOrbit) {
+        const sinPhi = Math.sin(camState.spherical.phi);
+        camState.desiredPos.set(
+          camState.desiredTarget.x + camState.spherical.radius * sinPhi * Math.sin(camState.spherical.theta),
+          camState.desiredTarget.y + camState.spherical.radius * Math.cos(camState.spherical.phi),
+          camState.desiredTarget.z + camState.spherical.radius * sinPhi * Math.cos(camState.spherical.theta)
+        );
+      }
+
+      camState.currentPos.lerp(camState.desiredPos, Math.min(1, dt * 5.5));
+      camState.currentTarget.lerp(camState.desiredTarget, Math.min(1, dt * 5.5));
+      camera.position.copy(camState.currentPos);
+      camera.lookAt(camState.currentTarget);
+
+      renderer.render(scene, camera);
+    }
+
+    // Handle window resize cleanly
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Initialize logo & colors immediately, then start render loop on load
+    syncAllColorsToScene();
+
+    window.onload = function () {
+      animate();
+    };
+  </script>
+</body>
+</html>

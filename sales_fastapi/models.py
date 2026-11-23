@@ -165,7 +165,9 @@ class GmailMessage(Base):
     """Normalized Gmail message for second-level conversation/attachment drilldown."""
 
     __tablename__ = "gmail_messages"
-    __table_args__ = (UniqueConstraint("mailbox_id", "message_id", name="uq_gmail_mailbox_message"),)
+    __table_args__ = (
+        UniqueConstraint("mailbox_id", "message_id", name="uq_gmail_mailbox_message"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(Integer, index=True, default=0)

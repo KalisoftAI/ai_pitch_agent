@@ -43,10 +43,7 @@ def executive_overview(
     tally = tally_stats(db)
     contacts = db.query(func.count(Contact.id)).filter(Contact.user_id == user.id).scalar() or 0
     gmail_rows = (
-        db.query(func.count(GmailMessage.id))
-        .filter(GmailMessage.user_id == user.id)
-        .scalar()
-        or 0
+        db.query(func.count(GmailMessage.id)).filter(GmailMessage.user_id == user.id).scalar() or 0
     )
     gmail_attachments = sum(
         len(row or [])

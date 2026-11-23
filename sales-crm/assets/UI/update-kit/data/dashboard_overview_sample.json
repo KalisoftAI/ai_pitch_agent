@@ -1,0 +1,107 @@
+{
+  "meta": {
+    "last_synced_at": "2026-11-21T14:30:00+05:30",
+    "source": "gcs://kalika-erp-prod-data/processed/dashboard-cache/overview_all.json",
+    "active_branch": "ALL",
+    "available_branches": [
+      "ALL",
+      "AHMEDNAGAR_MIDC",
+      "PHALTAN_SATARA",
+      "PUNE_SHIRUR"
+    ]
+  },
+  "business_kpis": {
+    "daily_rate_updates": [
+      {
+        "material": "Stretch Film 500mm x 23 Mic",
+        "rate": 108.0,
+        "unit": "kg",
+        "delta_pct": 0.0,
+        "updated_from": "ERP"
+      },
+      {
+        "material": "Stretch Film 500mm x 51 Mic",
+        "rate": 151.0,
+        "unit": "kg",
+        "delta_pct": 1.2,
+        "updated_from": "ERP"
+      },
+      {
+        "material": "BOPP Tape 48x65m 55 Mic",
+        "rate": 34.2,
+        "unit": "each",
+        "delta_pct": -0.5,
+        "updated_from": "ERP"
+      },
+      {
+        "material": "Tarpaulin 300 GSM",
+        "rate": 4.2,
+        "unit": "sqft",
+        "delta_pct": 0.0,
+        "updated_from": "ERP"
+      }
+    ],
+    "revenue_mtd": 2485000.0,
+    "pending_asn_dispatches": 14,
+    "active_rfq_threads": 9
+  },
+  "sales_executive_metrics": [
+    {
+      "executive": "Pratik Nakade",
+      "department": "Sales Account",
+      "email": "sales.kalikaenterprises@gmail.com",
+      "assigned_accounts": [
+        "Cummins",
+        "Eaton",
+        "JSW"
+      ],
+      "quotes_sent": 28,
+      "conversion_rate_pct": 64.3,
+      "avg_response_hrs": 2.4
+    },
+    {
+      "executive": "Vaishnavi Bhingare",
+      "department": "Key Accounts / Plant Ops",
+      "assigned_accounts": [
+        "Instor India",
+        "Swift",
+        "Elements",
+        "Malhotra Cables"
+      ],
+      "quotes_sent": 19,
+      "conversion_rate_pct": 73.6,
+      "avg_response_hrs": 1.8
+    },
+    {
+      "executive": "Narayan Dethe",
+      "department": "Dispatch & Plant Coordination",
+      "email": "dispatchkalikaenterprises1667@gmail.com",
+      "assigned_accounts": [
+        "TCL2",
+        "TCL3",
+        "JMD",
+        "CFS PCP2"
+      ],
+      "dispatches_completed": 42,
+      "on_time_dispatch_pct": 96.5
+    }
+  ],
+  "level2_conversations": [
+    {
+      "account": "Instor India Pvt. Ltd.",
+      "contact": "Rutuja Patil (rpatil@instorindia.com)",
+      "kalika_poc": "Vaishnavi Bhingare",
+      "subject": "REG-VENDOR FORM & Component Supply",
+      "status": "Active Onboarding / Rate Sync",
+      "last_updated": "2026-10-02T14:50:00+05:30"
+    },
+    {
+      "account": "JSW Group",
+      "contact": "jsw_procurement",
+      "kalika_poc": "Pratik Nakade",
+      "subject": "Daily Packaging & Stretch Film Rate Revision",
+      "status": "Awaiting Gmail OAuth Sync on kalikaenterprises@gmail.com",
+      "last_updated": "2026-11-21T14:30:00+05:30"
+    }
+  ]
+}

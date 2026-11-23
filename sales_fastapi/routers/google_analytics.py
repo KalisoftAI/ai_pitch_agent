@@ -148,7 +148,11 @@ def google_analytics_sync(force: bool = False):
                 "status": "no_new_files",
                 "message": (
                     "No new file detected — showing insights from the last processed export"
-                    + (f" ({str(state.get('processed_at') or '')[:10]})." if state.get("processed_at") else ".")
+                    + (
+                        f" ({str(state.get('processed_at') or '')[:10]})."
+                        if state.get("processed_at")
+                        else "."
+                    )
                 ),
                 "files": [
                     {"name": b["name"], "size": b.get("size"), "updated": b.get("updated")}
@@ -161,8 +165,7 @@ def google_analytics_sync(force: bool = False):
 
     known_entries = {f"{n}|{u}" for n, u in (state.get("entries") or [])}
     new_files = [
-        b for b in files
-        if f"{b['name']}|{b.get('updated')}" not in known_entries
+        b for b in files if f"{b['name']}|{b.get('updated')}" not in known_entries
     ] or files
     to_process = sorted(files, key=lambda b: str(b.get("updated") or ""))[-MAX_FILES_PER_SYNC:]
 

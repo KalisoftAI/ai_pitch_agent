@@ -38,10 +38,7 @@ router = APIRouter(prefix="/outreach-whatsapp", tags=["outreach-whatsapp"])
 
 CONTACT_PHONE = "+91 94055 36016"
 WEBSITE_URL = "https://www.kalikaindia.com"
-CTA = (
-    f"Reply YES for a quote or call/WhatsApp {CONTACT_PHONE}. "
-    f"Explore {WEBSITE_URL} - Team Kalika"
-)
+CTA = f"Reply YES for a quote or call/WhatsApp {CONTACT_PHONE}. Explore {WEBSITE_URL} - Team Kalika"
 SAMPLE_RATES = (
     ("stretch-film", "Stretch Film", 160.0),
     ("baby-roll", "Baby Roll", 164.0),
@@ -258,9 +255,7 @@ def _message_out(row: OutreachWhatsAppMessage) -> dict:
     }
 
 
-def _rate_text(
-    db: Session, rate_ids: list[int], user_id: int
-) -> tuple[str, list[ProductRate]]:
+def _rate_text(db: Session, rate_ids: list[int], user_id: int) -> tuple[str, list[ProductRate]]:
     rates = [db.get(ProductRate, rate_id) for rate_id in rate_ids]
     rates = [
         rate
@@ -321,8 +316,14 @@ def _render_context(
     token: str = "",
 ) -> tuple[str, dict[str, str]]:
     ctx = _contact_context(db, contact)
-    catalog = _tracked_url(request, token, CATALOGUE_LINK, "catalog_download") if token else CATALOGUE_LINK
-    profile = _tracked_url(request, token, PROFILE_LINK, "profile_download") if token else PROFILE_LINK
+    catalog = (
+        _tracked_url(request, token, CATALOGUE_LINK, "catalog_download")
+        if token
+        else CATALOGUE_LINK
+    )
+    profile = (
+        _tracked_url(request, token, PROFILE_LINK, "profile_download") if token else PROFILE_LINK
+    )
     product = _tracked_url(request, token, WEBSITE_URL, "product_link") if token else WEBSITE_URL
     ctx.update(
         {
@@ -428,7 +429,10 @@ def _requirements_from_text(text: str) -> str:
     matched = [
         part
         for part in parts
-        if any(keyword in part.lower() for keyword in (*PRODUCT_KEYWORDS, "rate", "price", "quote", "requirement"))
+        if any(
+            keyword in part.lower()
+            for keyword in (*PRODUCT_KEYWORDS, "rate", "price", "quote", "requirement")
+        )
     ]
     return " | ".join(matched[:8])[:2000]
 
@@ -442,9 +446,15 @@ def status(
     return {
         "enabled": settings.WHATSAPP_ENABLED,
         "gateway": gateway.health(),
-        "templates": db.query(OutreachSmartTemplate).filter(OutreachSmartTemplate.user_id == user.id).count(),
-        "campaigns": db.query(OutreachWhatsAppCampaign).filter(OutreachWhatsAppCampaign.user_id == user.id).count(),
-        "messages": db.query(OutreachWhatsAppMessage).filter(OutreachWhatsAppMessage.user_id == user.id).count(),
+        "templates": db.query(OutreachSmartTemplate)
+        .filter(OutreachSmartTemplate.user_id == user.id)
+        .count(),
+        "campaigns": db.query(OutreachWhatsAppCampaign)
+        .filter(OutreachWhatsAppCampaign.user_id == user.id)
+        .count(),
+        "messages": db.query(OutreachWhatsAppMessage)
+        .filter(OutreachWhatsAppMessage.user_id == user.id)
+        .count(),
     }
 
 
@@ -506,7 +516,9 @@ def bootstrap(
     for item in DEFAULT_TEMPLATES:
         exists = (
             db.query(OutreachSmartTemplate)
-            .filter(OutreachSmartTemplate.user_id == user.id, OutreachSmartTemplate.name == item["name"])
+            .filter(
+                OutreachSmartTemplate.user_id == user.id, OutreachSmartTemplate.name == item["name"]
+            )
             .first()
         )
         if exists is not None:
@@ -528,7 +540,9 @@ def bootstrap(
         "products_created": created_products,
         "rates_created": created_rates,
         "templates_created": created_templates,
-        "rates": [{"product": name, "rate": amount, "unit": "kg"} for _, name, amount in SAMPLE_RATES],
+        "rates": [
+            {"product": name, "rate": amount, "unit": "kg"} for _, name, amount in SAMPLE_RATES
+        ],
     }
 
 
@@ -554,7 +568,9 @@ def create_template(
 ):
     exists = (
         db.query(OutreachSmartTemplate)
-        .filter(OutreachSmartTemplate.user_id == user.id, OutreachSmartTemplate.name == payload.name)
+        .filter(
+            OutreachSmartTemplate.user_id == user.id, OutreachSmartTemplate.name == payload.name
+        )
         .first()
     )
     if exists is not None:
@@ -637,7 +653,9 @@ def preview_template(
     if payload.contact_ids:
         contacts = (
             db.query(MarketingCompany)
-            .filter(MarketingCompany.user_id == user.id, MarketingCompany.id.in_(payload.contact_ids))
+            .filter(
+                MarketingCompany.user_id == user.id, MarketingCompany.id.in_(payload.contact_ids)
+            )
             .limit(payload.limit)
             .all()
         )
@@ -844,7 +862,9 @@ def create_campaign(
         raise HTTPException(status_code=400, detail="No approved contacts selected")
     not_approved = [c.id for c in contacts if not c.marketing_approved]
     if not_approved:
-        raise HTTPException(status_code=409, detail="Imported contacts need approval before marketing")
+        raise HTTPException(
+            status_code=409, detail="Imported contacts need approval before marketing"
+        )
 
     campaign = OutreachWhatsAppCampaign(
         user_id=user.id,
@@ -1105,20 +1125,18 @@ def engagement_dashboard(
 ):
     since = _now() - timedelta(days=days)
     campaigns = (
-        db.query(OutreachWhatsAppCampaign)
-        .filter(OutreachWhatsAppCampaign.user_id == user.id)
-        .all()
+        db.query(OutreachWhatsAppCampaign).filter(OutreachWhatsAppCampaign.user_id == user.id).all()
     )
     messages = (
         db.query(OutreachWhatsAppMessage)
-        .filter(OutreachWhatsAppMessage.user_id == user.id, OutreachWhatsAppMessage.created_at >= since)
+        .filter(
+            OutreachWhatsAppMessage.user_id == user.id, OutreachWhatsAppMessage.created_at >= since
+        )
         .all()
     )
     message_ids = [m.id for m in messages]
     events = (
-        db.query(OutreachEngagementEvent)
-        .filter(OutreachEngagementEvent.user_id == user.id)
-        .all()
+        db.query(OutreachEngagementEvent).filter(OutreachEngagementEvent.user_id == user.id).all()
     )
     events = [e for e in events if e.message_id in set(message_ids)]
 
@@ -1190,9 +1208,7 @@ def engagement_dashboard(
         "days": days,
         "totals": totals,
         "rates": {
-            "delivery_rate": round(
-                ((sent_total - totals["failed"]) / sent_total) * 100, 1
-            )
+            "delivery_rate": round(((sent_total - totals["failed"]) / sent_total) * 100, 1)
             if sent_total
             else 0.0,
             "read_rate": round((totals["read"] / sent_total) * 100, 1) if sent_total else 0.0,
@@ -1205,7 +1221,9 @@ def engagement_dashboard(
         },
         "daily": [{"date": day, **values} for day, values in sorted(daily.items())],
         "campaigns": [_campaign_out(row) for row in campaigns],
-        "contacts": sorted(contact_stats.values(), key=lambda row: (row["read"], row["clicks"]), reverse=True),
+        "contacts": sorted(
+            contact_stats.values(), key=lambda row: (row["read"], row["clicks"]), reverse=True
+        ),
     }
 
 
@@ -1250,7 +1268,9 @@ def import_sales_data(
                 key = _company_key(company)
                 existing = (
                     db.query(MarketingCompany)
-                    .filter(MarketingCompany.user_id == user.id, MarketingCompany.company_key == key)
+                    .filter(
+                        MarketingCompany.user_id == user.id, MarketingCompany.company_key == key
+                    )
                     .first()
                 )
                 if existing is None:
@@ -1262,7 +1282,9 @@ def import_sales_data(
                             contact_name=(record.get("name") or "").strip(),
                             phone=(record.get("phone") or "").strip(),
                             email=(record.get("email") or "").strip(),
-                            requirements=(record.get("requirements") or record.get("notes") or "").strip(),
+                            requirements=(
+                                record.get("requirements") or record.get("notes") or ""
+                            ).strip(),
                             marketing_approved=False,
                             source_reference=f"{name}",
                             source_file=name,
@@ -1297,7 +1319,10 @@ def import_sales_data(
         if existing is None and phone:
             existing = (
                 db.query(MarketingCompany)
-                .filter(MarketingCompany.user_id == user.id, MarketingCompany.phone.like(f"%{phone[-10:]}%"))
+                .filter(
+                    MarketingCompany.user_id == user.id,
+                    MarketingCompany.phone.like(f"%{phone[-10:]}%"),
+                )
                 .first()
             )
         if existing is None:

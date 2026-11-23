@@ -71,16 +71,26 @@ def run_scheduler(
             continue
         try:
             summary = sync_connection(db, connection, user)
-            mail_results.append({"connection_id": connection.id, **{k: v for k, v in summary.items() if k != "sample"}})
+            mail_results.append(
+                {
+                    "connection_id": connection.id,
+                    **{k: v for k, v in summary.items() if k != "sample"},
+                }
+            )
         except Exception as exc:  # noqa: BLE001
-            mail_results.append({"connection_id": connection.id, "ok": False, "error": str(exc)[:200]})
+            mail_results.append(
+                {"connection_id": connection.id, "ok": False, "error": str(exc)[:200]}
+            )
     if mail_results:
         executed["email_new_mail_sync"] = mail_results
     # retention sweep at most once per day
     from ..models import SyncRun
 
     last_retention = (
-        db.query(SyncRun).filter(SyncRun.job == "mail_retention").order_by(SyncRun.id.desc()).first()
+        db.query(SyncRun)
+        .filter(SyncRun.job == "mail_retention")
+        .order_by(SyncRun.id.desc())
+        .first()
     )
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     if last_retention is None or str(last_retention.started_at)[:10] != today:

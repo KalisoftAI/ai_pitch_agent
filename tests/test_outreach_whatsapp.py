@@ -18,16 +18,22 @@ def _seed_approved(client, auth_headers):
     assert client.post("/api/outreach-whatsapp/bootstrap", headers=auth_headers).status_code == 200
     rates = client.get("/api/outreach-whatsapp/rates", headers=auth_headers).json()["items"]
     rate_id = next(rate["id"] for rate in rates if rate["status"] == "pending")
-    assert client.post(
-        f"/api/outreach-whatsapp/rates/{rate_id}/review",
-        headers=auth_headers,
-        json={"decision": "approved"},
-    ).status_code == 200
+    assert (
+        client.post(
+            f"/api/outreach-whatsapp/rates/{rate_id}/review",
+            headers=auth_headers,
+            json={"decision": "approved"},
+        ).status_code
+        == 200
+    )
     templates = client.get("/api/outreach-whatsapp/templates", headers=auth_headers).json()
     template_id = next(row["id"] for row in templates if row["name"] == "Daily rate + catalogue")
-    assert client.post(
-        f"/api/outreach-whatsapp/templates/{template_id}/approve", headers=auth_headers
-    ).status_code == 200
+    assert (
+        client.post(
+            f"/api/outreach-whatsapp/templates/{template_id}/approve", headers=auth_headers
+        ).status_code
+        == 200
+    )
     return rate_id, template_id
 
 
@@ -96,9 +102,11 @@ def test_bootstrap_campaign_approve_send_and_track(client, auth_headers, monkeyp
 
     db = SessionLocal()
     try:
-        message = db.query(OutreachWhatsAppMessage).filter(
-            OutreachWhatsAppMessage.campaign_id == campaign["id"]
-        ).one()
+        message = (
+            db.query(OutreachWhatsAppMessage)
+            .filter(OutreachWhatsAppMessage.campaign_id == campaign["id"])
+            .one()
+        )
         assert message.status == "sent"
         token = message.track_token
     finally:

@@ -7,7 +7,11 @@ import pytest
 
 from sales_fastapi.routers.marketing_companies import _parse_customers_csv
 
-WORKBOOK = pathlib.Path(__file__).resolve().parents[1] / "gcs_data" / "sales-contacts__marketing_list_kalika_(1).xlsx"
+WORKBOOK = (
+    pathlib.Path(__file__).resolve().parents[1]
+    / "gcs_data"
+    / "sales-contacts__marketing_list_kalika_(1).xlsx"
+)
 
 
 @pytest.mark.skipif(not WORKBOOK.exists(), reason="marketing workbook not present")
@@ -15,7 +19,13 @@ def test_import_and_list(client, auth_headers):
     with WORKBOOK.open("rb") as fh:
         resp = client.post(
             "/api/marketing-companies/import",
-            files={"file": (WORKBOOK.name, fh.read(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+            files={
+                "file": (
+                    WORKBOOK.name,
+                    fh.read(),
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
+            },
             headers=auth_headers,
         )
     assert resp.status_code == 200, resp.text
@@ -24,7 +34,9 @@ def test_import_and_list(client, auth_headers):
     assert body["imported"] + body["updated"] > 0
     assert body["skipped"] >= 0
     assert body["source"].startswith("upload:")
-    assert "removed duplicates - mail list" in body["sheets"] or any("mail list" in sheet for sheet in body["sheets"])
+    assert "removed duplicates - mail list" in body["sheets"] or any(
+        "mail list" in sheet for sheet in body["sheets"]
+    )
 
     listing = client.get("/api/marketing-companies", headers=auth_headers).json()
     assert listing
@@ -40,7 +52,13 @@ def test_update_requirements(client, auth_headers):
     with WORKBOOK.open("rb") as fh:
         client.post(
             "/api/marketing-companies/import",
-            files={"file": (WORKBOOK.name, fh.read(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+            files={
+                "file": (
+                    WORKBOOK.name,
+                    fh.read(),
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
+            },
             headers=auth_headers,
         )
 

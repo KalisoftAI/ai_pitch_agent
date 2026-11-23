@@ -1,0 +1,31 @@
+{
+  "brand": {
+    "navy": "#1F3A8A",
+    "deep_navy": "#14265C",
+    "teal": "#3CC4CC",
+    "light_teal": "#A8E6EA"
+  },
+  "environment": {
+    "floor_concrete": "#E9E4DA",
+    "safety_yellow": "#FFC727",
+    "wall_offwhite": "#F6F2EA",
+    "roof_cutaway": "#D8D2C4",
+    "yard_asphalt": "#5B6270",
+    "grass": "#9CCB7A",
+    "tree_dark": "#5FA55A",
+    "tree_light": "#7CBF6A",
+    "sky_day": [
+      "#BFE6F7",
+      "#FFF3E0"
+    ],
+    "sky_night": [
+      "#0B1330",
+      "#1B2A5E"
+    ]
+  },
+  "machinery": {
+    "extrusion_orange": "#F26A1B",
+    "white": "#FFFFFF",
+    "dark_grey": "#3A404B"
+  }
+}

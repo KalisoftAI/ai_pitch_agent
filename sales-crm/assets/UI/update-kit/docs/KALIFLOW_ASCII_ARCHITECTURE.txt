@@ -1,0 +1,33 @@
+KALIKA ENTERPRISES — KALIFLOW DASHBOARD DATA FLOW
+
+ERP / Sales / Rates / Dispatch / Production
+                 |
+                 v
+        Existing Backend API
+          |             |
+          v             v
+    GCS Cache       Live ERP Aggregation
+          |             |
+          +------+------+
+                 |
+                 v
+       Authenticated JSON API
+                 |
+                 v
+     Existing React / HTML Template
+                 |
+       +---------+----------+
+       |         |          |
+       v         v          v
+    Sales UI   3D Factory  Drilldowns
+       |         |          |
+       +---------+----------+
+                 |
+                 v
+       Browser Capture (Playwright)
+                 |
+                 v
+          Local FFmpeg MP4
+                 |
+                 v
+       Review / Approve / GCS Upload

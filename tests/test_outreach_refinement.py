@@ -20,7 +20,10 @@ def test_form_links_append_contact_context_only_to_http_links():
     assert "contact_name=Ravi+Shah" in url
     assert "company=Acme+Films" in url
     assert "email=ravi%40acme.example" in url
-    assert with_contact_context("mailto:sales@example.test", {"company": "Acme"}) == "mailto:sales@example.test"
+    assert (
+        with_contact_context("mailto:sales@example.test", {"company": "Acme"})
+        == "mailto:sales@example.test"
+    )
 
 
 def test_normalize_emails_endpoint_is_syntax_only(client, auth_headers):
@@ -61,8 +64,20 @@ def test_channel_filter_uses_valid_contact_details(client, auth_headers):
         user = db.query(User).filter(User.email == "tester@kalisoftai.com").one()
         db.add_all(
             [
-                MarketingCompany(user_id=user.id, company="Email Co", company_key="email-co", email="ok@example.com", phone="123"),
-                MarketingCompany(user_id=user.id, company="WhatsApp Co", company_key="whatsapp-co", email="bad", phone="9876543210"),
+                MarketingCompany(
+                    user_id=user.id,
+                    company="Email Co",
+                    company_key="email-co",
+                    email="ok@example.com",
+                    phone="123",
+                ),
+                MarketingCompany(
+                    user_id=user.id,
+                    company="WhatsApp Co",
+                    company_key="whatsapp-co",
+                    email="bad",
+                    phone="9876543210",
+                ),
             ]
         )
         db.commit()
@@ -70,7 +85,9 @@ def test_channel_filter_uses_valid_contact_details(client, auth_headers):
         db.close()
 
     email_rows = client.get("/api/marketing-companies?channel=email", headers=auth_headers).json()
-    phone_rows = client.get("/api/marketing-companies?channel=whatsapp", headers=auth_headers).json()
+    phone_rows = client.get(
+        "/api/marketing-companies?channel=whatsapp", headers=auth_headers
+    ).json()
     assert [row["company"] for row in email_rows] == ["Email Co"]
     assert [row["company"] for row in phone_rows] == ["WhatsApp Co"]
 
@@ -95,11 +112,22 @@ def test_customer_form_links_and_submissions(client, auth_headers):
 
     feedback = client.post(
         "/api/public/forms/feedback",
-        json={"name": "Ravi", "email": "ravi@acme.example", "phone": "9876543210", "message": "Good service"},
+        json={
+            "name": "Ravi",
+            "email": "ravi@acme.example",
+            "phone": "9876543210",
+            "message": "Good service",
+        },
     )
     review = client.post(
         "/api/public/forms/review",
-        json={"name": "Anita", "email": "anita@acme.example", "rating": 5, "title": "Strong film", "message": "Excellent quality"},
+        json={
+            "name": "Anita",
+            "email": "anita@acme.example",
+            "rating": 5,
+            "title": "Strong film",
+            "message": "Excellent quality",
+        },
     )
     assert feedback.status_code == 201, feedback.text
     assert review.status_code == 201, review.text

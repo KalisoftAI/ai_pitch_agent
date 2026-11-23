@@ -172,7 +172,7 @@ def test_prompt_review_flow(client, auth_headers):
     review = submitted.json()
     assert review["status"] == "pending"
     assert review["prompt_id"] == "PR-01"
-    assert review["task"] == "voice_context"
+    assert review["task"] == "customer_feedback_summary"
 
     pending = client.get("/api/ops/prompt-reviews?status=pending", headers=auth_headers)
     assert pending.status_code == 200, pending.text

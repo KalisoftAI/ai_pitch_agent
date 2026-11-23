@@ -27,7 +27,10 @@ REFRESH_INTERVAL_MINUTES = 120  # 2-hour realtime refresh cadence
 
 
 def _sync_graph_if_due(db: Session, user: User) -> dict:
-    if settings.DEPLOY_ENV.lower() in {"prod", "production"} or settings.ENV.lower() in {"prod", "production"}:
+    if settings.DEPLOY_ENV.lower() in {"prod", "production"} or settings.ENV.lower() in {
+        "prod",
+        "production",
+    }:
         return {"ok": True, "skipped": True, "reason": "graph review is DEV/UAT only"}
 
     from .knowledge_graph import _load_graph, build_user_graph
@@ -52,7 +55,12 @@ def _sync_graph_if_due(db: Session, user: User) -> dict:
         except ValueError:
             due_users.append(candidate)
     if not due_users:
-        return {"ok": True, "skipped": True, "reason": "weekly interval has not elapsed", "users_checked": len(users)}
+        return {
+            "ok": True,
+            "skipped": True,
+            "reason": "weekly interval has not elapsed",
+            "users_checked": len(users),
+        }
 
     started = datetime.now(timezone.utc)
     run = SyncRun(job="knowledge_graph_sync", status="running", detail="weekly JSON graph refresh")
@@ -66,7 +74,13 @@ def _sync_graph_if_due(db: Session, user: User) -> dict:
         for candidate in due_users:
             try:
                 result = build_user_graph(candidate, db)
-                completed.append({"user_id": candidate.id, "version": result["version"], "stats": result["stats"]})
+                completed.append(
+                    {
+                        "user_id": candidate.id,
+                        "version": result["version"],
+                        "stats": result["stats"],
+                    }
+                )
             except Exception as exc:  # noqa: BLE001 - continue processing other users
                 db.rollback()
                 failures.append({"user_id": candidate.id, "error": type(exc).__name__})
@@ -76,7 +90,13 @@ def _sync_graph_if_due(db: Session, user: User) -> dict:
             run.detail = f"built={len(completed)} failed={len(failures)} checked={len(users)}"
             run.finished_at = datetime.now(timezone.utc)
             db.commit()
-        return {"ok": not failures, "users_checked": len(users), "users_built": len(completed), "failures": failures, "items": completed}
+        return {
+            "ok": not failures,
+            "users_checked": len(users),
+            "users_built": len(completed),
+            "failures": failures,
+            "items": completed,
+        }
     except Exception as exc:  # noqa: BLE001 - record failure and keep source sync results
         db.rollback()
         run = db.query(SyncRun).filter(SyncRun.id == run_id).first()
@@ -85,7 +105,11 @@ def _sync_graph_if_due(db: Session, user: User) -> dict:
             run.detail = f"{type(exc).__name__}: {exc}"[:400]
             run.finished_at = datetime.now(timezone.utc)
             db.commit()
-        return {"ok": False, "error": f"{type(exc).__name__}: {exc}"[:400], "elapsed_seconds": round((datetime.now(timezone.utc) - started).total_seconds(), 2)}
+        return {
+            "ok": False,
+            "error": f"{type(exc).__name__}: {exc}"[:400],
+            "elapsed_seconds": round((datetime.now(timezone.utc) - started).total_seconds(), 2),
+        }
 
 
 def _sync_marketing(db: Session, user: User) -> dict:
@@ -113,8 +137,7 @@ def _sync_marketing(db: Session, user: User) -> dict:
     except Exception as exc:
         db.rollback()
         db.query(SyncRun).filter(SyncRun.id == run.id).update(
-            {"status": "error", "detail": str(exc)[:400],
-             "finished_at": datetime.now(timezone.utc)}
+            {"status": "error", "detail": str(exc)[:400], "finished_at": datetime.now(timezone.utc)}
         )
         db.commit()
         raise
@@ -154,12 +177,7 @@ def sync_status(user: User = Depends(get_current_user), db: Session = Depends(ge
     )
     latest: dict[str, dict] = {}
     for job in jobs:
-        row = (
-            db.query(SyncRun)
-            .filter(SyncRun.job == job)
-            .order_by(SyncRun.id.desc())
-            .first()
-        )
+        row = db.query(SyncRun).filter(SyncRun.job == job).order_by(SyncRun.id.desc()).first()
         latest[job] = (
             {
                 "status": row.status,

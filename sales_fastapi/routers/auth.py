@@ -205,18 +205,19 @@ def set_user_password(
     try:
         email = payload.get("email")
         password = payload.get("password")
-        
+
         if not email or not password:
             raise HTTPException(status_code=400, detail="email and password are required")
-        
+
         user = db.query(User).filter(User.email == email).first()
         if not user:
             raise HTTPException(status_code=404, detail=f"User not found: {email}")
-        
+
         from ..security import hash_password
+
         user.password_hash = hash_password(password)
         db.commit()
-        
+
         return {"ok": True, "email": email, "message": "Password updated", "user_id": user.id}
     except HTTPException:
         raise
@@ -260,10 +261,12 @@ def seed_initial_users(
         # Security check: only allow if database is empty or has only the demo user
         existing_users = db.query(User).count()
         if existing_users > 1:
-            raise HTTPException(status_code=400, detail="Database already has users. Seed already run.")
-        
+            raise HTTPException(
+                status_code=400, detail="Database already has users. Seed already run."
+            )
+
         from .security import hash_password
-        
+
         created_users = []
         for username, display, pwd, role in (
             ("kalika", "Kalika Admin", "kalika123", "admin"),
@@ -287,9 +290,9 @@ def seed_initial_users(
                 kuser.password_hash = hash_password(pwd)
                 kuser.role = role
                 created_users.append(f"{username} (updated)")
-        
+
         db.commit()
-        
+
         log_event(
             db,
             action="auth.seed_users",
@@ -300,7 +303,7 @@ def seed_initial_users(
             detail={"created_users": created_users},
         )
         db.commit()
-        
+
         return {"ok": True, "users_created": created_users}
     except HTTPException:
         raise

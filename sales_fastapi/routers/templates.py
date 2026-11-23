@@ -52,7 +52,9 @@ async def upload_template(
     """
     filename = (file.filename or "").strip()
     if not filename.lower().endswith(ALLOWED_TEMPLATE_EXTENSIONS):
-        raise HTTPException(status_code=400, detail="Template file must be .html, .htm, .txt or .md")
+        raise HTTPException(
+            status_code=400, detail="Template file must be .html, .htm, .txt or .md"
+        )
     raw = await file.read()
     if not raw:
         raise HTTPException(status_code=400, detail="Uploaded template file is empty")
@@ -61,8 +63,14 @@ async def upload_template(
     except UnicodeDecodeError:
         body = raw.decode("latin-1")
 
-    tpl_name = (name or filename.rsplit(".", 1)[0].replace("_", " ").replace("-", " ").strip() or "Uploaded template")[:128]
-    tpl_channel = (channel or "").strip().lower() or ("whatsapp" if "whatsapp" in filename.lower() else "email")
+    tpl_name = (
+        name
+        or filename.rsplit(".", 1)[0].replace("_", " ").replace("-", " ").strip()
+        or "Uploaded template"
+    )[:128]
+    tpl_channel = (channel or "").strip().lower() or (
+        "whatsapp" if "whatsapp" in filename.lower() else "email"
+    )
     tpl_strategy = (strategy or "").strip().lower() or "cold_outreach"
     tpl_subject = (subject or "").strip() or tpl_name
     variables = variables_used(tpl_subject + " " + body)
@@ -84,7 +92,11 @@ async def upload_template(
 
     path = f"{GCS_PATH}{filename.rsplit('.', 1)[0]}.html"
     gcs = GCSStorage(bucket_name=GCS_BUCKET)
-    stored = gcs.upload_bytes(path, body.encode("utf-8"), content_type="text/html") if gcs.available else False
+    stored = (
+        gcs.upload_bytes(path, body.encode("utf-8"), content_type="text/html")
+        if gcs.available
+        else False
+    )
 
     log_event(
         db,
@@ -96,7 +108,11 @@ async def upload_template(
         detail={"filename": filename, "gcs_path": path if stored else "", "channel": tpl_channel},
         commit=True,
     )
-    return {"template": template, "gcs_path": path if stored else "", "message": f"Uploaded template {tpl_name}"}
+    return {
+        "template": template,
+        "gcs_path": path if stored else "",
+        "message": f"Uploaded template {tpl_name}",
+    }
 
 
 @router.post("/store-gcs-paths")
@@ -252,9 +268,7 @@ def personalize_preview(
     subject_src = (
         payload.subject_override if payload.subject_override is not None else template.subject
     ) or ""
-    body_src = (
-        payload.body_override if payload.body_override is not None else template.body
-    ) or ""
+    body_src = (payload.body_override if payload.body_override is not None else template.body) or ""
     order_cache: dict[str, dict[str, str]] = {}
     form_links = get_form_links(db)
     previews: list[dict[str, Any]] = []
@@ -265,8 +279,12 @@ def personalize_preview(
     for record in records:
         is_marketing = payload.contact_type == "marketing_companies"
         company = getattr(record, "company", "") or ""
-        requirements = (getattr(record, "requirements", "") if is_marketing else getattr(record, "context", "")) or ""
-        category = (getattr(record, "category", "") if is_marketing else getattr(record, "intent", "")) or ""
+        requirements = (
+            getattr(record, "requirements", "") if is_marketing else getattr(record, "context", "")
+        ) or ""
+        category = (
+            getattr(record, "category", "") if is_marketing else getattr(record, "intent", "")
+        ) or ""
         ctx = outreach_context(
             db,
             record,
@@ -283,7 +301,9 @@ def personalize_preview(
             recipients_with_missing += 1
             for key in missing:
                 missing_fields[key] = missing_fields.get(key, 0) + 1
-        to_address = (getattr(record, "phone", "") if phone_channel else getattr(record, "email", "")) or ""
+        to_address = (
+            getattr(record, "phone", "") if phone_channel else getattr(record, "email", "")
+        ) or ""
         if _channel_ok(to_address, payload.channel):
             channel_ready += 1
         if len(previews) >= payload.limit:
@@ -438,7 +458,9 @@ def update_template(
     changed = payload.model_dump(exclude_unset=True)
     for field, value in changed.items():
         setattr(template, field, value)
-    if (template.channel or "").lower() in {"whatsapp", "wechat"} and looks_html(template.body or ""):
+    if (template.channel or "").lower() in {"whatsapp", "wechat"} and looks_html(
+        template.body or ""
+    ):
         raise HTTPException(
             status_code=400,
             detail="WhatsApp/WeChat templates must stay plain text - HTML rejected. Save the HTML version under the Email channel instead.",
@@ -496,13 +518,13 @@ def _parse_html_metadata(html_content: str, filename: str) -> dict[str, Any]:
     # Extract title from <title> tag or first <h1>
     title_match = re.search(r"<title[^>]*>(.*?)</title>", html_content, re.IGNORECASE | re.DOTALL)
     h1_match = re.search(r"<h1[^>]*>(.*?)</h1>", html_content, re.IGNORECASE | re.DOTALL)
-    
+
     name = filename.replace(".html", "").replace("_", " ").title()
     if title_match:
         name = title_match.group(1).strip()
     elif h1_match:
         name = h1_match.group(1).strip()
-    
+
     # Extract category from filename or path
     category = "email"
     if "whatsapp" in filename.lower():
@@ -513,13 +535,15 @@ def _parse_html_metadata(html_content: str, filename: str) -> dict[str, Any]:
         category = "follow_up"
     elif "intro" in filename.lower():
         category = "introduction"
-    
+
     # Extract subject from first heading or meta
     subject = name
-    subject_match = re.search(r'<meta[^>]*name=["\']subject["\'][^>]*content=["\'](.*?)["\']', html_content, re.IGNORECASE)
+    subject_match = re.search(
+        r'<meta[^>]*name=["\']subject["\'][^>]*content=["\'](.*?)["\']', html_content, re.IGNORECASE
+    )
     if subject_match:
         subject = subject_match.group(1).strip()
-    
+
     return {
         "name": name[:128],
         "subject": subject[:255],
@@ -537,34 +561,34 @@ def sync_templates_from_gcs(
     gcs = GCSStorage(bucket_name=GCS_BUCKET)
     if not gcs.available:
         raise HTTPException(status_code=503, detail="GCS is not available")
-    
+
     # List HTML files in Mail_templates folder
     blobs = gcs.list_contacts(prefix=GCS_PATH)
     html_blobs = [b for b in blobs if b["name"].lower().endswith(".html")]
-    
+
     if not html_blobs:
         return {"synced": 0, "updated": 0, "message": "No HTML templates found in GCS"}
-    
+
     synced = 0
     updated = 0
-    
+
     for blob_info in html_blobs:
         blob_name = blob_info["name"]
         filename = blob_name.split("/")[-1]
-        
+
         # Download HTML content
         html_bytes = gcs.download_blob(blob_name)
         if not html_bytes:
             continue
-        
+
         try:
             html_content = html_bytes.decode("utf-8")
         except UnicodeDecodeError:
             html_content = html_bytes.decode("latin-1")
-        
+
         # Parse metadata
         metadata = _parse_html_metadata(html_content, filename)
-        
+
         # Check if template already exists
         existing = (
             db.query(MessageTemplate)
@@ -574,7 +598,7 @@ def sync_templates_from_gcs(
             )
             .first()
         )
-        
+
         if existing:
             # Update existing template
             existing.body = metadata["body"]
@@ -598,7 +622,7 @@ def sync_templates_from_gcs(
             db.add(template)
             db.commit()
             synced += 1
-    
+
     log_event(
         db,
         action="template.sync_gcs",
@@ -609,7 +633,7 @@ def sync_templates_from_gcs(
         detail={"synced": synced, "updated": updated},
         commit=True,
     )
-    
+
     return {
         "synced": synced,
         "updated": updated,
@@ -628,26 +652,26 @@ def sync_specific_templates(
     gcs = GCSStorage(bucket_name=GCS_BUCKET)
     if not gcs.available:
         raise HTTPException(status_code=503, detail="GCS is not available")
-    
+
     synced = 0
     updated = 0
-    
+
     for gcs_path in gcs_paths:
         # Download HTML content
         html_bytes = gcs.download_blob(gcs_path)
         if not html_bytes:
             continue
-        
+
         filename = gcs_path.split("/")[-1]
-        
+
         try:
             html_content = html_bytes.decode("utf-8")
         except UnicodeDecodeError:
             html_content = html_bytes.decode("latin-1")
-        
+
         # Parse metadata
         metadata = _parse_html_metadata(html_content, filename)
-        
+
         # Check if template already exists
         existing = (
             db.query(MessageTemplate)
@@ -657,7 +681,7 @@ def sync_specific_templates(
             )
             .first()
         )
-        
+
         if existing:
             # Update existing template
             existing.body = metadata["body"]
@@ -681,7 +705,7 @@ def sync_specific_templates(
             db.add(template)
             db.commit()
             synced += 1
-    
+
     return {
         "synced": synced,
         "updated": updated,
@@ -691,7 +715,9 @@ def sync_specific_templates(
 
 @router.post("/import-whatsapp")
 def import_whatsapp_templates(
-    path: str = Query(default="sales-metadata/whatsapp-msg-templates/Kalika_WhatsApp_Message_Templates.xlsx"),
+    path: str = Query(
+        default="sales-metadata/whatsapp-msg-templates/Kalika_WhatsApp_Message_Templates.xlsx"
+    ),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -721,12 +747,17 @@ def import_whatsapp_templates(
             path = candidate
             break
     if not raw:
-        raise HTTPException(status_code=404, detail=f"Template file not found (tried: {', '.join(dict.fromkeys(tried))})")
+        raise HTTPException(
+            status_code=404,
+            detail=f"Template file not found (tried: {', '.join(dict.fromkeys(tried))})",
+        )
 
     try:
         workbook = load_workbook(BytesIO(raw), data_only=True, read_only=True)
     except Exception as exc:  # pragma: no cover
-        raise HTTPException(status_code=400, detail=f"Could not read workbook: {type(exc).__name__}")
+        raise HTTPException(
+            status_code=400, detail=f"Could not read workbook: {type(exc).__name__}"
+        )
 
     sheet = workbook.active
     grid = [list(row) for row in sheet.iter_rows(values_only=True)] if sheet is not None else []
@@ -738,8 +769,9 @@ def import_whatsapp_templates(
     headers = []
     for i, row in enumerate(grid[:12]):
         cells = [_norm(c) for c in row]
-        if any(("message" in c or "template" in c or "body" in c or "text" in c) for c in cells) or \
-           any("category" in c for c in cells):
+        if any(
+            ("message" in c or "template" in c or "body" in c or "text" in c) for c in cells
+        ) or any("category" in c for c in cells):
             header_idx = i
             headers = cells
             break
@@ -767,7 +799,7 @@ def import_whatsapp_templates(
     imported = updated = skipped = 0
     categories_seen = set()
     batch_keys = set()
-    for row in grid[header_idx + 1:]:
+    for row in grid[header_idx + 1 :]:
         if not row or all((c is None or str(c).strip() == "") for c in row):
             continue
         message = cell(row, message_idx)

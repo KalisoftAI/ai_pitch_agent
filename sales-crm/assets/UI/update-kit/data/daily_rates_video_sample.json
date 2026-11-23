@@ -1,0 +1,40 @@
+{
+  "template_id": "daily_rate_video_template_v2",
+  "gcs_output_path": "gs://kalika-erp-prod-data/renders/2026-11-21/daily_rates_reel.mp4",
+  "company_name": "KALIKA ENTERPRISES",
+  "branch_label": "Plot No. M-59/60, MIDC Ahilyanagar • Serving JSW, Instor, Cummins & Eaton",
+  "date_badge": "21 NOV 2026",
+  "headline": "Today's Live ERP Rate Update",
+  "subheadline": "Instant dispatch readiness across Maharashtra & Pan-India plants.",
+  "contact_line": "sales.kalikaenterprises@gmail.com | +91 9405536016",
+  "rates": [
+    {
+      "product": "Stretch Film (Hand Grade)",
+      "spec": "500mm x 23 Micron • High Clarity Virgin",
+      "rate": "108.00",
+      "unit": "kg",
+      "status_tag": "In Stock • Ready Dispatch"
+    },
+    {
+      "product": "Heavy Duty Stretch Film",
+      "spec": "500mm x 51 Micron • Industrial Pallet Wrap",
+      "rate": "151.00",
+      "unit": "kg",
+      "status_tag": "ERP Live Rate"
+    },
+    {
+      "product": "BOPP / Brown Packaging Tape",
+      "spec": "48mm x 65m • 55 Micron Recycle Printed",
+      "rate": "34.20",
+      "unit": "roll",
+      "status_tag": "Bulk Tier Active"
+    },
+    {
+      "product": "HDPE Tarpaulin 300 GSM",
+      "spec": "With Eyelets • Weatherproof Industrial Grade",
+      "rate": "4.20",
+      "unit": "sqft",
+      "status_tag": "ERP Live Rate"
+    }
+  ]
+}

@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import re
 
-_EMAIL_RE = re.compile(r"^[A-Z0-9._%+\-]+@[A-Z0-9](?:[A-Z0-9.\-]*[A-Z0-9])?\.[A-Z]{2,}$", re.IGNORECASE)
+_EMAIL_RE = re.compile(
+    r"^[A-Z0-9._%+\-]+@[A-Z0-9](?:[A-Z0-9.\-]*[A-Z0-9])?\.[A-Z]{2,}$", re.IGNORECASE
+)
 _INVISIBLE_RE = re.compile(r"[\u0000-\u001f\u007f-\u009f\u00ad\u200b\u200c\u200d\u2060\ufeff]")
 _SPLIT_RE = re.compile(r"[\s,;|]+")
 _TRIM_RE = re.compile(r"^[\s<>()\[\]{}\"',;:]+|[\s<>()\[\]{}\"',;:]+$")

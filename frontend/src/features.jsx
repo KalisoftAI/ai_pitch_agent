@@ -267,14 +267,20 @@ export function GcsUiAssetsPanel({ enabled, onNotice }) {
 
   if (!enabled) return null;
 
-  const kpis = data?.business_kpis?.business_kpis || {};
-  const rates = data?.daily_rate_template?.rates || kpis.daily_rate_updates || [];
+  const kit = data?.kit || {};
+  const overview = kit.dashboard_sample || data?.business_kpis || {};
+  const kpis = overview.business_kpis || {};
+  const rates = data?.daily_rate_template?.rates || kit.daily_rate_sample?.rates || kpis.daily_rate_updates || [];
   const dashboards = data?.dashboards || [];
+  const brand = kit.palette?.brand || {};
+  const boppCreative = kit.daily_rate_sample?.rates?.find((rate) => /BOPP/i.test(rate.product || ""));
+  const boppOverview = kpis.daily_rate_updates?.find((rate) => /BOPP/i.test(rate.material || ""));
+  const unitConflict = Boolean(boppCreative && boppOverview && boppCreative.unit !== boppOverview.unit);
 
   return (
     <section className="panel gcs-ui-assets">
       <div className="panel-heading">
-        <div><div className="section-kicker">GCS UI ASSETS</div><h3>Live rate + KUI board</h3></div>
+        <div><div className="section-kicker">GCS UI ASSETS</div><h3>Kaliflow rate + KPI board</h3></div>
         <button className="icon-button" onClick={load} disabled={busy} aria-label="Reload GCS UI assets"><RefreshCw size={17} /></button>
       </div>
       {!data && busy && <div className="empty-state compact"><RefreshCw size={22} /><p>Loading UI assets...</p></div>}
@@ -283,6 +289,14 @@ export function GcsUiAssetsPanel({ enabled, onNotice }) {
       {data && !data.error && (
         <>
           <div className="gcs-asset-tag"><span>PROMPT TAG</span><b>{data.prompt_tag}</b><small>{data.source}</small></div>
+          <div className="gcs-kit-strip">
+            <span><b>UI KIT</b> {kit.source || "not found"}</span>
+            <div className="gcs-swatches">
+              {Object.entries(brand).map(([name, value]) => <i key={name} style={{ background: value }} title={`${name}: ${value}`} />)}
+            </div>
+            <small>Sample fixtures; live values require verified API data.</small>
+          </div>
+          {unitConflict && <div className="gcs-warning">BOPP unit conflict: daily-rate template uses {boppCreative.unit}, dashboard sample uses {boppOverview.unit}. Both are preserved.</div>}
           <div className="gcs-kpi-grid">
             <div><small>Revenue MTD</small><b>{fmtMoney(kpis.revenue_mtd)}</b></div>
             <div><small>Pending ASN dispatches</small><b>{fmtNum(kpis.pending_asn_dispatches)}</b></div>

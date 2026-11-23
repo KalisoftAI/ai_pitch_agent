@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
@@ -70,6 +71,44 @@ def _signed_url(path: str, hours: int = 24) -> str:
     return _signed_url_for(path, GCS_BUCKET, hours)
 
 
+def _load_ui_kit() -> dict[str, Any] | None:
+    root = Path(__file__).resolve().parents[2] / settings.UI_ASSETS_KIT_PATH
+    if not root.is_dir():
+        return None
+
+    def read_json(relative: str) -> Any:
+        path = root / relative
+        if not path.is_file():
+            return None
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            return None
+
+    def read_text(relative: str) -> str:
+        path = root / relative
+        if not path.is_file():
+            return ""
+        try:
+            return path.read_text(encoding="utf-8")[:8000]
+        except (OSError, UnicodeDecodeError):
+            return ""
+
+    template_dir = root / "html-templates"
+    templates = (
+        sorted(path.name for path in template_dir.glob("*.html")) if template_dir.is_dir() else []
+    )
+    return {
+        "source": settings.UI_ASSETS_KIT_PATH.replace("\\", "/"),
+        "palette": read_json("data/kaliflow_palette.json"),
+        "dashboard_sample": read_json("data/dashboard_overview_sample.json"),
+        "daily_rate_sample": read_json("data/daily_rates_video_sample.json"),
+        "templates": templates,
+        "stats_doc": read_text("docs/KALIFLOW_STATS_AND_PATTERNS.md"),
+        "base_prompt": read_text("prompts/BASE_PROMPT_KALIFLOW_DASHBOARD_UI_UPDATES.md"),
+    }
+
+
 @router.get("/default-videos")
 def default_videos():
     return DEFAULT_VIDEOS
@@ -116,6 +155,7 @@ def ui_assets(user: User = Depends(get_current_user)):
         "prompt_tag": settings.UI_ASSETS_PROMPT_TAG,
         "prompt_text": settings.UI_ASSETS_PROMPT_TEXT,
         "source": source,
+        "kit": _load_ui_kit(),
         "items": [],
         "daily_rate_template": None,
         "business_kpis": None,

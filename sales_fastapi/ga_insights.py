@@ -58,7 +58,13 @@ METRIC_PRIORITY = (
     "screen views",
 )
 
-DATE_COLUMNS = ("date", "session date", "session date (day of week)", "week of the month", "week of")
+DATE_COLUMNS = (
+    "date",
+    "session date",
+    "session date (day of week)",
+    "week of the month",
+    "week of",
+)
 
 
 def normalise_header(name: str) -> str:
@@ -86,7 +92,9 @@ def parse_rows_from_csv(raw: bytes) -> list[dict[str, Any]]:
         text = raw.decode("latin-1")
     # GA4 exports wrap the table in "# ..." comment preamble/footer lines and
     # blank rows; keep only real data lines so DictReader sees the true header.
-    body = [line for line in text.splitlines() if line.strip() and not line.lstrip().startswith("#")]
+    body = [
+        line for line in text.splitlines() if line.strip() and not line.lstrip().startswith("#")
+    ]
     if not body:
         return []
     reader = csv.DictReader(StringIO("\n".join(body)))
@@ -135,9 +143,18 @@ def parse_rows_from_json(raw: bytes) -> list[dict[str, Any]] | None:
 
 
 def _is_metric_header(header: str) -> bool:
-    if "%" in header or "percent" in header or "rate" in header or "average" in header or "time" in header:
+    if (
+        "%" in header
+        or "percent" in header
+        or "rate" in header
+        or "average" in header
+        or "time" in header
+    ):
         return False
-    return any(token in header for token in ("user", "session", "count", "event", "view", "total", "engagement"))
+    return any(
+        token in header
+        for token in ("user", "session", "count", "event", "view", "total", "engagement")
+    )
 
 
 def _find_column(headers: set[str], aliases: tuple[str, ...]) -> str | None:
@@ -163,7 +180,9 @@ def _pick_metric(headers: set[str]) -> str | None:
     return candidates[0] if candidates else None
 
 
-def _aggregate(rows: list[dict[str, Any]], dimension: str, metric: str | None) -> list[dict[str, Any]]:
+def _aggregate(
+    rows: list[dict[str, Any]], dimension: str, metric: str | None
+) -> list[dict[str, Any]]:
     weights: dict[str, float] = {}
     for row in rows:
         label = str(row.get(dimension) or "").strip()
@@ -219,9 +238,7 @@ def build_summary(
     # Per-metric total taken as the MAX single-file column sum (not a cross-file
     # sum) so overlapping dimensions across the 6 GA4 exports don't double-count
     # the same audience.
-    numeric_headers = [
-        header for header in all_headers if _is_metric_header(header)
-    ][:12]
+    numeric_headers = [header for header in all_headers if _is_metric_header(header)][:12]
     for header in numeric_headers:
         sums = [sum(_num(row.get(header)) for row in rows) for _, rows in parsed_files]
         best = int(round(max(sums))) if sums else 0
@@ -271,8 +288,15 @@ def build_summary(
     if date_range:
         insights.append(f"Period: {date_range['from']} to {date_range['to']}")
     group_lead_word = {
-        "Cities": "city", "Countries": "country", "Regions": "region", "Devices": "device",
-        "Sources": "source", "Pages": "page", "Browsers": "browser", "OS": "OS", "Languages": "language",
+        "Cities": "city",
+        "Countries": "country",
+        "Regions": "region",
+        "Devices": "device",
+        "Sources": "source",
+        "Pages": "page",
+        "Browsers": "browser",
+        "OS": "OS",
+        "Languages": "language",
     }
     for group_name in ("Cities", "Countries", "Devices", "Sources", "Pages"):
         top = groups.get(group_name) or []

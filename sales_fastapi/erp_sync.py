@@ -215,7 +215,9 @@ def sync_erp_rates(db: Session) -> dict:
         db.commit()
         raise FileNotFoundError(run.detail)
 
-    blobs = gcs.list_blobs(prefix=settings.ERP_RATE_PREFIX, suffixes=(".xlsx", ".xls"), max_results=20)
+    blobs = gcs.list_blobs(
+        prefix=settings.ERP_RATE_PREFIX, suffixes=(".xlsx", ".xls"), max_results=20
+    )
     if not blobs:
         run.status = "error"
         run.detail = f"no rate workbooks under gs://{gcs.bucket_name}/{settings.ERP_RATE_PREFIX}"
@@ -253,19 +255,19 @@ def sync_erp_rates(db: Session) -> dict:
             unit_col = _column(frame, "unit")
             category_col = _column(frame, "category")
             effective_date = (
-                _rate_date(row.get(date_col)) if date_col else datetime.now(timezone.utc).strftime("%Y-%m-%d")
+                _rate_date(row.get(date_col))
+                if date_col
+                else datetime.now(timezone.utc).strftime("%Y-%m-%d")
             )
             unit = (_rate_text(row.get(unit_col)) if unit_col else "") or "kg"
             category = _rate_text(row.get(category_col)) if category_col else ""
             source_key = f"{latest['name']}|{code}|{effective_date}"
 
-            product = (
-                db.query(Product)
-                .filter(Product.user_id == 0, Product.code == code)
-                .first()
-            )
+            product = db.query(Product).filter(Product.user_id == 0, Product.code == code).first()
             if product is None:
-                product = Product(user_id=0, code=code, name=name or code, category=category, unit=unit)
+                product = Product(
+                    user_id=0, code=code, name=name or code, category=category, unit=unit
+                )
                 db.add(product)
                 db.flush()
             else:
@@ -436,9 +438,7 @@ def forecast(db: Session, months: int = 6) -> dict:
     if not buckets:
         source = "tally"
         tally = (
-            db.query(TallySale.period, func.sum(TallySale.value))
-            .group_by(TallySale.period)
-            .all()
+            db.query(TallySale.period, func.sum(TallySale.value)).group_by(TallySale.period).all()
         )
         buckets = {period: float(total or 0) for period, total in tally if period}
     ordered = sorted(buckets.items())[-months:]

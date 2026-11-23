@@ -355,9 +355,7 @@ def _filter_mails(
     until_date = date.fromisoformat(until) if until else None
     rows = []
     for mail in mails:
-        title = " ".join(
-            str(mail.get(key) or "") for key in ("working_title", "subject")
-        )
+        title = " ".join(str(mail.get(key) or "") for key in ("working_title", "subject"))
         client = " ".join(
             str(mail.get(key) or "")
             for key in ("client_name", "company", "from_name", "from_email")
@@ -380,8 +378,9 @@ def _filter_mails(
         rows.append(mail)
     return sorted(
         rows,
-        key=lambda mail: mail_datetime(str(mail.get("date") or ""))
-        or datetime.min.replace(tzinfo=timezone.utc),
+        key=lambda mail: (
+            mail_datetime(str(mail.get("date") or "")) or datetime.min.replace(tzinfo=timezone.utc)
+        ),
         reverse=True,
     )
 

@@ -170,7 +170,7 @@ def render_resolved_report(text: str, context: dict[str, Any]) -> tuple[str, lis
 
 
 def contact_context(contact: Any, extra: dict[str, Any] | None = None) -> dict[str, Any]:
-    name_value = (getattr(contact, "name", "") or getattr(contact, "contact_name", "") or "")
+    name_value = getattr(contact, "name", "") or getattr(contact, "contact_name", "") or ""
     company_value = getattr(contact, "company", "") or ""
     phone_value = getattr(contact, "phone", "") or getattr(contact, "mobile", "") or ""
     designation = (

@@ -340,7 +340,10 @@ def ensure_default_connection_all(
             continue
         conn, created = _ensure_default_connection_for_user(db, user, credentials)
         smtp_ok, detail = check_smtp_connection(
-            conn.smtp_host, conn.smtp_port, conn.email_address, decrypt_secret(conn.secret_encrypted)
+            conn.smtp_host,
+            conn.smtp_port,
+            conn.email_address,
+            decrypt_secret(conn.secret_encrypted),
         )
         results.append(
             {
@@ -367,9 +370,10 @@ def smtp_status_all(
     users = db.query(User).order_by(User.id).all()
     for user in users:
         connections = (
-            db.query(EmailConnection).filter(EmailConnection.user_id == user.id).order_by(
-                EmailConnection.id.asc()
-            ).all()
+            db.query(EmailConnection)
+            .filter(EmailConnection.user_id == user.id)
+            .order_by(EmailConnection.id.asc())
+            .all()
         )
         checked = []
         for conn in connections:
