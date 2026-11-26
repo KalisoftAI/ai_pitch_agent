@@ -1,0 +1,159 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-11-26",
+  "source_of_truth": {
+    "crm": [
+      "gs://sales-crm/assets/code-files/Kalika_Enterprise_Complete_AV_Links_CRM_Bundle.zip#04_crm_datasets/Kalika_Ent_SalesV1_Leads.csv",
+      "gs://sales-crm/assets/code-files/Kalika_Enterprise_Complete_AV_Links_CRM_Bundle.zip#04_crm_datasets/Kalika_Ent_SalesV1_Leads.json",
+      "gs://sales-crm/assets/code-files/Kalika_Enterprise_Complete_AV_Links_CRM_Bundle.zip#04_crm_datasets/Kalika_Ent_SalesV1_CRM_Workbook.xlsx"
+    ],
+    "media": [
+      "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/",
+      "gs://kalika_enterprises/images and videos/",
+      "gs://sales-crm/assets/Audio-files/"
+    ]
+  },
+  "crm": {
+    "records": 112,
+    "tier_counts": { "Direct SME / Trade": 107, "Tier-1 Enterprise": 5 },
+    "segment_counts": {
+      "General Trade & Distributors": 44,
+      "Packaging & Polymers": 21,
+      "Dairy, Agro & FMCG": 12,
+      "Services, Tech & Advisory": 12,
+      "Engineering & Industrial": 10,
+      "Refrigeration & Cold Chain": 5,
+      "Logistics & Transport": 2,
+      "Pharmaceuticals": 2,
+      "Automotive & Engineering": 1,
+      "Automotive Steel & Processing": 1,
+      "Heavy Engineering / Transmission": 1,
+      "Optical Fiber & Telecom": 1
+    },
+    "source_sheet_counts": {
+      "Kalika_Master_Leads": 107,
+      "Aurangabad_Enterprise_SCM": 4,
+      "Ahmednagar_Enterprise_SCM": 1
+    },
+    "product_interest": {
+      "General Packaging / Film Inquiry": 87,
+      "distinct_values": 26,
+      "singleton_values": 25,
+      "examples": [
+        "Anandgram Logu Udyg",
+        "Built Paper",
+        "Deep Freezers",
+        "Expert in seaworthy packaging",
+        "Industrial & Seaworthy Packaging",
+        "Industrial Packaging / Stretch Film",
+        "Logo & Branding"
+      ]
+    },
+    "data_quality": {
+      "missing_email": 63,
+      "missing_email_pct": 56.25,
+      "emails_with_at": 49,
+      "missing_company": 21,
+      "missing_contact_person": 23,
+      "missing_phone": 2,
+      "multi_phone_cells": 33,
+      "duplicate_lead_ids": 0,
+      "duplicate_rows": 0,
+      "near_duplicate_pair": ["KAL-004", "KAL-027"],
+      "enterprise_target_rows_are_subset": true
+    },
+    "workbook_note": "Executive Dashboard formulas have no cached values; counts come from raw lead sheets"
+  },
+  "media": {
+    "manufacturing_video_objects": 27,
+    "manufacturing_directory_markers": 2,
+    "manufacturing_objects_probed": 25,
+    "manufacturing_objects_excluded": 2,
+    "brand_video_objects": 8,
+    "brand_image_objects": 8,
+    "duplicate_video_groups": 7,
+    "largest_excluded_bytes": 712581244,
+    "observed_video_dimensions": {
+      "478x850": 25,
+      "480x856": 2,
+      "480x854": 2,
+      "848x480": 2,
+      "1920x1080": 2
+    },
+    "frame_probe": {
+      "sample_positions_pct": [10, 50, 90],
+      "contact_sheet_filter": "fps=3/duration,scale=480:-1,tile=3x1",
+      "sheets_generated": 33,
+      "full_resolution_samples": 99,
+      "visual_review_status": "pending_human_pass"
+    }
+  },
+  "audio": {
+    "gcs_media_objects": 13,
+    "gcs_directory_markers": 1,
+    "gcs_total_bytes": 52488935,
+    "bundle_stems": 6,
+    "persona_mixes": 3,
+    "machine_base_stems": 3,
+    "transcript_videos": 7,
+    "transcript_segments": 16,
+    "action_counts": { "STRIP": 7, "KEEP_BASE_LAYER": 6, "STRIP_AND_DUB": 2, "KEEP_ASMR_LAYER": 1 },
+    "gcs_duration_candidates": 3,
+    "excluded_generic_or_non_business": 10,
+    "duplicate_audio_groups": 3,
+    "measured_lufs_range": { "min": -28.5, "max": -11.3 }
+  },
+  "insights": [
+    {
+      "id": "I-01",
+      "observation": "87 of 112 leads share one generic product interest.",
+      "evidence": "crm.product_interest",
+      "action": "Use persona-specific story beats to qualify intent before sending a catalog."
+    },
+    {
+      "id": "I-02",
+      "observation": "63 of 112 leads lack an email address.",
+      "evidence": "crm.data_quality.missing_email_pct",
+      "action": "Gate email journeys behind enrichment; use WhatsApp or LinkedIn where email is absent."
+    },
+    {
+      "id": "I-03",
+      "observation": "Only 5 Tier-1 enterprise accounts exist alongside 107 SME/trade leads.",
+      "evidence": "crm.tier_counts",
+      "action": "Split renders: technical spec reel for persona A, yield/price reel for persona B."
+    },
+    {
+      "id": "I-04",
+      "observation": "Seven exact duplicate video groups occupy multiple GCS prefixes.",
+      "evidence": "media.duplicate_video_groups",
+      "action": "Store one canonical URI per visual and reference aliases from JSON."
+    },
+    {
+      "id": "I-05",
+      "observation": "Six transcript segments are machine-only and six more are kept as base layers.",
+      "evidence": "audio.action_counts",
+      "action": "Strip operator chatter; keep machine stems for proof, then dub persona scripts."
+    },
+    {
+      "id": "I-06",
+      "observation": "Three GCS audio files match transcript durations within 0.46s.",
+      "evidence": "refined-mapping.json:gcs_audio_candidates",
+      "action": "Use as provisional base beds only after listening review."
+    },
+    {
+      "id": "I-07",
+      "observation": "The Kaliflow dashboard video carries OEE and dispatch numbers but no live telemetry proof.",
+      "evidence": "refined-mapping.json:asset_groups[plant-oee-dispatch].data_caveat",
+      "action": "Label as demo footage until ERP values are verified."
+    }
+  ],
+  "caveats": [
+    "Requested singular Audio-file prefix corrected to plural Audio-files.",
+    "Requested kalika_enterprises/images corrected to kalika_enterprises/images and videos.",
+    "Bundle transcript filenames are absent from GCS; mappings use duration, OCR and scene semantics.",
+    "Two Workshop-2 objects were not sampled due to size; one exceeds 700 MB.",
+    "Measured LUFS values differ from declared design targets and are not compliance verdicts.",
+    "Several .mp3.mpeg objects are MP3 audio with embedded PNG cover art.",
+    "Visual classification is pending human review of generated FFmpeg contact sheets."
+  ]
+}

@@ -1,0 +1,382 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-11-26",
+  "branch": "feature/marketing-videos-ai-film-studio",
+  "base_commit": "ff00389bf9cb3568e7a0b640067b591ca7a9b0ed",
+  "purpose": "Refined GCS-to-studio mapping for Kalika sales and marketing video personas",
+  "gcs_prefixes": {
+    "M": "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/",
+    "E": "gs://kalika_enterprises/images and videos/",
+    "A": "gs://sales-crm/assets/Audio-files/",
+    "B": "gs://sales-crm/assets/code-files/"
+  },
+  "path_corrections": [
+    {
+      "requested": "sales-crm/assets/Audio-file",
+      "verified": "gs://sales-crm/assets/Audio-files/"
+    },
+    {
+      "requested": "kalika_enterprises/images",
+      "verified": "gs://kalika_enterprises/images and videos/"
+    },
+    {
+      "requested": "sales-crm/assets/code-files",
+      "verified": "gs://sales-crm/assets/code-files/"
+    }
+  ],
+  "source_bundles": [
+    {
+      "uri": "gs://sales-crm/assets/code-files/Kalika_Enterprise_Complete_AV_Links_CRM_Bundle.zip",
+      "bytes": 9451366,
+      "contains": [
+        "01_audio_segments/",
+        "02_persona_music_scripts/",
+        "03_transcripts_and_manifest/",
+        "04_crm_datasets/",
+        "05_links_and_external_directory/"
+      ]
+    },
+    {
+      "uri": "gs://sales-crm/assets/code-files/Kalika_Enterprise_Audio_Transcripts_CRM_Bundle.zip",
+      "bytes": 9447917,
+      "contains": [
+        "01_audio_segments/",
+        "02_persona_music_scripts/",
+        "03_transcripts_and_manifest/",
+        "04_crm_datasets/"
+      ]
+    }
+  ],
+  "method": {
+    "probe": "ffprobe -v error -show_streams -show_format -of json",
+    "frame_extraction": "ffmpeg -ss {10pct|50pct|90pct} -i {clip} -frames:v 1 -q:v 2 {frame}.jpg",
+    "contact_sheet": "ffmpeg -i {clip} -vf fps=3/{duration},scale=480:-1,tile=3x1 -frames:v 1 {sheet}.jpg",
+    "review_frames_root": "C:\\Users\\user\\AppData\\Local\\Temp\\opencode\\kaliflow\\frames\\",
+    "evidence": [
+      "ffprobe metadata",
+      "FFmpeg 10/50/90% frame sheets",
+      "transcript duration matching",
+      "OCR from sampled frames and JPEGs",
+      "GCS MD5/SHA-256 duplicate checks"
+    ],
+    "confidence_policy": {
+      "high": "Filename/OCR/transcript duration/duplicate evidence agrees",
+      "medium": "Exact duplicate or close duration match",
+      "low": "Inference only; requires human visual pass"
+    }
+  },
+  "personas": [
+    {
+      "id": "persona-a-midc-procurement",
+      "label": "Tier-1 MIDC Industrial Procurement",
+      "audience": "Purchase and SCM leads at Varroc, Mahindra Accelo, STL, Glenmark, Premium Transmission, HSIL, Jupiter",
+      "audio_stem": "01_audio_segments/mix01_MIDC_Procurement_Persona_30s.wav",
+      "duration_s": 30,
+      "declared_lufs": { "base": -16, "music": -12 },
+      "measured_lufs": -20.0,
+      "music": "108 BPM minimalist industrial tech pulse, D5 analog bass, muted marimba clockwork",
+      "script_beats": [
+        { "time": "00:00-00:07", "beat": "Hook", "line": "Precision packaging isn't an afterthought—it protects every component leaving your MIDC line." },
+        { "time": "00:07-00:18", "beat": "Proof", "line": "Automated air-ring calibration and high-tensile cast stretch lines give uniform micron gauge and zero line-breakage." },
+        { "time": "00:18-00:25", "beat": "Regional advantage", "line": "Direct manufacturer supply with 24-hour dispatch across Supa, Waluj, Shendra, Chakan and Pune MIDC." },
+        { "time": "00:25-00:30", "beat": "CTA", "line": "Request a technical spec sheet and trial roll for your plant today." }
+      ],
+      "asset_groups": ["blown-film-extrusion", "size-change-quality", "plant-oee-dispatch"],
+      "scene_patterns": ["documentary", "infographic", "data", "split", "quote"]
+    },
+    {
+      "id": "persona-b-distributor-high-yield",
+      "label": "Bulk Packaging Distributors and Dairy/Agro Buyers",
+      "audience": "Shriram Dudh, Shivendra Dairy, Riddhi Siddhi, Parag Paper Mart and trade distributors",
+      "audio_stem": "01_audio_segments/mix02_Distributor_HighYield_Persona_25s.wav",
+      "duration_s": 25,
+      "declared_lufs": { "base": -16, "music": -11 },
+      "measured_lufs": -19.6,
+      "music": "124 BPM upbeat commercial groove, bright acoustic-electronic pluck in G major",
+      "language": "Marathi / Hindi / English code-switch",
+      "script_beats": [
+        { "time": "00:00-00:06", "beat": "Hook", "line": "Jast stretch yield, zero breakage, ani direct factory rate—Kalika Enterprise!" },
+        { "time": "00:06-00:17", "beat": "Product range", "line": "High-clarity XHD stretch films, 300mm dairy poly rolls aur custom-printed pouch films—ready stock mein available." },
+        { "time": "00:17-00:25", "beat": "CTA", "line": "Apne bulk order ya sample roll ke liye aaj hi sampark karein." }
+      ],
+      "asset_groups": ["xhd-cast-high-yield", "winder-finished-roll", "product-brand-stills"],
+      "scene_patterns": ["split", "infographic", "walkthrough", "quote"]
+    },
+    {
+      "id": "persona-c-export-esg-circular",
+      "label": "Export, Seaworthy and Circular-Economy Buyers",
+      "audience": "Greenstrix, Pratibha Enterprises, Abhinav Trans-Cargo, Gold Plast",
+      "audio_stem": "01_audio_segments/mix03_Export_ESG_Circular_Persona_25s.wav",
+      "duration_s": 25,
+      "declared_lufs": { "base": -14, "music": -13 },
+      "measured_lufs": -24.8,
+      "music": "92 BPM warm atmospheric ambient swell, C major 9 organic synth pad",
+      "language": "Neutral international English",
+      "script_beats": [
+        { "time": "00:00-00:07", "beat": "Hook", "line": "True packaging reliability begins at the polymer level." },
+        { "time": "00:07-00:18", "beat": "Sustainability and transit proof", "line": "Disciplined raw-material sorting and high-tensile multi-layer extrusion deliver export-grade films engineered for seaworthy stability." },
+        { "time": "00:18-00:25", "beat": "CTA", "line": "Partner with us for consistent quality, traceable blends and on-time container dispatch." }
+      ],
+      "asset_groups": ["granule-sorting-asmr", "grinder-recycling", "product-brand-stills"],
+      "scene_patterns": ["isometric", "data", "documentary", "quote"]
+    }
+  ],
+  "audio_stems": [
+    { "path": "01_audio_segments/mix01_MIDC_Procurement_Persona_30s.wav", "duration_s": 30.0, "sample_rate_hz": 44100, "channels": 1, "bytes": 2646044, "measured_lufs": -20.0, "persona": "persona-a-midc-procurement" },
+    { "path": "01_audio_segments/mix02_Distributor_HighYield_Persona_25s.wav", "duration_s": 25.0, "sample_rate_hz": 44100, "channels": 1, "bytes": 2205044, "measured_lufs": -19.6, "persona": "persona-b-distributor-high-yield" },
+    { "path": "01_audio_segments/mix03_Export_ESG_Circular_Persona_25s.wav", "duration_s": 25.0, "sample_rate_hz": 44100, "channels": 1, "bytes": 2205044, "measured_lufs": -24.8, "persona": "persona-c-export-esg-circular" },
+    { "path": "01_audio_segments/seg01_blown_extruder_base_19s.wav", "duration_s": 19.5, "sample_rate_hz": 44100, "channels": 1, "bytes": 1719944, "measured_lufs": -21.4, "persona": "persona-a-midc-procurement", "anchor": "VEO3_BUBBLE_02", "source_timestamp": "00:18" },
+    { "path": "01_audio_segments/seg02_xhd_cast_line_base_15s.wav", "duration_s": 15.0, "sample_rate_hz": 44100, "channels": 1, "bytes": 1323044, "measured_lufs": -21.9, "persona": "persona-b-distributor-high-yield", "anchor": "VEO3_MACRO_01", "source_timestamp": "00:02" },
+    { "path": "01_audio_segments/seg03_granule_asmr_base_9s.wav", "duration_s": 9.0, "sample_rate_hz": 44100, "channels": 1, "bytes": 793844, "measured_lufs": -28.5, "persona": "persona-c-export-esg-circular", "anchor": "VEO3_GRANULE_ASMR_03", "source_timestamp": "00:06" }
+  ],
+  "gcs_audio_candidates": [
+    { "uri": "gs://sales-crm/assets/Audio-files/112873-audio.mp3.mpeg", "duration_s": 27.306, "sample_rate_hz": 44100, "channels": 2, "bytes": 307136, "measured_lufs": -21.3, "inferred_role": "Persona A blown-film / winder base", "matched_transcript": "20261122_123639.mp4", "duration_delta_s": -0.164, "confidence": "medium" },
+    { "uri": "gs://sales-crm/assets/Audio-files/100431-audio.mp3.mpeg", "duration_s": 16.576, "sample_rate_hz": 48000, "channels": 2, "bytes": 405673, "measured_lufs": -12.3, "inferred_role": "Personas A/B XHD cast-line base", "matched_transcript": "20261018_192209.mp4", "duration_delta_s": -0.464, "confidence": "medium" },
+    { "uri": "gs://sales-crm/assets/Audio-files/84222-audio.mp3.mpeg", "duration_s": 10.496, "sample_rate_hz": 48000, "channels": 2, "bytes": 247561, "measured_lufs": -11.3, "inferred_role": "Personas A/B high-speed winder proof", "matched_transcript": "20261026_212609.mp4", "duration_delta_s": -0.134, "confidence": "medium" }
+  ],
+  "gcs_audio_excluded": [
+    { "uri": "gs://sales-crm/assets/Audio-files/A.R. Rahman - Ik Onkar Best Video_Rang De Basanti_Aamir Khan_Siddharth_Harshdeep Kaur [_YFqUPU24uI].mp3.mpeg", "reason": "non-business music" },
+    { "uri": "gs://sales-crm/assets/Audio-files/Chenda+Samurai+_+Kerala+Meets+Japan+Hip-Hop+Fusion [zzg2uPtbKvY].mp3.mpeg", "reason": "non-business music" },
+    { "uri": "gs://sales-crm/assets/Audio-files/Chenda+Samurai+_+Kerala+Meets+Japan+Hip-Hop+Fusion [zzg2uPtbKvY] (1).mp3.mpeg", "reason": "duplicate non-business music" },
+    { "uri": "gs://sales-crm/assets/Audio-files/Comment AI to get weekly AI superpowers.Imagine speaking English on a call while everyone hears .mp4", "reason": "generic social video" },
+    { "uri": "gs://sales-crm/assets/Audio-files/Più precisione, più velocità, meno impatto 🙌Con larrivo della nuova Komori Lithrone G540 advan.mp4", "reason": "unrelated promo" },
+    { "uri": "gs://sales-crm/assets/Audio-files/WhatsApp Audio 2026-11-26 at 18.52.17.mp4", "reason": "generic long voice note" },
+    { "uri": "gs://sales-crm/assets/Audio-files/WhatsApp Audio 2026-11-26 at 18.52.17 (1).mp4", "reason": "duplicate voice note" },
+    { "uri": "gs://sales-crm/assets/Audio-files/WhatsApp Audio 2026-11-26 at 19.45.32.mp4", "reason": "generic long voice note" },
+    { "uri": "gs://sales-crm/assets/Audio-files/WhatsApp Audio 2026-11-26 at 19.45.32 (1).mp4", "reason": "duplicate voice note" },
+    { "uri": "gs://sales-crm/assets/Audio-files/ek+onkar+satnam+karta+purakh+wonderful+view+of+golden+temple+WhatsApp+status [jNeOMvhHbgM].mp3.mpeg", "reason": "non-business status audio" }
+  ],
+  "transcript_actions": {
+    "total_segments": 16,
+    "total_videos": 7,
+    "counts": { "STRIP": 7, "KEEP_BASE_LAYER": 6, "STRIP_AND_DUB": 2, "KEEP_ASMR_LAYER": 1 }
+  },
+  "asset_groups": [
+    {
+      "id": "blown-film-extrusion",
+      "media_type": "video",
+      "theme": "Blown-film tower, air-ring and die-head proof",
+      "persona": "persona-a-midc-procurement",
+      "primary": {
+        "uri": "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/Workshop-1/Setting-for-size-change2.mp4",
+        "duration_s": 34.755,
+        "bytes": 7030482,
+        "width": 478,
+        "height": 850,
+        "fps": 29.981,
+        "evidence": "Filename plus exact 34.75s transcript: steady extruder gearbox and symmetrical bubble airflow",
+        "confidence": "high"
+      },
+      "additional": [
+        { "uri": "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/WhatsApp Video 2026-10-05 at 1.51.37 PM.mp4", "duration_s": 12.447, "bytes": 2518848, "confidence": "low" },
+        { "uri": "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/Workshop-1/WhatsApp Video 2026-10-05 at 1.51.40 PM.mp4", "duration_s": 26.949, "bytes": 5425538, "confidence": "medium" }
+      ],
+      "duplicates": [
+        "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/WhatsApp Video 2026-10-15 at 11.36.59 AM.mp4",
+        "gs://kalika_enterprises/images and videos/WhatsApp Video 2026-10-05 at 1.51.37 PM.mp4",
+        "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/Workshop-1/WhatsApp Video 2026-10-18 at 15.15.01.mp4",
+        "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/Workshop-1/marketing-videos_WhatsApp Video 2026-10-05 at 1.51.40 PM.mp4",
+        "gs://kalika_enterprises/images and videos/WhatsApp Video 2026-10-05 at 1.51.40 PM.mp4"
+      ]
+    },
+    {
+      "id": "granule-sorting-asmr",
+      "media_type": "video",
+      "theme": "Raw-material sorting and polymer granule ASMR",
+      "persona": "persona-c-export-esg-circular",
+      "primary": {
+        "uri": "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/WhatsApp Video 2026-10-15 at 11.37.03 AM.mp4",
+        "duration_s": 14.561,
+        "bytes": 3015573,
+        "width": 478,
+        "height": 850,
+        "fps": 29.944,
+        "evidence": "Exact 15.16s transcript: polymer pellet sorting and scoop clink; exact duplicate across three prefixes",
+        "confidence": "high"
+      },
+      "additional": [
+        { "uri": "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/WhatsApp Video 2026-10-05 at 1.51.38 PM (1).mp4", "duration_s": 5.656, "bytes": 1146176, "confidence": "low" },
+        { "uri": "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/WhatsApp Video 2026-10-05 at 1.51.39 PM (1).mp4", "duration_s": 4.205, "bytes": 851633, "confidence": "low" },
+        { "uri": "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/WhatsApp Video 2026-10-15 at 11.37.02 AM.mp4", "duration_s": 5.656, "bytes": 1146180, "confidence": "medium" },
+        { "uri": "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/WhatsApp Video 2026-10-15 at 11.37.03 AM (1).mp4", "duration_s": 4.205, "bytes": 851637, "confidence": "medium" },
+        { "uri": "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/WhatsApp Video 2026-10-15 at 11.37.03 AM (2).mp4", "duration_s": 4.043, "bytes": 818367, "confidence": "medium" }
+      ],
+      "duplicates": [
+        "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/Workshop-2/WhatsApp Video 2026-10-05 at 1.51.38 PM.mp4",
+        "gs://kalika_enterprises/images and videos/WhatsApp Video 2026-10-05 at 1.51.38 PM (1).mp4",
+        "gs://kalika_enterprises/images and videos/WhatsApp Video 2026-10-05 at 1.51.38 PM.mp4",
+        "gs://kalika_enterprises/images and videos/WhatsApp Video 2026-10-05 at 1.51.39 PM (1).mp4",
+        "gs://kalika_enterprises/images and videos/WhatsApp Video 2026-10-05 at 1.51.39 PM.mp4"
+      ]
+    },
+    {
+      "id": "xhd-cast-high-yield",
+      "media_type": "video",
+      "theme": "XHD cast chill-roll and glossy LLDPE web",
+      "persona": "persona-b-distributor-high-yield",
+      "primary": {
+        "uri": "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/WhatsApp Video 2026-10-15 at 1.33.31 PM (1).mp4",
+        "duration_s": 16.598,
+        "bytes": 3359940,
+        "width": 478,
+        "height": 850,
+        "fps": 30.004,
+        "evidence": "Duration matches 17.04s transcript: XHD cast chill-roll hum and glossy web rustle",
+        "confidence": "medium"
+      },
+      "additional": [
+        { "uri": "gs://kalika_enterprises/images and videos/WhatsApp Video 2026-10-30 at 2.39.39 PM.mp4", "duration_s": 10.261, "bytes": 1347123, "width": 480, "height": 854, "fps": 30.017, "evidence": "Duration matches 10.63s transcript: high-speed winder and pneumatic tension hiss", "confidence": "medium" }
+      ]
+    },
+    {
+      "id": "winder-finished-roll",
+      "media_type": "video",
+      "theme": "Winding, red-pigmented roll and line tension",
+      "persona": "persona-b-distributor-high-yield",
+      "primary": {
+        "uri": "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/machine1.mp4",
+        "duration_s": 22.797,
+        "bytes": 4564560,
+        "width": 478,
+        "height": 850,
+        "fps": 30.004,
+        "evidence": "Exact 22.8s transcript: red pigmented film roller hum and tension check",
+        "confidence": "high"
+      },
+      "additional": [
+        { "uri": "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/WhatsApp Video 2026-10-15 at 1.33.31 PM.mp4", "duration_s": 11.455, "bytes": 2320668, "confidence": "low" }
+      ],
+      "duplicates": [
+        "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/Workshop-1/New-size-updated-with-Color-25-11-2026.mp4"
+      ]
+    },
+    {
+      "id": "size-change-quality",
+      "media_type": "video",
+      "theme": "Size change, startup cue and quality inspection",
+      "persona": "persona-a-midc-procurement",
+      "primary": {
+        "uri": "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/Workshop-1/Setting-for-size-change.mp4",
+        "duration_s": 9.737,
+        "bytes": 1970504,
+        "width": 478,
+        "height": 850,
+        "fps": 29.987,
+        "evidence": "Filename plus exact 9.74s transcript: air-ring blower and die-head startup",
+        "confidence": "high"
+      },
+      "additional": [
+        { "uri": "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/WhatsApp Video 2026-11-26 at 2.10.21 PM.mp4", "duration_s": 3.236, "bytes": 671085, "confidence": "low" },
+        { "uri": "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/WhatsApp Video 2026-11-26 at 2.10.25 PM.mp4", "duration_s": 2.653, "bytes": 533575, "width": 848, "height": 480, "confidence": "low" },
+        { "uri": "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/WhatsApp Video 2026-11-26 at 2.11.11 PM.mp4", "duration_s": 4.994, "bytes": 1026288, "width": 848, "height": 480, "confidence": "low" },
+        { "uri": "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/Workshop-2/video_20261122_171958.mp4", "duration_s": 4.217, "bytes": 9451461, "width": 1920, "height": 1080, "fps": 27.888, "confidence": "low" }
+      ]
+    },
+    {
+      "id": "grinder-recycling",
+      "media_type": "video",
+      "theme": "Grinder and recycling loop",
+      "persona": "persona-c-export-esg-circular",
+      "primary": {
+        "uri": "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/Workshop-1/Grinder-mc-workshop1.mp4",
+        "duration_s": 45.399,
+        "bytes": 9192815,
+        "width": 478,
+        "height": 850,
+        "fps": 30.001,
+        "evidence": "Filename explicitly identifies grinder machine",
+        "confidence": "high"
+      }
+    },
+    {
+      "id": "plant-oee-dispatch",
+      "media_type": "video",
+      "theme": "Kaliflow live plant, OEE and pallet dispatch",
+      "persona": "persona-a-midc-procurement",
+      "primary": {
+        "uri": "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/base-mc-workshop2-html.mp4",
+        "duration_s": 40.388,
+        "bytes": 7464430,
+        "width": 1920,
+        "height": 1080,
+        "fps": 24.859,
+        "evidence": "OCR: KALIFLOW LIVE PLANT, OEE 94.5 to 94.6, 80 to 82 pallets dispatched, MIDC Ahmednagar",
+        "confidence": "high",
+        "data_caveat": "Dashboard values are media content, not verified live ERP telemetry"
+      },
+      "additional": [
+        { "uri": "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/WhatsApp Video 2026-11-26 at 2.11.16 PM.mp4", "duration_s": 29.779, "bytes": 6117538, "confidence": "low" }
+      ]
+    },
+    {
+      "id": "product-brand-stills",
+      "media_type": "image",
+      "theme": "Product, carton, invoice and QR feedback catalog stills",
+      "persona": "shared",
+      "primary": {
+        "uri": "gs://kalika_enterprises/images and videos/WhatsApp Image 2026-10-30 at 2.39.41 PM.jpeg",
+        "bytes": 251862,
+        "width": 1536,
+        "height": 1024,
+        "evidence": "OCR: Kalika Industrial E-Commerce, QR feedback system, BOPP Tape, Stretch Film, VCI Bags",
+        "confidence": "high"
+      },
+      "additional": [
+        { "uri": "gs://kalika_enterprises/images and videos/WhatsApp Image 2026-10-05 at 1.51.40 PM (1).jpeg", "bytes": 185598, "width": 1200, "height": 1600, "evidence": "OCR: Megatech invoice/document", "confidence": "medium" },
+        { "uri": "gs://kalika_enterprises/images and videos/WhatsApp Image 2026-10-05 at 1.51.40 PM.jpeg", "bytes": 102496, "width": 1200, "height": 1600, "confidence": "low" },
+        { "uri": "gs://kalika_enterprises/images and videos/WhatsApp Image 2026-10-05 at 1.51.41 PM (3).jpeg", "bytes": 225688, "width": 1600, "height": 1200, "confidence": "low" },
+        { "uri": "gs://kalika_enterprises/images and videos/WhatsApp Image 2026-10-05 at 1.51.41 PM.jpeg", "bytes": 197182, "width": 1600, "height": 1200, "evidence": "OCR: carton label, UPC, net weight 10.5 kg", "confidence": "medium" },
+        { "uri": "gs://kalika_enterprises/images and videos/WhatsApp Image 2026-10-05 at 1.51.42 PM (1).jpeg", "bytes": 181735, "width": 1200, "height": 1600, "evidence": "OCR: 12 channel analog product carton", "confidence": "medium" },
+        { "uri": "gs://kalika_enterprises/images and videos/WhatsApp Image 2026-10-05 at 1.51.42 PM.jpeg", "bytes": 195969, "width": 1200, "height": 1600, "evidence": "OCR: 12 channel analog", "confidence": "medium" },
+        { "uri": "gs://kalika_enterprises/images and videos/WhatsApp Image 2026-10-30 at 2.39.40 PM.jpeg", "bytes": 210358, "width": 1200, "height": 1600, "confidence": "low" },
+        { "uri": "gs://kalika_enterprises/images and videos/WhatsApp Video 2026-10-30 at 2.39.40 PM.mp4", "duration_s": 55.906, "bytes": 7475489, "confidence": "low" }
+      ]
+    }
+  ],
+  "excluded_large_videos": [
+    { "uri": "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/Workshop-2/video_20261122_172255.mp4", "bytes": 83163646, "reason": "Not sampled in this pass; local review needed" },
+    { "uri": "gs://sales-crm/Manufacturing-Data/kalika-videos/manufacturing/Workshop-2/video_20261122_172452.mp4", "bytes": 712581244, "reason": "Oversized; stream or local review required" }
+  ],
+  "duplicate_video_groups": [
+    { "bytes": 2518848, "md5_base64": "9z3r1WTlChTBfvcYrH4JIA==", "count": 3 },
+    { "bytes": 1146176, "md5_base64": "IMtilwHAVx1QOXT/kCVZFg==", "count": 2 },
+    { "bytes": 851633, "md5_base64": "DskvWlJRZlo7InTBukKy7w==", "count": 2 },
+    { "bytes": 3015573, "md5_base64": "U0+IoRsRSdZN+QYRLCoa7A==", "count": 3 },
+    { "bytes": 818367, "md5_base64": "KSBK1bA8HXHLkCVKHBSPgQ==", "count": 2 },
+    { "bytes": 4564560, "md5_base64": "7ayc1TBZFMvN6veMJqocnQ==", "count": 2 },
+    { "bytes": 5425538, "md5_base64": "ZnC2GWatFdAoiYJ6aFJNzQ==", "count": 4 }
+  ],
+  "scene_plan": [
+    { "index": 0, "title": "Precision is protection", "pattern": "documentary", "asset_group": "blown-film-extrusion", "audio": "seg01_blown_extruder_base_19s.wav", "stat": "112 leads mapped" },
+    { "index": 1, "title": "Micron discipline", "pattern": "infographic", "asset_group": "size-change-quality", "audio": "mix01_MIDC_Procurement_Persona_30s.wav", "stat": "9.737s size-change proof clip" },
+    { "index": 2, "title": "Reliability starts upstream", "pattern": "isometric", "asset_group": "granule-sorting-asmr", "audio": "seg03_granule_asmr_base_9s.wav", "stat": "16 transcript segments" },
+    { "index": 3, "title": "High-yield supply", "pattern": "split", "asset_group": "xhd-cast-high-yield", "audio": "mix02_Distributor_HighYield_Persona_25s.wav", "stat": "44 distributor leads" },
+    { "index": 4, "title": "Dispatch proof", "pattern": "data", "asset_group": "plant-oee-dispatch", "audio": "112873-audio.mp3.mpeg", "stat": "94.5 to 94.6 OEE shown in media; verify before claim" },
+    { "index": 5, "title": "Request a trial roll", "pattern": "quote", "asset_group": "product-brand-stills", "audio": "mix01_MIDC_Procurement_Persona_30s.wav", "stat": "63/112 missing email: qualify before outreach" }
+  ],
+  "studio_bindings": {
+    "style": "documentary",
+    "palette": { "bg": "#0B1020", "panel": "#14265C", "ink": "#E9E4DA", "signal": "#3CC4CC", "accent": "#FFC727" },
+    "render_payload": {
+      "quality": "both",
+      "include_captions": true,
+      "engine": "motion",
+      "motion_style": "documentary",
+      "effects": ["grain", "vignette"],
+      "audio": true,
+      "scene_patterns": { "0": "documentary", "1": "infographic", "2": "isometric", "3": "split", "4": "data", "5": "quote" },
+      "template": "default"
+    },
+    "audio_mux": "ffmpeg -y -loglevel error -i silent.mp4 -i mix.wav -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -b:a 192k -ar 48000 -af loudnorm=I=-14:TP=-1.5:LRA=11 -shortest -movflags +faststart output.mp4",
+    "publish_prefix": "gs://sales-crm/marketing-videos/renders/{project}/{job}/",
+    "manifest_prefix": "gs://sales-crm/marketing-videos/metadata/renders/{project}/{job}.json"
+  },
+  "roadmap": [
+    { "phase": 0, "action": "Confirm corrected GCS prefixes and bundle versions", "gate": "All URIs resolve" },
+    { "phase": 1, "action": "Human visual pass on FFmpeg contact sheets", "gate": "Tentative rows promoted" },
+    { "phase": 2, "action": "Seed one ai-film-studio project per persona", "gate": "Script and storyboard approved" },
+    { "phase": 3, "action": "Render previews with persona stems", "gate": "Preview duration matches script beat" },
+    { "phase": 4, "action": "Normalize audio and publish export", "gate": "Manifest and gallery verified" },
+    { "phase": 5, "action": "Wire CRM segment counts into KPI scenes", "gate": "Stats match raw workbook sheets" }
+  ]
+}

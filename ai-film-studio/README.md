@@ -218,6 +218,7 @@ ai-film-studio/
   scripts/             download, setup, start, and dev helpers
   storage/             local database, assets, previews, exports, models, tools
   docs/
+    refinement-pack/     GCS-to-studio persona/media mapping, stats, ZIP
 ```
 
 ## Phase 1 boundaries
