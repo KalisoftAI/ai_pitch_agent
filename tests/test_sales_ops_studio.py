@@ -240,3 +240,98 @@ def test_studio_upload_validates_extension_and_sanitizes_name(client, auth_heade
     assert blob_name.startswith("assets/uploads/")
     assert blob_name.endswith("_factory_notes.txt")
     assert storage.uploaded
+
+
+def test_instor_sender_matching():
+    from sales_fastapi.sales_ops_mail import is_instor_sender
+
+    assert is_instor_sender("Rutuja Patil <rpatil@instorindia.com>") is True
+    assert is_instor_sender("Purchase <purchase@instorindia.com>") is True
+    assert is_instor_sender("R. Patil <rpatil@gmail.com> (Instor India Pvt Ltd)") is True
+    assert is_instor_sender("Rajesh <rajesh@othercompany.com>") is False
+
+
+def test_instor_mail_sync_and_date_grouping(client, auth_headers, monkeypatch):
+    class FakeExtractor:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def connect(self):
+            return True
+
+        def disconnect(self):
+            return None
+
+        def sync_emails(self, *, last_uid=0, batch=25, before_uid=None, full=False, **kwargs):
+            if last_uid or not full:
+                return []
+            return [
+                {
+                    "uid": "101",
+                    "message_id": "<a@example.com>",
+                    "from": "Rutuja Patil <rpatil@instorindia.com>",
+                    "subject": "Rate sheet for stretch film",
+                    "date": "Fri, 27 Nov 2026 09:15:00 +0000",
+                    "body": "Please share your 23 micron rate sheet for Koregaon Bhima.",
+                },
+                {
+                    "uid": "102",
+                    "message_id": "<b@example.com>",
+                    "from": "Purchase Team <purchase@instorindia.com>",
+                    "subject": "Purchase order 4421",
+                    "date": "Thu, 26 Nov 2026 10:00:00 +0000",
+                    "body": "Please find our purchase order attached.",
+                },
+                {
+                    "uid": "103",
+                    "message_id": "<c@example.com>",
+                    "from": "Somebody <somebody@othercompany.com>",
+                    "subject": "Unrelated mail",
+                    "date": "Fri, 27 Nov 2026 11:00:00 +0000",
+                    "body": "Nothing to do with Instor.",
+                },
+            ]
+
+    monkeypatch.setattr(
+        "sales_fastapi.sales_ops_mail._credentials",
+        lambda: ("kalikaenterprises@gmail.com", "app-password"),
+    )
+    monkeypatch.setattr("sales_fastapi.sales_ops_mail.SalesOpsEmailExtractor", FakeExtractor)
+    monkeypatch.setattr(
+        "sales_fastapi.sales_ops_mail._summarize_email",
+        lambda *args, **kwargs: ("AI summary of enquiry", "test:stub"),
+    )
+    monkeypatch.setattr(
+        "sales_fastapi.sales_ops_mail.GCSStorage",
+        lambda **kwargs: OfflineStorage(**kwargs),
+    )
+
+    synced = client.post(
+        "/api/v1/sales-ops/mail/instor/sync", headers=auth_headers, json={}
+    )
+    assert synced.status_code == 200
+    result = synced.json()
+    assert result["status"] == "ok"
+    assert result["matched"] == 2
+    assert result["new"] == 2
+
+    listed = client.get(
+        "/api/v1/sales-ops/mail/instor?limit=50&auto_sync=false", headers=auth_headers
+    )
+    assert listed.status_code == 200
+    body = listed.json()
+    assert body["company"]["name"] == "Instor India Pvt. Ltd."
+    assert body["mailbox"] == "kalikaenterprises@gmail.com"
+    groups = body["groups"]
+    assert [group["date"] for group in groups] == ["2026-11-27", "2026-11-26"]
+    first = groups[0]["messages"][0]
+    assert first["sender_email"] == "rpatil@instorindia.com"
+    assert first["subject"] == "Rate sheet for stretch film"
+    assert first["received_time"] == "14:45"
+    assert first["ai_summary"] == "AI summary of enquiry"
+
+    again = client.post(
+        "/api/v1/sales-ops/mail/instor/sync", headers=auth_headers, json={}
+    )
+    assert again.status_code == 200
+    assert again.json()["new"] == 0

@@ -112,6 +112,19 @@ class Settings(BaseSettings):
     GMAIL_ADDRESS_KALIKA2: str = Field(default="", alias="GMAIL_ADDRESS_KALIKA2")
     GMAIL_APP_PASSWORD_KALIKA2: str = Field(default="", alias="GMAIL_APP_PASSWORD_KALIKA2")
 
+    # --- Sales Ops: Instor India incoming mail desk ---
+    # Uses the kalika2 Gmail account by default; overrides are optional.
+    SALES_OPS_INSTOR_MAILBOX: str = Field(
+        default="", alias="SALES_OPS_INSTOR_MAILBOX"
+    )  # blank -> GMAIL_ADDRESS_KALIKA2 / kalikaenterprises@gmail.com
+    SALES_OPS_INSTOR_APP_PASSWORD: str = Field(
+        default="", alias="SALES_OPS_INSTOR_APP_PASSWORD"
+    )  # only needed when overriding the mailbox with a different account
+    SALES_OPS_INSTOR_SENDERS: str = Field(
+        default="instorindia.com", alias="SALES_OPS_INSTOR_SENDERS"
+    )  # comma-separated sender emails or domains
+    SALES_OPS_INSTOR_SYNC_LIMIT: int = Field(default=25, alias="SALES_OPS_INSTOR_SYNC_LIMIT")
+
     # --- AI ---
     GEMMA_MODEL: str = Field(default="gemma-4-27b-it", alias="GEMMA_MODEL")
     GEMINI_API_KEY: str = Field(default="", alias="GEMINI_API_KEY")

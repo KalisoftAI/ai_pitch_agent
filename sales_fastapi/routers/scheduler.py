@@ -76,6 +76,15 @@ def run_scheduler(
             mail_results.append({"connection_id": connection.id, "ok": False, "error": str(exc)[:200]})
     if mail_results:
         executed["email_new_mail_sync"] = mail_results
+    # Sales Ops Instor mail desk: same read-only IMAP source, isolated tables.
+    from ..sales_ops_mail import sync_instor_mails
+
+    try:
+        executed["sales_ops_instor_mail_sync"] = sync_instor_mails(
+            db, user_id=user.id, actor=user.email
+        )
+    except Exception as exc:  # noqa: BLE001 - never break the rest of the cron sweep
+        executed["sales_ops_instor_mail_sync"] = {"ok": False, "error": str(exc)[:200]}
     # retention sweep at most once per day
     from ..models import SyncRun
 

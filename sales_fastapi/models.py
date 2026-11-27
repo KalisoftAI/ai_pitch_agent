@@ -909,3 +909,49 @@ class StudioRefinement(Base):
     gcs_uri: Mapped[str] = mapped_column(String(512), default="")
     created_by: Mapped[str] = mapped_column(String(255), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
+
+
+class SalesOpsMailSyncState(Base):
+    """Read-only IMAP checkpoint for the Sales Ops Instor mail capture."""
+
+    __tablename__ = "sales_ops_mail_sync_states"
+
+    mailbox: Mapped[str] = mapped_column(String(320), primary_key=True)
+    last_uid: Mapped[int] = mapped_column(Integer, default=0)
+    cursor_uid: Mapped[int] = mapped_column(Integer, default=0)
+    backfill_complete: Mapped[bool] = mapped_column(Boolean, default=False)
+    last_sync_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_status: Mapped[str] = mapped_column(String(32), default="")
+    last_error: Mapped[str] = mapped_column(String(512), default="")
+    fetched_total: Mapped[int] = mapped_column(Integer, default=0)
+    new_total: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class SalesOpsIncomingMail(Base):
+    """Incoming Instor India email with an AI summary, grouped by received date/time."""
+
+    __tablename__ = "sales_ops_incoming_mails"
+    __table_args__ = (UniqueConstraint("dedup_key", name="uq_sales_ops_incoming_mails_dedup"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    mailbox: Mapped[str] = mapped_column(String(320), default="", index=True)
+    company: Mapped[str] = mapped_column(String(255), default="", index=True)
+    sender_name: Mapped[str] = mapped_column(String(255), default="")
+    sender_email: Mapped[str] = mapped_column(String(320), default="", index=True)
+    sender_raw: Mapped[str] = mapped_column(String(512), default="")
+    subject: Mapped[str] = mapped_column(String(512), default="")
+    received_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    received_date: Mapped[str] = mapped_column(String(10), default="", index=True)
+    received_time: Mapped[str] = mapped_column(String(8), default="")
+    body_snippet: Mapped[str] = mapped_column(Text, default="")
+    ai_summary: Mapped[str] = mapped_column(Text, default="")
+    summary_source: Mapped[str] = mapped_column(String(64), default="deterministic_fallback")
+    message_id: Mapped[str] = mapped_column(String(512), default="")
+    imap_uid: Mapped[str] = mapped_column(String(32), default="", index=True)
+    dedup_key: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    gcs_uri: Mapped[str] = mapped_column(String(512), default="")
+    created_by: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)

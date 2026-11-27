@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  BarChart3, Camera, Check, Copy, FileUp, Film, RefreshCw, ScanLine, Send, Settings2, Sparkles, TrendingUp, X,
+  BarChart3, Camera, Check, Copy, FileUp, Film, Mail, RefreshCw, ScanLine, Send, Settings2, Sparkles, TrendingUp, X,
 } from "lucide-react";
 
 const API = "/api";
@@ -101,6 +101,7 @@ export function SalesOpsStudio({ onNotice, user }) {
     channels: ["email", "whatsapp"],
   });
   const [preview, setPreview] = useState(null);
+  const [instorMail, setInstorMail] = useState({ company: {}, mailbox: "", groups: [], sync: null });
   const [busy, setBusy] = useState("");
   const [notice, setNotice] = useState("");
   const videoRef = useRef(null);
@@ -112,12 +113,18 @@ export function SalesOpsStudio({ onNotice, user }) {
     if (onNotice) onNotice({ type, text });
   };
 
+  const loadMail = useCallback(async () => {
+    const result = await request("/v1/sales-ops/mail/instor?limit=200");
+    setInstorMail(result || {});
+  }, []);
+
   const loadAll = useCallback(async () => {
     const results = await Promise.allSettled([
       isAdmin ? request("/v1/sales-ops/admin/toggles") : Promise.resolve(null),
       request("/v1/sales-ops/youtube/trends?limit=20"),
       request("/v1/studio/templates"),
       request("/v1/sales-ops/erp/barcode-scans?limit=20"),
+      loadMail(),
     ]);
     if (results[0].status === "fulfilled" && results[0].value) {
       setToggles(results[0].value.toggles || DEFAULT_TOGGLES);
@@ -126,7 +133,8 @@ export function SalesOpsStudio({ onNotice, user }) {
     if (results[1].status === "fulfilled") setTrends(results[1].value.items || []);
     if (results[2].status === "fulfilled") setTemplates(results[2].value.items || []);
     if (results[3].status === "fulfilled") setScans(results[3].value.items || []);
-  }, [isAdmin]);
+    if (results[4].status === "fulfilled") setInstorMail(results[4].value || {});
+  }, [isAdmin, loadMail]);
 
   useEffect(() => { loadAll().catch(() => {}); }, [loadAll]);
   useEffect(() => {
@@ -134,6 +142,13 @@ export function SalesOpsStudio({ onNotice, user }) {
     const timer = setTimeout(() => setNotice(""), 4200);
     return () => clearTimeout(timer);
   }, [notice]);
+
+  // New mail appears automatically while the Instor desk is open.
+  useEffect(() => {
+    if (tab !== "mail") return undefined;
+    const timer = window.setInterval(() => { loadMail().catch(() => {}); }, 60000);
+    return () => window.clearInterval(timer);
+  }, [tab, loadMail]);
 
   const stopCamera = useCallback(() => {
     if (timerRef.current) window.clearTimeout(timerRef.current);
@@ -318,6 +333,27 @@ export function SalesOpsStudio({ onNotice, user }) {
     }
   };
 
+  const syncInstorMail = async () => {
+    setBusy("mail-sync");
+    try {
+      const result = await request("/v1/sales-ops/mail/instor/sync", {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      await loadMail();
+      notify(
+        result.status === "ok"
+          ? `Instor mail synced: ${result.new} new, ${result.matched} matched`
+          : `Sync ${result.status}: ${result.reason || result.error || "no updates"}`,
+        result.status === "error" ? "error" : "ok",
+      );
+    } catch (error) {
+      notify(error.message, "error");
+    } finally {
+      setBusy("");
+    }
+  };
+
   const toggleDisabled = (name) => !isAdmin || busy === `toggle:${name}`;
 
   return (
@@ -342,6 +378,7 @@ export function SalesOpsStudio({ onNotice, user }) {
           ["barcode", "Barcode scan", ScanLine],
           ["studio", "AI Studio", Film],
           ["trends", "Trending patterns", TrendingUp],
+          ["mail", "Instor mails", Mail],
           ["dispatch", "Campaign composer", Send],
         ].map(([key, label, Icon]) => (
           <button key={key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}>
@@ -483,6 +520,56 @@ export function SalesOpsStudio({ onNotice, user }) {
                   <div><b>{item.title}</b><small>{item.query} · {item.source_mode}</small></div>
                   <div className="so-actions compact"><a href={item.video_url} target="_blank" rel="noreferrer">Open</a><button className="secondary-button" onClick={() => cloneHook(item.hook_pattern || item.title)}>Clone to Studio</button></div>
                 </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === "mail" && (
+        <div className="so-grid">
+          <div className="so-card wide">
+            <div className="so-card-head">
+              <h3>Instor India — incoming mail</h3>
+              <span>{instorMail.company?.name || "Instor India Pvt. Ltd."}</span>
+            </div>
+            <div className="so-mail-meta">
+              <span>{instorMail.company?.address || "New Gat 584/2, Koregaon Bhima, Taluka Shirur, Pune – 412216, India."}</span>
+              <span>Mailbox: {instorMail.mailbox || "kalikaenterprises@gmail.com"}</span>
+              <span>Last sync: {instorMail.sync?.last_sync_at || "not yet"}</span>
+            </div>
+            <div className="so-actions">
+              <button className="primary-button" onClick={syncInstorMail} disabled={busy === "mail-sync"}>
+                <RefreshCw size={15} /> Sync new mail
+              </button>
+              <button className="secondary-button" onClick={() => loadMail().catch((error) => notify(error.message, "error"))} disabled={busy === "mail-sync"}>
+                Refresh view
+              </button>
+            </div>
+            {instorMail.sync?.status === "not_configured" && (
+              <div className="so-callout">Set GMAIL_APP_PASSWORD_KALIKA2 (or SALES_OPS_INSTOR_APP_PASSWORD) to enable automatic mailbox sync.</div>
+            )}
+            {(instorMail.groups || []).length === 0 && (
+              <div className="so-empty">No Instor India emails captured yet. Sync the mailbox to load incoming mail.</div>
+            )}
+            <div className="so-mail-groups">
+              {(instorMail.groups || []).map((group) => (
+                <section className="so-mail-day" key={group.date}>
+                  <div className="so-mail-day-head"><b>{group.date}</b><span>{group.count} email{group.count === 1 ? "" : "s"}</span></div>
+                  {group.messages.map((item) => (
+                    <article className="so-mail-row" key={item.id}>
+                      <div className="so-mail-row-head">
+                        <div>
+                          <b>{item.subject || "(no subject)"}</b>
+                          <small>{item.sender_name || item.sender_email} · {item.sender_email}</small>
+                        </div>
+                        <span className="so-mail-time">{item.received_time}</span>
+                      </div>
+                      <p className="so-mail-summary">{item.ai_summary}</p>
+                      <small className="so-mail-source">Received {item.received_date} at {item.received_time} · {item.summary_source}</small>
+                    </article>
+                  ))}
+                </section>
               ))}
             </div>
           </div>

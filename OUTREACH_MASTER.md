@@ -254,6 +254,7 @@ Database: SQLite by default (`SQLITE_PATH`), Postgres via `DATABASE_URL` / `POST
 | Auth | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_ALLOWED_DOMAINS`, `GOOGLE_ALLOWED_EMAILS`, `GOOGLE_REDIRECT_URI`, `AUTH_DEV_MODE`, `AUTH_DEV_ALLOWED_EMAILS` |
 | Mail | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `IMAP_HOST`, `IMAP_PORT`, mailbox OAuth settings |
 | Mail sync | `MAIL_SYNC_BATCH` (20-50), `MAIL_RETENTION_RAW_DAYS` (180), `MAIL_RETENTION_PROCESSED_DAYS` (365), `MAIL_RETENTION_ATTACHMENTS_DAYS` (90), `MAIL_RETENTION_LOGS_DAYS` (365) |
+| Sales Ops mail | `SALES_OPS_INSTOR_MAILBOX` (defaults to `GMAIL_ADDRESS_KALIKA2`), `SALES_OPS_INSTOR_APP_PASSWORD`, `SALES_OPS_INSTOR_SENDERS`, `SALES_OPS_INSTOR_SYNC_LIMIT` |
 | Knowledge graph | `KNOWLEDGE_GRAPH_GCS_PREFIX`, `KNOWLEDGE_GRAPH_CHAT_ENABLED`, `KNOWLEDGE_GRAPH_REFRESH_DAYS` |
 | Cache | `REDIS_URL`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_DB` |
 
@@ -277,6 +278,8 @@ Database: SQLite by default (`SQLITE_PATH`), Postgres via `DATABASE_URL` / `POST
   `/campaigns/{id}/preview`, `/approve`, `/send`, `/retry`, `GET /campaigns/track/open`
 - Email: `/email/connections`, `/email/sync`, `/email/sync/state`, `/email/sync/analytics?days=N`,
   `/email/retention`, `/email/test-send`, default-connection endpoints
+- Sales Ops mail desk: `GET /v1/sales-ops/mail/instor` (date/time-grouped Instor India mails with AI
+  summaries; throttled auto-sync), `POST /v1/sales-ops/mail/instor/sync` (manual/IMAP pull)
 - Visits: `GET /visits`, `POST /visits/samples` (built-in sample records only)
 
 ## 11. Manual test path

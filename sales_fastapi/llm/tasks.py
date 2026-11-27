@@ -53,6 +53,15 @@ TASKS: dict[str, TaskSpec] = {
         description="Condense a LinkedIn/company profile",
         max_output_tokens=256,
     ),
+    "sales_ops_email_summary": TaskSpec(
+        name="sales_ops_email_summary",
+        tier=Tier.SMALL,
+        description="Condense an incoming Sales Ops email for the mail desk",
+        max_output_tokens=240,
+        allow_external=True,
+        allow_pii=False,
+        tags=("sales_ops", "email"),
+    ),
     "knowledge_graph_chat": TaskSpec(
         name="knowledge_graph_chat",
         tier=Tier.SMALL,

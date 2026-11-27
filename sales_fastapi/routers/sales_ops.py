@@ -21,6 +21,7 @@ from ..models import (
     SalesOpsDispatch,
     SalesOpsYouTubeSignal,
 )
+from ..sales_ops_mail import auto_sync_due, list_instor_mails, sync_instor_mails
 from ..security import get_current_user, require_admin
 from ..services import GCSStorage, MailSender, YouTubeExtractor
 
@@ -84,6 +85,10 @@ class DispatchIn(OutreachPrepareIn):
 class YouTubeDiscoverIn(BaseModel):
     keywords: list[str] | None = Field(default=None, max_length=40)
     max_results: int = Field(default=8, ge=1, le=20)
+
+
+class InstorMailSyncIn(BaseModel):
+    limit: int | None = Field(default=None, ge=1, le=50)
 
 
 def _actor(user) -> str:
@@ -694,3 +699,51 @@ def list_youtube_trends(
             for row in rows
         ]
     }
+
+
+# ---------------------------------------------------------------------------
+# Instor India incoming mail desk (read-only mailbox capture + AI summaries)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/mail/instor/sync")
+def sync_instor_mail(
+    payload: InstorMailSyncIn | None = None,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """Explicitly pull new mail from the configured Kalika Gmail account."""
+    result = sync_instor_mails(
+        db,
+        user_id=int(getattr(user, "id", 0) or 0),
+        actor=_actor(user),
+        limit=(payload.limit if payload else None),
+    )
+    # Return the status inline instead of raising: a transient IMAP failure must
+    # not turn the whole Sales Ops view into a hard HTTP error.
+    return result
+
+
+@router.get("/mail/instor")
+def list_instor_mail(
+    limit: int = 200,
+    date: str | None = None,
+    auto_sync: bool = True,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """List Instor mail grouped by date/time; refresh new mail when due."""
+    sync_result: dict | None = None
+    if auto_sync and auto_sync_due(db):
+        sync_result = sync_instor_mails(
+            db,
+            user_id=int(getattr(user, "id", 0) or 0),
+            actor=_actor(user),
+            limit=settings.SALES_OPS_INSTOR_SYNC_LIMIT,
+        )
+    payload = list_instor_mails(db, limit=limit, date_filter=date or "")
+    payload["sync"] = sync_result or {
+        "status": "skipped",
+        "reason": "synced_recently" if auto_sync else "auto_sync_disabled",
+    }
+    return payload

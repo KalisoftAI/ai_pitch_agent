@@ -121,6 +121,8 @@ STANDARD_TASKS: List[Dict[str, Any]] = [
     {"name": "kpi_snapshot", "cron": "0 23 * * *", "description": "Nightly business-KPI snapshot"},
     {"name": "email_new_mail_sync", "cron": "*/30 * * * *",
      "description": "Incremental IMAP sync (UID checkpoint, Message-ID dedup) -> Kalika_gmail_data raw/processed on GCS"},
+    {"name": "sales_ops_instor_mail_sync", "cron": "*/15 * * * *",
+     "description": "Read-only Instor India mail capture for Sales Ops with AI summaries (kalikaenterprises@gmail.com)"},
     {"name": "mail_retention_cleanup", "cron": "30 4 * * *",
      "description": "GCS retention: raw 180d, processed 365d, attachments 90d, logs 365d (mailbox untouched)"},
     {
